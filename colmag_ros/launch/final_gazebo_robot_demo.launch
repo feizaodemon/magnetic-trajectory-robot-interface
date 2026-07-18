@@ -1,0 +1,151 @@
+<launch>
+  <!--
+    COLMAG M96 - operator-facing FINAL Gazebo robot-body demo (ONE entrypoint).
+
+    Final robot-body route (this is the ONLY final-PASS route; NOT the marker route):
+
+      dashboard / board manual confirm
+        -> /colmag/confirmed_label
+        -> task_dispatcher_node
+        -> /colmag/task_command
+        -> fr3_gazebo_visible_task_bridge_node
+        -> /position_joint_trajectory_controller/follow_joint_trajectory
+        -> Gazebo Panda robot-body motion
+
+    This wrapper composes the colmag_ros DTW mouse frontend with the Gazebo-only
+    bridge and adds the external franka_gazebo Panda action-server stack that provides
+    /position_joint_trajectory_controller/follow_joint_trajectory.
+
+    It does NOT use gazebo_task_executor, /gazebo/set_model_state, or the
+    colmag_ee_marker route. Marker motion is debug/fallback only and does NOT
+    count as a final PASS. No new bridge is introduced.
+
+    Safety boundary: Gazebo simulation only. This launch does NOT connect to a
+    real FR3, a robot_ip, libfranka, franka_control_node, or any real hardware
+    controller. It is NOT real-FR3-ready.
+
+    Runtime is USER-RUN (M97). The agent does not start Gazebo.
+
+    Usage (single terminal, default one entrypoint):
+      roslaunch colmag_ros final_gazebo_robot_demo.launch
+
+    Usage (two terminals, when franka_gazebo is started separately):
+      Terminal A: roslaunch franka_gazebo panda.launch rviz:=false headless:=true \
+                    paused:=false controller:=position_joint_trajectory_controller
+      Terminal B: roslaunch colmag_ros final_gazebo_robot_demo.launch start_franka_gazebo:=false
+
+    Note on input mode: demo_input_mode defaults to ocr_canvas because the
+    dashboard C-confirm publishes /colmag/confirmed_label in ocr_canvas mode. The
+    real-board trajectory-preview red-cursor confirm seam is handled separately in
+    M95; do not switch demo_input_mode to trajectory for a final PASS until M95
+    lands.
+  -->
+
+  <!-- Operator knobs -->
+  <arg name="start_franka_gazebo" default="true" />
+  <arg name="headless" default="false" />
+  <arg name="paused" default="false" />
+  <arg name="rviz" default="false" />
+
+  <!-- Final robot-body route safety knobs -->
+  <arg name="allowed_task_set" default="safe_gazebo_demo" />
+  <arg name="allow_critical_tasks" default="false" />
+  <arg name="publish_task_command" default="false" />
+  <arg name="require_manual_confirm" default="true" />
+  <arg name="min_confidence" default="0.25" />
+  <arg name="demo_input_mode" default="ocr_canvas" />
+  <arg name="label_set" default="1,2,3,V,O,X,A,C" />
+  <arg name="dispatcher_mapping_name" default="m104c4_8symbol_gazebo" />
+  <arg name="integrated_dashboard_confirm_enabled" default="true" />
+  <arg name="publish_confirmed_label" default="true" />
+  <arg name="dashboard_controller_layout" default="rank_confirm" />
+  <arg name="dashboard_gamepad_enabled" default="false" />
+  <arg name="dashboard_virtual_buttons_enabled" default="true" />
+  <arg name="dashboard_dwell_confirm_sec" default="2.0" />
+  <arg name="dashboard_recognition_backend" default="dtw" />
+  <arg name="dashboard_candidate_labels" default="$(arg label_set)" />
+  <arg name="dashboard_debug_sample_panel" default="false" />
+
+  <arg name="recognizer_backend" default="dtw_template_bank" />
+  <arg name="dtw_template_bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="dtw_template_allowed_labels" default="1,2,3,V,O,X,A,C" />
+  <arg name="dtw_template_top_k" default="3" />
+  <arg name="dtw_template_max_distance" default="0.12" />
+  <arg name="dtw_template_min_margin" default="0.01" />
+  <arg name="dtw_template_min_confidence" default="0.30" />
+
+  <arg name="confirmed_topic" default="/colmag/confirmed_label" />
+  <arg name="task_command_topic" default="/colmag/task_command" />
+  <!-- Documentary: the fr3 bridge already targets this action by default; the
+       external franka_gazebo controller exposes exactly this action server. -->
+  <arg name="follow_joint_trajectory_action"
+       default="/position_joint_trajectory_controller/follow_joint_trajectory" />
+  <arg name="visible_bridge_goal_tolerance_rad" default="0.01" />
+  <arg name="visible_bridge_path_tolerance_rad" default="0.05" />
+  <arg name="visible_bridge_goal_time_tolerance_sec" default="1.0" />
+  <arg name="visible_bridge_home_or_ready_motion_duration_sec" default="4.0" />
+  <arg name="visible_bridge_home_or_ready_final_hold_sec" default="1.0" />
+  <arg name="visible_bridge_home_or_ready_bounded_success_enabled" default="true" />
+  <arg name="visible_bridge_home_or_ready_bounded_success_tolerance_rad" default="0.01" />
+
+  <!-- External franka_gazebo Panda action-server stack (robot body + controller).
+       Set start_franka_gazebo:=false to run this stack in a separate terminal. -->
+  <group if="$(arg start_franka_gazebo)">
+    <include file="$(find franka_gazebo)/launch/panda.launch">
+      <arg name="rviz" value="$(arg rviz)" />
+      <arg name="headless" value="$(arg headless)" />
+      <arg name="paused" value="$(arg paused)" />
+      <arg name="controller" value="position_joint_trajectory_controller" />
+    </include>
+  </group>
+
+  <!-- COLMAG DTW GUI/confirm -> task_dispatcher_node -> fr3 bridge -> FollowJointTrajectory.
+       task_command is produced ONLY by task_dispatcher_node; the dashboard keeps
+       publish_task_command=false. gazebo_task_executor / marker route is never
+       included here. -->
+  <include file="$(find colmag_ros)/launch/dtw_mouse_demo_frontend.launch">
+    <arg name="enable_task_dispatch" value="true" />
+    <arg name="require_manual_confirm" value="$(arg require_manual_confirm)" />
+    <arg name="allowed_task_set" value="$(arg allowed_task_set)" />
+    <arg name="allow_critical_tasks" value="$(arg allow_critical_tasks)" />
+    <arg name="publish_task_command" value="$(arg publish_task_command)" />
+    <arg name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
+    <arg name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
+    <arg name="min_confidence" value="$(arg min_confidence)" />
+    <arg name="label_set" value="$(arg label_set)" />
+    <arg name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
+    <arg name="dashboard_controller_layout" value="$(arg dashboard_controller_layout)" />
+    <arg name="dashboard_gamepad_enabled" value="$(arg dashboard_gamepad_enabled)" />
+    <arg name="dashboard_virtual_buttons_enabled" value="$(arg dashboard_virtual_buttons_enabled)" />
+    <arg name="dashboard_dwell_confirm_sec" value="$(arg dashboard_dwell_confirm_sec)" />
+    <arg name="dashboard_candidate_labels" value="$(arg dashboard_candidate_labels)" />
+    <arg name="dashboard_debug_sample_panel" value="$(arg dashboard_debug_sample_panel)" />
+    <arg name="confirmed_topic" value="$(arg confirmed_topic)" />
+    <arg name="task_command_topic" value="$(arg task_command_topic)" />
+    <arg name="recognizer_backend" value="$(arg recognizer_backend)" />
+    <arg name="dtw_template_bank_path" value="$(arg dtw_template_bank_path)" />
+    <arg name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
+    <arg name="dtw_template_top_k" value="$(arg dtw_template_top_k)" />
+    <arg name="dtw_template_max_distance" value="$(arg dtw_template_max_distance)" />
+    <arg name="dtw_template_min_margin" value="$(arg dtw_template_min_margin)" />
+    <arg name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
+    <arg name="dispatcher_gazebo_only" value="true" />
+  </include>
+
+  <node pkg="colmag_gazebo_stub"
+        type="fr3_gazebo_visible_task_bridge_node.py"
+        name="fr3_gazebo_visible_task_bridge_node"
+        output="screen">
+    <param name="task_command_topic" value="$(arg task_command_topic)" />
+    <param name="demo_task_state_topic" value="/colmag/fr3_demo_task_state" />
+    <param name="goal_tolerance_rad" value="$(arg visible_bridge_goal_tolerance_rad)" />
+    <param name="path_tolerance_rad" value="$(arg visible_bridge_path_tolerance_rad)" />
+    <param name="goal_time_tolerance_sec" value="$(arg visible_bridge_goal_time_tolerance_sec)" />
+    <param name="home_or_ready_motion_duration_sec" value="$(arg visible_bridge_home_or_ready_motion_duration_sec)" />
+    <param name="home_or_ready_final_hold_sec" value="$(arg visible_bridge_home_or_ready_final_hold_sec)" />
+    <param name="home_or_ready_bounded_success_enabled" value="$(arg visible_bridge_home_or_ready_bounded_success_enabled)" />
+    <param name="home_or_ready_bounded_success_tolerance_rad" value="$(arg visible_bridge_home_or_ready_bounded_success_tolerance_rad)" />
+    <param name="allow_missing_gazebo_flag" value="false" />
+  </node>
+</launch>

@@ -1,0 +1,73 @@
+<launch>
+  <!--
+    Stable COLMAG operator alias for the M104-C4 8-symbol DTW template-bank to
+    Gazebo Panda robot-body demo.
+
+    Thin wrapper only. Runtime behavior is owned by:
+      m104c4_8symbol_dtw_gazebo_robot_body_demo.launch
+
+    No marker route, no candidate_panel, no auto-confirm, no serial hardware,
+    no real FR3 controller path.
+  -->
+
+  <arg name="start_franka_gazebo" default="true" />
+  <arg name="headless" default="false" />
+  <arg name="paused" default="false" />
+  <arg name="rviz" default="false" />
+
+  <arg name="bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="dtw_template_allowed_labels" default="1,2,3,V,O,X,A,C" />
+  <arg name="dtw_template_top_k" default="3" />
+  <arg name="dtw_template_max_distance" default="0.12" />
+  <arg name="dtw_template_min_margin" default="0.01" />
+  <arg name="dtw_template_min_confidence" default="0.30" />
+  <arg name="label_set" default="1,2,3,V,O,X,A,C" />
+
+  <arg name="allowed_task_set" default="safe_gazebo_demo" />
+  <arg name="allow_critical_tasks" default="false" />
+  <arg name="publish_task_command" default="false" />
+  <arg name="require_manual_confirm" default="true" />
+  <arg name="min_confidence" default="0.25" />
+  <arg name="demo_input_mode" default="ocr_canvas" />
+  <arg name="dispatcher_mapping_name" default="m104c4_8symbol_gazebo" />
+  <arg name="integrated_dashboard_confirm_enabled" default="true" />
+  <arg name="publish_confirmed_label" default="true" />
+  <arg name="dashboard_controller_layout" default="rank_confirm" />
+  <arg name="dashboard_gamepad_enabled" default="false" />
+  <arg name="dashboard_virtual_buttons_enabled" default="true" />
+  <arg name="dashboard_dwell_confirm_sec" default="2.0" />
+  <arg name="dashboard_recognition_backend" default="dtw" />
+  <arg name="dashboard_candidate_labels" default="1,2,3,V,O,X,A,C" />
+  <arg name="dashboard_debug_sample_panel" default="false" />
+
+  <include file="$(find colmag_ros)/launch/m104c4_8symbol_dtw_gazebo_robot_body_demo.launch">
+    <arg name="start_franka_gazebo" value="$(arg start_franka_gazebo)" />
+    <arg name="headless" value="$(arg headless)" />
+    <arg name="paused" value="$(arg paused)" />
+    <arg name="rviz" value="$(arg rviz)" />
+    <arg name="bank_path" value="$(arg bank_path)" />
+    <arg name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
+    <arg name="dtw_template_top_k" value="$(arg dtw_template_top_k)" />
+    <arg name="dtw_template_max_distance" value="$(arg dtw_template_max_distance)" />
+    <arg name="dtw_template_min_margin" value="$(arg dtw_template_min_margin)" />
+    <arg name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
+    <arg name="label_set" value="$(arg label_set)" />
+    <arg name="allowed_task_set" value="$(arg allowed_task_set)" />
+    <arg name="allow_critical_tasks" value="$(arg allow_critical_tasks)" />
+    <arg name="publish_task_command" value="$(arg publish_task_command)" />
+    <arg name="require_manual_confirm" value="$(arg require_manual_confirm)" />
+    <arg name="min_confidence" value="$(arg min_confidence)" />
+    <arg name="demo_input_mode" value="$(arg demo_input_mode)" />
+    <arg name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
+    <arg name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
+    <arg name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
+    <arg name="dashboard_controller_layout" value="$(arg dashboard_controller_layout)" />
+    <arg name="dashboard_gamepad_enabled" value="$(arg dashboard_gamepad_enabled)" />
+    <arg name="dashboard_virtual_buttons_enabled" value="$(arg dashboard_virtual_buttons_enabled)" />
+    <arg name="dashboard_dwell_confirm_sec" value="$(arg dashboard_dwell_confirm_sec)" />
+    <arg name="dashboard_recognition_backend" value="$(arg dashboard_recognition_backend)" />
+    <arg name="dashboard_candidate_labels" value="$(arg dashboard_candidate_labels)" />
+    <arg name="dashboard_debug_sample_panel" value="$(arg dashboard_debug_sample_panel)" />
+  </include>
+</launch>

@@ -1,0 +1,51 @@
+<launch>
+  <!-- DTW real-board frontend -> Gazebo Panda robot-body validation route. -->
+  <arg name="board_source" default="mock" />
+  <arg name="port" default="/dev/ttyACM0" />
+  <arg name="baudrate" default="921600" />
+  <arg name="start_franka_gazebo" default="true" />
+  <arg name="headless" default="false" />
+  <arg name="paused" default="false" />
+  <arg name="rviz" default="false" />
+  <arg name="bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="real_board_demo_allowed_labels" default="1,2,3,V,O,C" />
+  <arg name="task_command_topic" default="/colmag/task_command" />
+  <arg name="demo_task_state_topic" default="/colmag/fr3_demo_task_state" />
+  <arg name="follow_joint_trajectory_action"
+       default="/position_joint_trajectory_controller/follow_joint_trajectory" />
+
+  <group if="$(arg start_franka_gazebo)">
+    <include file="$(find franka_gazebo)/launch/panda.launch">
+      <arg name="rviz" value="$(arg rviz)" />
+      <arg name="headless" value="$(arg headless)" />
+      <arg name="paused" value="$(arg paused)" />
+      <arg name="controller" value="position_joint_trajectory_controller" />
+    </include>
+  </group>
+
+  <include file="$(find colmag_ros)/launch/dtw_real_board_demo_frontend.launch">
+    <arg name="board_source" value="$(arg board_source)" />
+    <arg name="port" value="$(arg port)" />
+    <arg name="baudrate" value="$(arg baudrate)" />
+    <arg name="bank_path" value="$(arg bank_path)" />
+    <arg name="real_board_demo_allowed_labels" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="dtw_template_allowed_labels" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="label_set" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="dashboard_candidate_labels" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="task_command_topic" value="$(arg task_command_topic)" />
+    <arg name="demo_task_state_topic" value="$(arg demo_task_state_topic)" />
+    <arg name="enable_task_dispatch" value="true" />
+    <arg name="publish_task_command" value="false" />
+    <arg name="safety_badge" value="GAZEBO ONLY / NO REAL ROBOT" />
+    <arg name="footer_text" value="COLMAG trajectory dashboard | dwell confirm -> Gazebo Panda" />
+  </include>
+
+  <node pkg="colmag_gazebo_stub" type="fr3_gazebo_visible_task_bridge_node.py"
+        name="fr3_gazebo_visible_task_bridge_node" output="screen">
+    <param name="task_command_topic" value="$(arg task_command_topic)" />
+    <param name="demo_task_state_topic" value="$(arg demo_task_state_topic)" />
+    <param name="follow_joint_trajectory_action" value="$(arg follow_joint_trajectory_action)" />
+    <param name="allow_missing_gazebo_flag" value="false" />
+  </node>
+</launch>

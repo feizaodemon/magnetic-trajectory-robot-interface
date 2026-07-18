@@ -1,0 +1,103 @@
+name: magnetic-trajectory-interface-fr3
+
+x-fr3-common: &fr3-common
+  image: ${COLMAG_FR3_DOCKER_IMAGE:-magnetic-trajectory-interface:fr3-noetic}
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.noetic-fr3
+    args:
+      COLMAG_GIT_SHA: ${COLMAG_GIT_SHA:-uncommitted}
+  network_mode: host
+  ipc: host
+  cap_add:
+    - SYS_NICE
+    - IPC_LOCK
+  ulimits:
+    rtprio: 99
+    memlock: -1
+    nice: -20
+  environment:
+    FR3_ROBOT_IP: ${FR3_ROBOT_IP:-__REQUIRED_FR3_ROBOT_IP__}
+    ROS_MASTER_URI: ${ROS_MASTER_URI:-http://localhost:11311}
+  stdin_open: true
+  tty: true
+
+services:
+  fr3-hardware-dry-run:
+    <<: *fr3-common
+    profiles: [fr3-hardware-dry-run]
+    environment:
+      FR3_ROBOT_IP: ${FR3_ROBOT_IP:-__REQUIRED_FR3_ROBOT_IP__}
+      ROS_MASTER_URI: ${ROS_MASTER_URI:-http://localhost:11311}
+      COLMAG_FR3_MODE: dry-run
+      COLMAG_HARDWARE_EXECUTION_ENABLED: "false"
+      COLMAG_SEND_GOALS: "false"
+    command:
+      - roslaunch
+      - colmag_ros
+      - colmag_fr3_hardware_stack.launch
+      - robot_ip:=${FR3_ROBOT_IP:-__REQUIRED_FR3_ROBOT_IP__}
+      - send_goals:=false
+      - hardware_execution_enabled:=false
+      - hardware_profile:=dry-run
+
+  fr3-hardware-active:
+    <<: *fr3-common
+    profiles: [fr3-hardware-active]
+    environment:
+      FR3_ROBOT_IP: ${FR3_ROBOT_IP:-__REQUIRED_FR3_ROBOT_IP__}
+      ROS_MASTER_URI: ${ROS_MASTER_URI:-http://localhost:11311}
+      DISPLAY: ${DISPLAY:-:0}
+      QT_X11_NO_MITSHM: "1"
+      XAUTHORITY: /root/.Xauthority
+      COLMAG_FR3_MODE: active
+      COLMAG_HARDWARE_EXECUTION_ENABLED: ${COLMAG_HARDWARE_EXECUTION_ENABLED:-false}
+      COLMAG_SEND_GOALS: ${COLMAG_SEND_GOALS:-false}
+    command:
+      - roslaunch
+      - colmag_ros
+      - colmag_mouse_fr3_hardware_demo.launch
+      - robot_ip:=${FR3_ROBOT_IP:-__REQUIRED_FR3_ROBOT_IP__}
+      - send_goals:=${COLMAG_SEND_GOALS:-false}
+      - hardware_execution_enabled:=${COLMAG_HARDWARE_EXECUTION_ENABLED:-false}
+      - hardware_profile:=fr3-hardware-active
+      - realtime_config:=enforce
+      - one_shot_hardware_mode:=true
+      - max_motion_goals_per_process:=${COLMAG_MAX_MOTION_GOALS_PER_PROCESS:-1}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${COLMAG_XAUTHORITY:-/dev/null}:/root/.Xauthority:ro
+
+  fr3-hardware-active-board:
+    <<: *fr3-common
+    profiles: [fr3-hardware-active-board]
+    environment:
+      FR3_ROBOT_IP: ${FR3_ROBOT_IP:-__REQUIRED_FR3_ROBOT_IP__}
+      ROS_MASTER_URI: ${ROS_MASTER_URI:-http://localhost:11311}
+      DISPLAY: ${DISPLAY:-:0}
+      QT_X11_NO_MITSHM: "1"
+      XAUTHORITY: /root/.Xauthority
+      COLMAG_FR3_MODE: active
+      COLMAG_HARDWARE_EXECUTION_ENABLED: ${COLMAG_HARDWARE_EXECUTION_ENABLED:-false}
+      COLMAG_SEND_GOALS: ${COLMAG_SEND_GOALS:-false}
+    command:
+      - roslaunch
+      - colmag_ros
+      - colmag_real_board_fr3_hardware_demo.launch
+      - robot_ip:=${FR3_ROBOT_IP:-__REQUIRED_FR3_ROBOT_IP__}
+      - board_source:=serial
+      - port:=/dev/ttyACM0
+      - baudrate:=921600
+      - send_goals:=${COLMAG_SEND_GOALS:-false}
+      - hardware_execution_enabled:=${COLMAG_HARDWARE_EXECUTION_ENABLED:-false}
+      - hardware_profile:=fr3-hardware-active
+      - realtime_config:=enforce
+      - one_shot_hardware_mode:=true
+      - max_motion_goals_per_process:=${COLMAG_MAX_MOTION_GOALS_PER_PROCESS:-1}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${COLMAG_XAUTHORITY:-/dev/null}:/root/.Xauthority:ro
+    devices:
+      - ${COLMAG_BOARD_DEVICE:-/dev/ttyACM0}:/dev/ttyACM0
+    group_add:
+      - ${COLMAG_DIALOUT_GID:-20}

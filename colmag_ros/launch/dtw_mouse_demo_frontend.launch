@@ -1,0 +1,108 @@
+<launch>
+  <!-- Shared DTW mouse input, dashboard confirmation, and optional dispatcher.
+       This frontend owns no Gazebo or real-FR3 backend. -->
+
+  <arg name="enable_task_dispatch" default="true" />
+  <arg name="symbol_capture_topic" default="/colmag/symbol_capture" />
+  <arg name="symbol_candidates_topic" default="/colmag/symbol_candidates" />
+  <arg name="recognized_topic" default="/colmag/recognized_label" />
+  <arg name="confirmed_topic" default="/colmag/confirmed_label" />
+  <arg name="task_command_topic" default="/colmag/task_command" />
+  <arg name="demo_task_state_topic" default="/colmag/fr3_demo_task_state" />
+
+  <arg name="recognizer_backend" default="dtw_template_bank" />
+  <arg name="dtw_template_bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="dtw_template_allowed_labels" default="1,2,3,V,O,X,A,C" />
+  <arg name="dtw_template_top_k" default="3" />
+  <arg name="dtw_template_max_distance" default="0.12" />
+  <arg name="dtw_template_min_margin" default="0.01" />
+  <arg name="dtw_template_min_confidence" default="0.30" />
+  <arg name="label_set" default="1,2,3,V,O,X,A,C" />
+  <arg name="min_confidence" default="0.25" />
+
+  <arg name="require_manual_confirm" default="true" />
+  <arg name="integrated_dashboard_confirm_enabled" default="true" />
+  <arg name="publish_confirmed_label" default="true" />
+  <arg name="publish_task_command" default="false" />
+  <arg name="dashboard_controller_layout" default="rank_confirm" />
+  <arg name="dashboard_gamepad_enabled" default="false" />
+  <arg name="dashboard_virtual_buttons_enabled" default="true" />
+  <arg name="dashboard_dwell_confirm_sec" default="2.0" />
+  <arg name="dashboard_candidate_labels" default="$(arg label_set)" />
+  <arg name="dashboard_debug_sample_panel" default="false" />
+  <arg name="interaction_profile" default="mouse" />
+  <arg name="safety_badge" default="" />
+  <arg name="footer_text" default="" />
+  <arg name="route_scope_text" default="DTW frontend. Backend selected by the parent launch." />
+  <arg name="confirm_policy_text" default="Confirm publishes selected DTW label." />
+
+  <arg name="dispatcher_mapping_name" default="m104c4_8symbol_gazebo" />
+  <arg name="allowed_task_set" default="safe_gazebo_demo" />
+  <arg name="allow_critical_tasks" default="false" />
+  <arg name="dispatcher_gazebo_only" default="true" />
+  <arg name="publish_once" default="false" />
+
+  <param name="/colmag/dtw_require_manual_confirm" value="$(arg require_manual_confirm)" />
+
+  <node pkg="colmag_ros"
+        type="magnetic_trajectory_dashboard_node.py"
+        name="magnetic_trajectory_dashboard_node"
+        output="screen">
+    <param name="demo_input_mode" value="ocr_canvas" />
+    <param name="interaction_profile" value="$(arg interaction_profile)" />
+    <param name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <param name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
+    <param name="confirmed_label_topic" value="$(arg confirmed_topic)" />
+    <param name="task_command_topic" value="$(arg task_command_topic)" />
+    <param name="demo_task_state_topic" value="$(arg demo_task_state_topic)" />
+    <param name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
+    <param name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
+    <param name="publish_task_command" value="$(arg publish_task_command)" />
+    <param name="dashboard_controller_layout" value="$(arg dashboard_controller_layout)" />
+    <param name="dashboard_gamepad_enabled" value="$(arg dashboard_gamepad_enabled)" />
+    <param name="dashboard_virtual_buttons_enabled" value="$(arg dashboard_virtual_buttons_enabled)" />
+    <param name="dashboard_dwell_confirm_sec" value="$(arg dashboard_dwell_confirm_sec)" />
+    <param name="recognition_backend" value="dtw" />
+    <param name="candidate_labels" value="$(arg dashboard_candidate_labels)" />
+    <param name="dashboard_debug_sample_panel" value="$(arg dashboard_debug_sample_panel)" />
+    <param name="safety_badge" value="$(arg safety_badge)" />
+    <param name="footer_text" value="$(arg footer_text)" />
+    <param name="route_scope_text" value="$(arg route_scope_text)" />
+    <param name="confirm_policy_text" value="$(arg confirm_policy_text)" />
+  </node>
+
+  <node pkg="colmag_ros"
+        type="trajectory_symbol_top3_recognizer_node.py"
+        name="trajectory_symbol_top3_recognizer_node"
+        output="screen">
+    <param name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <param name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
+    <param name="recognized_label_topic" value="$(arg recognized_topic)" />
+    <param name="min_confidence" value="$(arg min_confidence)" />
+    <param name="recognizer_backend" value="$(arg recognizer_backend)" />
+    <param name="label_set" value="$(arg label_set)" />
+    <param name="dtw_template_bank_path" value="$(arg dtw_template_bank_path)" />
+    <param name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
+    <param name="dtw_template_top_k" value="$(arg dtw_template_top_k)" />
+    <param name="dtw_template_max_distance" value="$(arg dtw_template_max_distance)" />
+    <param name="dtw_template_min_margin" value="$(arg dtw_template_min_margin)" />
+    <param name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
+  </node>
+
+  <group if="$(arg enable_task_dispatch)">
+    <node pkg="colmag_ros"
+          type="task_dispatcher_node.py"
+          name="task_dispatcher_node"
+          output="screen">
+      <param name="confirmed_label_topic" value="$(arg confirmed_topic)" />
+      <param name="task_command_topic" value="$(arg task_command_topic)" />
+      <param name="min_confidence" value="$(arg min_confidence)" />
+      <param name="publish_once" value="$(arg publish_once)" />
+      <param name="gazebo_only" value="$(arg dispatcher_gazebo_only)" />
+      <param name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
+      <param name="allowed_task_set" value="$(arg allowed_task_set)" />
+      <param name="allow_critical_tasks" value="$(arg allow_critical_tasks)" />
+    </node>
+  </group>
+</launch>

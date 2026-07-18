@@ -1,0 +1,41 @@
+<launch>
+  <!-- Real-FR3 bring-up only. This launch connects franka_control and starts
+       the standard position trajectory controller. It never runs recovery,
+       sends a trajectory, or loads the experimental Strategy B controller. -->
+
+  <arg name="robot_ip" doc="Required IP/hostname of the lab FR3; never hardcode it in this file" />
+  <arg name="robot" default="fr3" />
+  <arg name="arm_id" default="fr3" />
+  <arg name="load_gripper" default="false" />
+  <arg name="controller_name" default="position_joint_trajectory_controller" />
+  <arg name="controller_config_file"
+       default="$(find colmag_ros)/config/colmag_fr3_hardware_controllers.yaml" />
+  <arg name="franka_control_launch_file"
+       default="$(find franka_control)/launch/franka_control.launch" />
+  <arg name="robot_description_source" default="franka_control" />
+  <arg name="xacro_args" default="" />
+  <arg name="realtime_config" default="enforce" />
+  <arg name="start_controller" default="true" />
+
+  <include file="$(arg franka_control_launch_file)">
+    <arg name="robot_ip" value="$(arg robot_ip)" />
+    <arg name="robot" value="$(arg robot)" />
+    <arg name="arm_id" value="$(arg arm_id)" />
+    <arg name="load_gripper" value="$(arg load_gripper)" />
+    <arg name="xacro_args" value="$(arg xacro_args)" />
+  </include>
+
+  <!-- franka_control 0.10.x loads enforce by default. This explicit param keeps
+       the contract visible and allows only deliberate lab overrides. -->
+  <param name="/franka_control/realtime_config" value="$(arg realtime_config)" />
+  <param name="/colmag_fr3_hardware_bringup/robot_description_source"
+         value="$(arg robot_description_source)" />
+  <rosparam command="load" file="$(arg controller_config_file)" subst_value="true" />
+
+  <node pkg="controller_manager"
+        type="spawner"
+        name="colmag_fr3_trajectory_controller_spawner"
+        output="screen"
+        if="$(arg start_controller)"
+        args="$(arg controller_name)" />
+</launch>

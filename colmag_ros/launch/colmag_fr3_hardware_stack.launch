@@ -1,0 +1,53 @@
+<launch>
+  <!-- Production real-FR3 controller + Strategy A adapter composition.
+       Defaults connect the controller graph but suppress every COLMAG goal. -->
+
+  <arg name="robot_ip" />
+  <arg name="arm_id" default="fr3" />
+  <arg name="load_gripper" default="false" />
+  <arg name="controller_name" default="position_joint_trajectory_controller" />
+  <arg name="controller_config_file"
+       default="$(find colmag_ros)/config/colmag_fr3_hardware_controllers.yaml" />
+  <arg name="realtime_config" default="enforce" />
+  <arg name="start_controller" default="true" />
+  <arg name="send_goals" default="false" />
+  <arg name="hardware_execution_enabled" default="false" />
+  <arg name="hardware_profile" default="dry-run" />
+  <arg name="joint_names"
+       default="$(arg arm_id)_joint1, $(arg arm_id)_joint2, $(arg arm_id)_joint3, $(arg arm_id)_joint4, $(arg arm_id)_joint5, $(arg arm_id)_joint6, $(arg arm_id)_joint7" />
+  <arg name="target_joint_name" default="$(arg arm_id)_joint1" />
+  <arg name="joint_nudge_delta_rad" default="0.10" />
+  <arg name="one_shot_hardware_mode" default="true" />
+  <arg name="max_motion_goals_per_process" default="1" />
+  <arg name="execution_timeout_sec" default="15.0" />
+  <arg name="allowed_tasks"
+       default="MOVE_LEFT, HEXAGON_TRAJECTORY, MOVE_RIGHT, STOP_OR_CANCEL" />
+
+  <include file="$(find colmag_ros)/launch/colmag_fr3_hardware_bringup.launch">
+    <arg name="robot_ip" value="$(arg robot_ip)" />
+    <arg name="arm_id" value="$(arg arm_id)" />
+    <arg name="load_gripper" value="$(arg load_gripper)" />
+    <arg name="controller_name" value="$(arg controller_name)" />
+    <arg name="controller_config_file" value="$(arg controller_config_file)" />
+    <arg name="realtime_config" value="$(arg realtime_config)" />
+    <arg name="start_controller" value="$(arg start_controller)" />
+  </include>
+
+  <include file="$(find colmag_ros)/launch/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch">
+    <arg name="arm_id" value="$(arg arm_id)" />
+    <arg name="controller_name" value="$(arg controller_name)" />
+    <arg name="follow_joint_trajectory_action"
+         value="/$(arg controller_name)/follow_joint_trajectory" />
+    <arg name="controller_joint_names_param" value="/$(arg controller_name)/joints" />
+    <arg name="joint_names" value="$(arg joint_names)" />
+    <arg name="target_joint_name" value="$(arg target_joint_name)" />
+    <arg name="send_goals" value="$(arg send_goals)" />
+    <arg name="hardware_execution_enabled" value="$(arg hardware_execution_enabled)" />
+    <arg name="hardware_profile" value="$(arg hardware_profile)" />
+    <arg name="joint_nudge_delta_rad" value="$(arg joint_nudge_delta_rad)" />
+    <arg name="one_shot_hardware_mode" value="$(arg one_shot_hardware_mode)" />
+    <arg name="max_motion_goals_per_process" value="$(arg max_motion_goals_per_process)" />
+    <arg name="execution_timeout_sec" value="$(arg execution_timeout_sec)" />
+    <arg name="allowed_tasks" value="$(arg allowed_tasks)" />
+  </include>
+</launch>

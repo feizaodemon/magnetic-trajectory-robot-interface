@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+*.pyo
+
+venv/
+.venv/
+env/
+
+.vscode/
+.ipynb_checkpoints/
+.pytest_cache/
+pytest-cache-files-*/
+
+.DS_Store
+Thumbs.db
+
+captures/
+.tmp/
+colmag_ros/logs/*
+!colmag_ros/logs/.gitkeep
+.venv_colmag_ocr/
+.venv_classifier/
+
+# Local generated outputs
+outputs/
+
+# Local real-FR3 Docker credentials/gates. Commit only the .example template.
+docker/fr3-hardware.env

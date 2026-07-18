@@ -1,0 +1,38 @@
+<launch>
+  <!--
+    M104-B2e recognizer-only mouse smoke for the opt-in DTW template bank.
+
+    This launch starts only trajectory_symbol_top3_recognizer_node.py. It does
+    not start the dashboard, task dispatcher, Gazebo, FR3, or any robot
+    execution path. The generated y-flip bank lives under ignored outputs/ and
+    must not be committed.
+  -->
+  <arg name="symbol_capture_topic" default="/colmag/symbol_capture" />
+  <arg name="symbol_candidates_topic" default="/colmag/symbol_candidates" />
+  <arg name="recognized_label_topic" default="/colmag/recognized_label" />
+  <arg name="recognizer_backend" default="dtw_template_bank" />
+  <arg name="dtw_template_bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="dtw_template_allowed_labels" default="1,2,3,V,O,X,A,C" />
+  <arg name="dtw_template_top_k" default="3" />
+  <arg name="dtw_template_max_distance" default="0.12" />
+  <arg name="dtw_template_min_margin" default="0.01" />
+  <arg name="dtw_template_min_confidence" default="0.30" />
+  <arg name="label_set" default="1,2,3,V,O,X,A,C" />
+  <arg name="min_confidence" default="0.0" />
+
+  <node pkg="colmag_ros" type="trajectory_symbol_top3_recognizer_node.py" name="m104b2d_dtw_template_bank_recognizer" output="screen">
+    <param name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <param name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
+    <param name="recognized_label_topic" value="$(arg recognized_label_topic)" />
+    <param name="recognizer_backend" value="$(arg recognizer_backend)" />
+    <param name="dtw_template_bank_path" value="$(arg dtw_template_bank_path)" />
+    <param name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
+    <param name="dtw_template_top_k" value="$(arg dtw_template_top_k)" />
+    <param name="dtw_template_max_distance" value="$(arg dtw_template_max_distance)" />
+    <param name="dtw_template_min_margin" value="$(arg dtw_template_min_margin)" />
+    <param name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
+    <param name="label_set" value="$(arg label_set)" />
+    <param name="min_confidence" value="$(arg min_confidence)" />
+  </node>
+</launch>

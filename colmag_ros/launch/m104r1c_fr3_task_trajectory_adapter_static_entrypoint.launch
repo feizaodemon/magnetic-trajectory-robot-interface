@@ -1,0 +1,101 @@
+<launch>
+  <!-- Strategy A adapter entrypoint. Defaults are software-only and no-motion.
+       It never starts franka_control, controller_manager, Gazebo, GUI, serial,
+       or recovery. Hardware sending requires explicit triple-gate overrides. -->
+
+  <arg name="config_file"
+       default="$(find colmag_ros)/config/colmag_fr3_task_trajectory_adapter.yaml" />
+  <arg name="command_topic" default="/colmag/task_command" />
+  <arg name="state_topic" default="/colmag/fr3_task_trajectory_adapter_state" />
+  <arg name="adapter_session_topic" default="/colmag/fr3_adapter_session" />
+  <arg name="controller_name" default="position_joint_trajectory_controller" />
+  <arg name="follow_joint_trajectory_action"
+       default="/position_joint_trajectory_controller/follow_joint_trajectory" />
+  <arg name="controller_joint_names_param"
+       default="/position_joint_trajectory_controller/joints" />
+  <arg name="joint_state_topic" default="/franka_state_controller/joint_states" />
+  <arg name="robot_description_param" default="/robot_description" />
+  <arg name="arm_id" default="fr3" />
+  <arg name="joint_names"
+       default="$(arg arm_id)_joint1, $(arg arm_id)_joint2, $(arg arm_id)_joint3, $(arg arm_id)_joint4, $(arg arm_id)_joint5, $(arg arm_id)_joint6, $(arg arm_id)_joint7" />
+  <arg name="target_joint_name" default="$(arg arm_id)_joint1" />
+  <arg name="hexagon_primary_joint_name" default="$(arg arm_id)_joint1" />
+  <arg name="hexagon_secondary_joint_name" default="$(arg arm_id)_joint6" />
+  <arg name="send_goals" default="false" />
+  <arg name="hardware_execution_enabled" default="false" />
+  <arg name="hardware_profile" default="dry-run" />
+  <arg name="reject_gazebo_only_commands" default="true" />
+  <arg name="reject_controls_real_robot_true" default="true" />
+  <arg name="joint_state_max_age_sec" default="0.5" />
+  <arg name="joint_state_future_tolerance_sec" default="0.05" />
+  <arg name="move_left_joint_delta_rad" default="0.10" />
+  <arg name="joint_nudge_delta_rad" default="$(arg move_left_joint_delta_rad)" />
+  <arg name="max_abs_joint_delta_rad" default="0.12" />
+  <arg name="goal_duration_sec" default="3.0" />
+  <arg name="trajectory_start_delay_sec" default="0.2" />
+  <arg name="max_velocity_rad_s" default="0.12" />
+  <arg name="max_acceleration_rad_s2" default="0.18" />
+  <arg name="sample_period_sec" default="0.10" />
+  <arg name="joint_limit_margin_rad" default="0.02" />
+  <arg name="action_server_wait_sec" default="0.5" />
+  <arg name="execution_timeout_sec" default="15.0" />
+  <arg name="final_state_timeout_sec" default="1.0" />
+  <arg name="watchdog_period_sec" default="0.05" />
+  <arg name="final_joint_error_tolerance_rad" default="0.01" />
+  <arg name="one_shot_hardware_mode" default="true" />
+  <arg name="max_motion_goals_per_process" default="1" />
+  <arg name="command_max_age_sec" default="2.0" />
+  <arg name="command_future_tolerance_sec" default="0.1" />
+  <arg name="recent_command_cache_size" default="128" />
+  <arg name="supported_schema_version" default="1" />
+  <arg name="allowed_tasks"
+       default="MOVE_LEFT, HEXAGON_TRAJECTORY, MOVE_RIGHT, STOP_OR_CANCEL" />
+
+  <rosparam command="load" file="$(arg config_file)" />
+
+  <node pkg="colmag_ros"
+        type="colmag_fr3_task_trajectory_adapter"
+        name="colmag_fr3_task_trajectory_adapter"
+        output="screen">
+    <param name="command_topic" value="$(arg command_topic)" />
+    <param name="state_topic" value="$(arg state_topic)" />
+    <param name="adapter_session_topic" value="$(arg adapter_session_topic)" />
+    <param name="controller_name" value="$(arg controller_name)" />
+    <param name="follow_joint_trajectory_action" value="$(arg follow_joint_trajectory_action)" />
+    <param name="controller_joint_names_param" value="$(arg controller_joint_names_param)" />
+    <param name="joint_state_topic" value="$(arg joint_state_topic)" />
+    <param name="robot_description_param" value="$(arg robot_description_param)" />
+    <param name="arm_id" value="$(arg arm_id)" />
+    <rosparam param="joint_names" subst_value="true">[$(arg joint_names)]</rosparam>
+    <param name="target_joint_name" value="$(arg target_joint_name)" />
+    <param name="hexagon_primary_joint_name" value="$(arg hexagon_primary_joint_name)" />
+    <param name="hexagon_secondary_joint_name" value="$(arg hexagon_secondary_joint_name)" />
+    <param name="send_goals" value="$(arg send_goals)" />
+    <param name="hardware_execution_enabled" value="$(arg hardware_execution_enabled)" />
+    <param name="hardware_profile" value="$(arg hardware_profile)" />
+    <param name="reject_gazebo_only_commands" value="$(arg reject_gazebo_only_commands)" />
+    <param name="reject_controls_real_robot_true" value="$(arg reject_controls_real_robot_true)" />
+    <param name="joint_state_max_age_sec" value="$(arg joint_state_max_age_sec)" />
+    <param name="joint_state_future_tolerance_sec" value="$(arg joint_state_future_tolerance_sec)" />
+    <param name="joint_nudge_delta_rad" value="$(arg joint_nudge_delta_rad)" />
+    <param name="max_abs_joint_delta_rad" value="$(arg max_abs_joint_delta_rad)" />
+    <param name="goal_duration_sec" value="$(arg goal_duration_sec)" />
+    <param name="trajectory_start_delay_sec" value="$(arg trajectory_start_delay_sec)" />
+    <param name="max_velocity_rad_s" value="$(arg max_velocity_rad_s)" />
+    <param name="max_acceleration_rad_s2" value="$(arg max_acceleration_rad_s2)" />
+    <param name="sample_period_sec" value="$(arg sample_period_sec)" />
+    <param name="joint_limit_margin_rad" value="$(arg joint_limit_margin_rad)" />
+    <param name="action_server_wait_sec" value="$(arg action_server_wait_sec)" />
+    <param name="execution_timeout_sec" value="$(arg execution_timeout_sec)" />
+    <param name="final_state_timeout_sec" value="$(arg final_state_timeout_sec)" />
+    <param name="watchdog_period_sec" value="$(arg watchdog_period_sec)" />
+    <param name="final_joint_error_tolerance_rad" value="$(arg final_joint_error_tolerance_rad)" />
+    <param name="one_shot_hardware_mode" value="$(arg one_shot_hardware_mode)" />
+    <param name="max_motion_goals_per_process" value="$(arg max_motion_goals_per_process)" />
+    <param name="command_max_age_sec" value="$(arg command_max_age_sec)" />
+    <param name="command_future_tolerance_sec" value="$(arg command_future_tolerance_sec)" />
+    <param name="recent_command_cache_size" value="$(arg recent_command_cache_size)" />
+    <param name="supported_schema_version" value="$(arg supported_schema_version)" />
+    <rosparam param="allowed_tasks" subst_value="true">[$(arg allowed_tasks)]</rosparam>
+  </node>
+</launch>

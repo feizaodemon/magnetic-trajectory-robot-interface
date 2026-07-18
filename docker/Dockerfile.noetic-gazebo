@@ -1,0 +1,106 @@
+ARG ROS_IMAGE=osrf/ros:noetic-desktop-full@sha256:7dbfb9576d8e6d226c31e06129a82aaab8702695f38eca2116918cb9b9308797
+
+FROM ${ROS_IMAGE} AS builder
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    ROS_PYTHON_VERSION=3 \
+    PYTHONUNBUFFERED=1 \
+    COLMAG_WS=/workspace/catkin_ws
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-catkin-pkg \
+    python3-numpy \
+    python3-serial \
+    python3-tk \
+    ros-noetic-actionlib \
+    ros-noetic-control-msgs \
+    ros-noetic-controller-interface \
+    ros-noetic-effort-controllers \
+    ros-noetic-franka-gazebo \
+    ros-noetic-gazebo-ros-control \
+    ros-noetic-gazebo-ros-pkgs \
+    ros-noetic-hardware-interface \
+    ros-noetic-joint-state-controller \
+    ros-noetic-joint-trajectory-controller \
+    ros-noetic-pluginlib \
+    ros-noetic-position-controllers \
+    ros-noetic-realtime-tools \
+    ros-noetic-robot-state-publisher \
+    ros-noetic-sensor-msgs \
+    ros-noetic-std-msgs \
+    ros-noetic-trajectory-msgs \
+    ros-noetic-xacro \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR ${COLMAG_WS}
+COPY colmag_ros src/colmag_ros
+COPY colmag_gazebo_stub src/colmag_gazebo_stub
+
+RUN source /opt/ros/noetic/setup.bash && \
+    catkin_make install && \
+    source install/setup.bash && \
+    python3 -c "import colmag_ros.dashboard_geometry, colmag_ros.dtw_template_bank_tools, colmag_ros.m104c4_execution_semantics" && \
+    python3 -m json.tool \
+      install/share/colmag_ros/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json \
+      >/dev/null
+
+FROM ${ROS_IMAGE} AS runtime
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ARG COLMAG_GIT_SHA=uncommitted
+
+LABEL org.opencontainers.image.revision="${COLMAG_GIT_SHA}"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    ROS_PYTHON_VERSION=3 \
+    PYTHONUNBUFFERED=1 \
+    QT_X11_NO_MITSHM=1 \
+    COLMAG_WS=/workspace/catkin_ws \
+    ROS_LOG_DIR=/workspace/runtime_logs/ros
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libgl1-mesa-dri \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    python3-numpy \
+    python3-serial \
+    python3-tk \
+    ros-noetic-actionlib \
+    ros-noetic-control-msgs \
+    ros-noetic-controller-interface \
+    ros-noetic-effort-controllers \
+    ros-noetic-franka-gazebo \
+    ros-noetic-gazebo-ros-control \
+    ros-noetic-gazebo-ros-pkgs \
+    ros-noetic-hardware-interface \
+    ros-noetic-joint-state-controller \
+    ros-noetic-joint-trajectory-controller \
+    ros-noetic-pluginlib \
+    ros-noetic-position-controllers \
+    ros-noetic-realtime-tools \
+    ros-noetic-robot-state-publisher \
+    ros-noetic-sensor-msgs \
+    ros-noetic-std-msgs \
+    ros-noetic-trajectory-msgs \
+    ros-noetic-xacro \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /workspace/catkin_ws/install /workspace/catkin_ws/install
+COPY docker/entrypoint.sh /ros_entrypoint_colmag.sh
+
+RUN chmod +x /ros_entrypoint_colmag.sh && \
+    mkdir -p /workspace/runtime_logs/ros && \
+    source /workspace/catkin_ws/install/setup.bash && \
+    python3 -c "import colmag_ros.dashboard_geometry, colmag_ros.dtw_template_bank_tools, colmag_ros.m104c4_execution_semantics" && \
+    test -f /workspace/catkin_ws/install/share/colmag_ros/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json
+
+WORKDIR /workspace
+ENTRYPOINT ["/ros_entrypoint_colmag.sh"]
+CMD ["roslaunch", "colmag_ros", "colmag_8symbol_gazebo_robot_body_demo.launch"]

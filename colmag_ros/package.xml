@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>colmag_ros</name>
+  <version>0.0.1</version>
+  <description>ROS1 wrapper nodes for the COLMAG serial MVP project.</description>
+
+  <maintainer email="todo@example.com">COLMAG Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>actionlib</depend>
+  <depend>control_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>urdf</depend>
+  <exec_depend>python3-serial</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>franka_control</exec_depend>
+  <exec_depend>joint_trajectory_controller</exec_depend>
+  <exec_depend>position_controllers</exec_depend>
+</package>

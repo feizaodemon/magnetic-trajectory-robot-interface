@@ -1,0 +1,221 @@
+<launch>
+  <!-- DTW-only magnetic-board input, recognition, dashboard, and confirmation.
+       Robot backends are owned by outer wrappers. This file has no Gazebo or
+       real-FR3 controller dependency. board_source defaults to mock. -->
+
+  <!-- ============================ input source ============================ -->
+  <!-- board_source: mock | serial | replay | none -->
+  <arg name="board_source" default="mock" />
+  <arg name="port" default="/dev/ttyACM0" />
+  <arg name="baudrate" default="921600" />
+  <arg name="project_src_path" default="$(find colmag_ros)/../src" />
+  <arg name="replay_sequence_id" default="1" />
+  <arg name="replay_loop" default="false" />
+
+  <!-- ========================= topic definitions ========================= -->
+  <arg name="raw_packet_topic" default="/colmag/raw_packet" />
+  <arg name="trajectory_topic" default="/colmag/trajectory_2d" />
+  <arg name="ui_state_topic" default="/colmag/ui_state" />
+  <arg name="symbol_capture_topic" default="/colmag/symbol_capture" />
+  <arg name="symbol_candidates_topic" default="/colmag/symbol_candidates" />
+  <arg name="recognized_topic" default="/colmag/recognized_label" />
+  <arg name="confirmed_topic" default="/colmag/confirmed_label" />
+  <arg name="task_command_topic" default="/colmag/task_command" />
+  <arg name="demo_task_state_topic" default="/colmag/fr3_demo_task_state" />
+
+  <!-- ===== legacy magnetic_ui_state diagnostics (controls disabled here) = -->
+  <arg name="enable_legacy_control_zones" default="false" />
+  <arg name="ui_dwell_sec" default="2.0" />
+  <arg name="ui_capture_window_sec" default="2.0" />
+  <arg name="ui_min_capture_points" default="8" />
+  <arg name="ui_zone_radius" default="0.012" />
+
+  <!-- ================= dtw_template_bank recognizer knobs ================ -->
+  <!-- The bank is the tracked curated C4/LAB2 8-symbol runtime asset. -->
+  <arg name="recognizer_backend" default="dtw_template_bank" />
+  <arg name="bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="real_board_demo_allowed_labels" default="1,2,3,V,O,C" />
+  <arg name="dtw_template_allowed_labels" default="$(arg real_board_demo_allowed_labels)" />
+  <arg name="dtw_template_top_k" default="3" />
+  <arg name="dtw_template_max_distance" default="0.12" />
+  <arg name="dtw_template_min_margin" default="0.01" />
+  <arg name="dtw_template_min_confidence" default="0.30" />
+  <arg name="label_set" default="$(arg real_board_demo_allowed_labels)" />
+  <arg name="min_confidence" default="0.25" />
+
+  <!-- ==================== dashboard / confirm knobs ====================== -->
+  <arg name="candidate_preview_enabled" default="true" />
+  <arg name="interaction_profile" default="real_board" />
+  <arg name="integrated_dashboard_confirm_enabled" default="true" />
+  <arg name="publish_confirmed_label" default="true" />
+  <arg name="publish_task_command" default="false" />
+  <arg name="dashboard_control_dwell_sec" default="1.0" />
+  <arg name="dashboard_board_control_layout" default="canvas_reachable" />
+  <arg name="trajectory_trace_window_points" default="180" />
+  <arg name="trajectory_stroke_gate_mode" default="off" />
+  <arg name="trajectory_z_min" default="none" />
+  <arg name="trajectory_z_max" default="none" />
+  <arg name="trajectory_min_speed" default="0.0" />
+  <arg name="trajectory_max_speed" default="0.0" />
+  <arg name="trajectory_gate_invalid_breaks_stroke" default="true" />
+  <arg name="trajectory_input_valid_gate_enabled" default="true" />
+  <arg name="trajectory_input_z_min" default="inherit" />
+  <arg name="trajectory_input_z_max" default="inherit" />
+  <arg name="trajectory_input_reactivate_samples" default="2" />
+  <arg name="trajectory_recording_enabled" default="false" />
+  <arg name="record_stop_on_lift" default="false" />
+  <arg name="record_lift_z_threshold" default="0.05" />
+  <arg name="dashboard_board_sample_cleanup_enabled" default="true" />
+  <arg name="dashboard_board_sample_min_point_delta" default="0.0015" />
+  <arg name="dashboard_board_sample_max_points" default="160" />
+  <arg name="dashboard_debug_sample_panel" default="false" />
+  <arg name="real_board_sample_recording_enabled" default="false" />
+  <arg name="real_board_sample_recording_dir"
+       default="outputs/runtime_samples/real_board" />
+  <arg name="dashboard_preview_backend" default="dtw" />
+  <arg name="dashboard_candidate_labels" default="$(arg real_board_demo_allowed_labels)" />
+  <!-- M104-G3a-F1: confirm the external dtw_template_bank /colmag/symbol_candidates
+       (authoritative), falling back to the in-process preview candidate only when
+       no external candidates are available. -->
+  <arg name="confirm_candidate_source" default="external_symbol_candidates" />
+  <arg name="safety_badge" default="" />
+  <arg name="footer_text" default="" />
+
+  <!-- Optional dispatcher; outer wrappers choose the backend scope. -->
+  <arg name="enable_task_dispatch" default="true" />
+  <arg name="dispatcher_gazebo_only" default="true" />
+  <arg name="allowed_task_set" default="safe_gazebo_demo" />
+  <arg name="allow_critical_tasks" default="false" />
+  <arg name="dispatcher_mapping_name" default="m104c4_8symbol_gazebo" />
+
+  <!-- 1a. Real board serial source -> /colmag/raw_packet -->
+  <node if="$(eval arg('board_source') == 'serial')"
+        pkg="colmag_ros" type="serial_packet_publisher_node.py"
+        name="serial_packet_publisher_node" output="screen">
+    <param name="port" value="$(arg port)" />
+    <param name="baudrate" value="$(arg baudrate)" />
+    <param name="project_src_path" value="$(arg project_src_path)" />
+    <param name="publish_topic" value="$(arg raw_packet_topic)" />
+  </node>
+
+  <!-- 1b. No-hardware mock source -> /colmag/raw_packet -->
+  <node if="$(eval arg('board_source') == 'mock')"
+        pkg="colmag_ros" type="mock_packet_publisher_node.py"
+        name="mock_packet_publisher_node" output="screen">
+    <param name="publish_topic" value="$(arg raw_packet_topic)" />
+  </node>
+
+  <!-- 2. raw_packet -> trajectory_2d (skipped when replay feeds trajectory_2d directly) -->
+  <node unless="$(eval arg('board_source') == 'replay')"
+        pkg="colmag_ros" type="raw_packet_to_trajectory_2d_node.py"
+        name="raw_packet_to_trajectory_2d_node" output="screen">
+    <param name="raw_packet_topic" value="$(arg raw_packet_topic)" />
+    <param name="trajectory_topic" value="$(arg trajectory_topic)" />
+  </node>
+
+  <!-- 1c. Recorded trajectory replay -> /colmag/trajectory_2d (no hardware) -->
+  <node if="$(eval arg('board_source') == 'replay')"
+        pkg="colmag_ros" type="trajectory_2d_replay_publisher.py"
+        name="trajectory_2d_replay_publisher" output="screen">
+    <param name="trajectory_topic" value="$(arg trajectory_topic)" />
+    <param name="sequence_id" value="$(arg replay_sequence_id)" />
+    <param name="loop" value="$(arg replay_loop)" />
+  </node>
+
+  <!-- 3. Legacy state/diagnostic publisher. Its historical A/B/X geometry,
+       dwell and capture actions are disabled in this canonical frontend. -->
+  <node pkg="colmag_ros" type="magnetic_ui_state_node.py"
+        name="magnetic_ui_state_node" output="screen">
+    <param name="trajectory_topic" value="$(arg trajectory_topic)" />
+    <param name="ui_state_topic" value="$(arg ui_state_topic)" />
+    <param name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <param name="dwell_sec" value="$(arg ui_dwell_sec)" />
+    <param name="capture_window_sec" value="$(arg ui_capture_window_sec)" />
+    <param name="min_capture_points" value="$(arg ui_min_capture_points)" />
+    <param name="zone_radius" value="$(arg ui_zone_radius)" />
+    <param name="enable_legacy_control_zones" value="$(arg enable_legacy_control_zones)" />
+  </node>
+
+  <!-- 4. symbol_capture -> dtw_template_bank recognizer -> /colmag/symbol_candidates
+       (the SAME node/backend the G2 mouse route uses). -->
+  <node pkg="colmag_ros" type="trajectory_symbol_top3_recognizer_node.py"
+        name="trajectory_symbol_top3_recognizer_node" output="screen">
+    <param name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <param name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
+    <param name="recognized_label_topic" value="$(arg recognized_topic)" />
+    <param name="min_confidence" value="$(arg min_confidence)" />
+    <param name="recognizer_backend" value="$(arg recognizer_backend)" />
+    <param name="label_set" value="$(arg label_set)" />
+    <param name="dtw_template_bank_path" value="$(arg bank_path)" />
+    <param name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
+    <param name="dtw_template_top_k" value="$(arg dtw_template_top_k)" />
+    <param name="dtw_template_max_distance" value="$(arg dtw_template_max_distance)" />
+    <param name="dtw_template_min_margin" value="$(arg dtw_template_min_margin)" />
+    <param name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
+  </node>
+
+  <!-- 5. Single-window dashboard: live board trail + top3 candidate display +
+       hover/dwell confirm. demo_input_mode=trajectory for the live board trail.
+       M104-G3a-F1: confirm_candidate_source=external_symbol_candidates makes the
+       C/dwell confirm publish the external dtw_template_bank symbol_candidates
+       above (authoritative), with a stale guard + internal fallback. No
+       candidate_panel, no auto-confirm. -->
+  <node pkg="colmag_ros" type="magnetic_trajectory_dashboard_node.py"
+        name="magnetic_trajectory_dashboard_node" output="screen">
+    <param name="demo_input_mode" value="trajectory" />
+    <param name="interaction_profile" value="$(arg interaction_profile)" />
+    <param name="trajectory_topic" value="$(arg trajectory_topic)" />
+    <param name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <param name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
+    <param name="confirmed_label_topic" value="$(arg confirmed_topic)" />
+    <param name="task_command_topic" value="$(arg task_command_topic)" />
+    <param name="demo_task_state_topic" value="$(arg demo_task_state_topic)" />
+    <param name="candidate_preview_enabled" value="$(arg candidate_preview_enabled)" />
+    <param name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
+    <param name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
+    <param name="publish_task_command" value="$(arg publish_task_command)" />
+    <param name="dashboard_control_dwell_sec" value="$(arg dashboard_control_dwell_sec)" />
+    <param name="dashboard_board_control_layout" value="$(arg dashboard_board_control_layout)" />
+    <param name="trajectory_trace_window_points" value="$(arg trajectory_trace_window_points)" />
+    <param name="trajectory_stroke_gate_mode" value="$(arg trajectory_stroke_gate_mode)" />
+    <param name="trajectory_z_min" value="$(arg trajectory_z_min)" />
+    <param name="trajectory_z_max" value="$(arg trajectory_z_max)" />
+    <param name="trajectory_min_speed" value="$(arg trajectory_min_speed)" />
+    <param name="trajectory_max_speed" value="$(arg trajectory_max_speed)" />
+    <param name="trajectory_gate_invalid_breaks_stroke" value="$(arg trajectory_gate_invalid_breaks_stroke)" />
+    <param name="trajectory_input_valid_gate_enabled" value="$(arg trajectory_input_valid_gate_enabled)" />
+    <param name="trajectory_input_z_min" value="$(arg trajectory_input_z_min)" />
+    <param name="trajectory_input_z_max" value="$(arg trajectory_input_z_max)" />
+    <param name="trajectory_input_reactivate_samples" value="$(arg trajectory_input_reactivate_samples)" />
+    <param name="trajectory_recording_enabled" value="$(arg trajectory_recording_enabled)" />
+    <param name="record_stop_on_lift" value="$(arg record_stop_on_lift)" />
+    <param name="record_lift_z_threshold" value="$(arg record_lift_z_threshold)" />
+    <param name="dashboard_board_sample_cleanup_enabled" value="$(arg dashboard_board_sample_cleanup_enabled)" />
+    <param name="dashboard_board_sample_min_point_delta" value="$(arg dashboard_board_sample_min_point_delta)" />
+    <param name="dashboard_board_sample_max_points" value="$(arg dashboard_board_sample_max_points)" />
+    <param name="dashboard_debug_sample_panel" value="$(arg dashboard_debug_sample_panel)" />
+    <param name="real_board_sample_recording_enabled" value="$(arg real_board_sample_recording_enabled)" />
+    <param name="real_board_sample_recording_dir" value="$(arg real_board_sample_recording_dir)" />
+    <param name="recognition_backend" value="$(arg dashboard_preview_backend)" />
+    <param name="candidate_labels" value="$(arg dashboard_candidate_labels)" />
+    <param name="confirm_candidate_source" value="$(arg confirm_candidate_source)" />
+    <param name="safety_badge" value="$(arg safety_badge)" />
+    <param name="footer_text" value="$(arg footer_text)" />
+  </node>
+
+  <!-- 6. confirmed_label -> task_command (safe_gazebo_demo gate; task_command owner). -->
+  <group if="$(arg enable_task_dispatch)">
+    <node pkg="colmag_ros" type="task_dispatcher_node.py"
+          name="task_dispatcher_node" output="screen">
+      <param name="confirmed_label_topic" value="$(arg confirmed_topic)" />
+      <param name="task_command_topic" value="$(arg task_command_topic)" />
+      <param name="min_confidence" value="$(arg min_confidence)" />
+      <param name="gazebo_only" value="$(arg dispatcher_gazebo_only)" />
+      <param name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
+      <param name="allowed_task_set" value="$(arg allowed_task_set)" />
+      <param name="allow_critical_tasks" value="$(arg allow_critical_tasks)" />
+    </node>
+  </group>
+
+</launch>

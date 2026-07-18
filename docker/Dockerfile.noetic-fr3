@@ -1,0 +1,195 @@
+ARG ROS_IMAGE=ros:noetic-robot@sha256:7cf0b9f6546abeba308ea42cb7ad3453f3e520e1af57cdf179fe915c939674bc
+
+FROM ${ROS_IMAGE} AS builder
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ARG LIBFRANKA_COMMIT=64b0314518ba28110e5559669a6bb310087ddc0c
+ARG FRANKA_ROS_COMMIT=c11f000c2737acc22ed8dfeff40555b2644a4294
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    ROS_PYTHON_VERSION=3 \
+    FRANKA_PREFIX=/opt/franka \
+    FRANKA_WS=/opt/franka_ros_ws \
+    COLMAG_WS=/opt/colmag_ws
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    libeigen3-dev \
+    libpoco-dev \
+    pkg-config \
+    python3-catkin-pkg \
+    python3-rosdep \
+    ros-noetic-actionlib \
+    ros-noetic-combined-robot-hw \
+    ros-noetic-control-msgs \
+    ros-noetic-controller-interface \
+    ros-noetic-controller-manager \
+    ros-noetic-effort-controllers \
+    ros-noetic-hardware-interface \
+    ros-noetic-joint-limits-interface \
+    ros-noetic-joint-state-controller \
+    ros-noetic-joint-trajectory-controller \
+    ros-noetic-pluginlib \
+    ros-noetic-position-controllers \
+    ros-noetic-realtime-tools \
+    ros-noetic-robot-state-publisher \
+    ros-noetic-sensor-msgs \
+    ros-noetic-std-msgs \
+    ros-noetic-trajectory-msgs \
+    ros-noetic-transmission-interface \
+    ros-noetic-urdf \
+    ros-noetic-xacro \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/frankarobotics/libfranka.git /opt/src/libfranka && \
+    git -C /opt/src/libfranka checkout --detach "${LIBFRANKA_COMMIT}" && \
+    test "$(git -C /opt/src/libfranka rev-parse HEAD)" = "${LIBFRANKA_COMMIT}" && \
+    git -C /opt/src/libfranka submodule update --init --recursive && \
+    cmake -S /opt/src/libfranka -B /opt/src/libfranka/build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_TESTS=OFF \
+      -DBUILD_EXAMPLES=OFF \
+      -DCMAKE_INSTALL_PREFIX="${FRANKA_PREFIX}" && \
+    cmake --build /opt/src/libfranka/build --target install -j"$(nproc)"
+
+RUN mkdir -p "${FRANKA_WS}/src" && \
+    git clone https://github.com/frankarobotics/franka_ros.git "${FRANKA_WS}/src/franka_ros" && \
+    git -C "${FRANKA_WS}/src/franka_ros" checkout --detach "${FRANKA_ROS_COMMIT}" && \
+    test "$(git -C "${FRANKA_WS}/src/franka_ros" rev-parse HEAD)" = "${FRANKA_ROS_COMMIT}" && \
+    touch "${FRANKA_WS}/src/franka_ros/franka_gazebo/CATKIN_IGNORE" \
+          "${FRANKA_WS}/src/franka_ros/franka_example_controllers/CATKIN_IGNORE"
+
+RUN (rosdep init 2>/dev/null || true) && \
+    rosdep update && \
+    rosdep install --from-paths "${FRANKA_WS}/src/franka_ros" \
+      --ignore-src -r -y --rosdistro noetic --skip-keys="libfranka" && \
+    rm -rf /var/lib/apt/lists/* && \
+    source /opt/ros/noetic/setup.bash && \
+    cd "${FRANKA_WS}" && \
+    catkin_make install \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DFranka_DIR="${FRANKA_PREFIX}/lib/cmake/Franka" \
+      -DCMAKE_PREFIX_PATH="${FRANKA_PREFIX};/opt/ros/noetic"
+
+WORKDIR ${COLMAG_WS}
+COPY colmag_ros src/colmag_ros
+RUN mkdir -p /opt/colmag_python/lib/python3/dist-packages
+COPY src/serial_mvp /opt/colmag_python/lib/python3/dist-packages/serial_mvp
+
+RUN source /opt/ros/noetic/setup.bash && \
+    source "${FRANKA_WS}/install/setup.bash" && \
+    catkin_make install -DCMAKE_BUILD_TYPE=Release && \
+    source install/setup.bash && \
+    test -x install/lib/colmag_ros/colmag_fr3_task_trajectory_adapter && \
+    test -f install/share/colmag_ros/launch/colmag_fr3_hardware_stack.launch && \
+    grep -F 'joint_nudge_delta_rad: 0.10' \
+      install/share/colmag_ros/config/colmag_fr3_task_trajectory_adapter.yaml && \
+    grep -F 'max_abs_joint_delta_rad: 0.12' \
+      install/share/colmag_ros/config/colmag_fr3_task_trajectory_adapter.yaml && \
+    grep -F 'hexagon_primary_offset_rad: 0.08' \
+      install/share/colmag_ros/config/colmag_fr3_task_trajectory_adapter.yaml && \
+    grep -F 'hexagon_secondary_offset_rad: 0.10' \
+      install/share/colmag_ros/config/colmag_fr3_task_trajectory_adapter.yaml && \
+    grep -F 'kVisibleMotionHardLimitRad = 0.12' \
+      install/include/colmag_ros/fr3_visible_motion_limits.h && \
+    grep -F 'name="target_joint_name" default="$(arg arm_id)_joint1"' \
+      install/share/colmag_ros/launch/colmag_fr3_hardware_stack.launch
+
+FROM ${ROS_IMAGE} AS runtime
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ARG LIBFRANKA_COMMIT=64b0314518ba28110e5559669a6bb310087ddc0c
+ARG FRANKA_ROS_COMMIT=c11f000c2737acc22ed8dfeff40555b2644a4294
+ARG COLMAG_GIT_SHA=uncommitted
+
+LABEL org.opencontainers.image.title="Magnetic Trajectory Robot Interface real-FR3 stack" \
+      org.opencontainers.image.description="Dedicated real-FR3 build and configuration gate" \
+      org.opencontainers.image.revision="${COLMAG_GIT_SHA}" \
+      org.opencontainers.image.version="portfolio-fr3-noetic" \
+      org.colmag.image.purpose="dedicated-real-fr3-hardware-gate" \
+      org.colmag.ros.distro="noetic" \
+      org.colmag.libfranka.commit="${LIBFRANKA_COMMIT}" \
+      org.colmag.franka_ros.commit="${FRANKA_ROS_COMMIT}" \
+      org.colmag.libfranka.version="0.13.3" \
+      org.colmag.franka_ros.tag="0.10.2" \
+      org.colmag.franka_ros.package_version="0.10.1"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    ROS_PYTHON_VERSION=3 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    FRANKA_PREFIX=/opt/franka \
+    FRANKA_WS=/opt/franka_ros_ws \
+    COLMAG_WS=/opt/colmag_ws \
+    ROS_LOG_DIR=/var/log/colmag/ros \
+    PYTHONPATH=/opt/colmag_python/lib/python3/dist-packages \
+    LD_LIBRARY_PATH=/opt/franka/lib:/opt/franka_ros_ws/install/lib:/opt/colmag_ws/install/lib
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libeigen3-dev \
+    libpoco-dev \
+    python3-argcomplete \
+    python3-serial \
+    python3-tk \
+    ros-noetic-actionlib \
+    ros-noetic-actionlib-msgs \
+    ros-noetic-combined-robot-hw \
+    ros-noetic-control-msgs \
+    ros-noetic-controller-interface \
+    ros-noetic-controller-manager \
+    ros-noetic-geometry-msgs \
+    ros-noetic-hardware-interface \
+    ros-noetic-joint-limits-interface \
+    ros-noetic-joint-state-controller \
+    ros-noetic-joint-state-publisher \
+    ros-noetic-joint-trajectory-controller \
+    ros-noetic-message-runtime \
+    ros-noetic-pluginlib \
+    ros-noetic-position-controllers \
+    ros-noetic-realtime-tools \
+    ros-noetic-robot-state-publisher \
+    ros-noetic-roslaunch \
+    ros-noetic-roscpp \
+    ros-noetic-rospy \
+    ros-noetic-sensor-msgs \
+    ros-noetic-std-msgs \
+    ros-noetic-std-srvs \
+    ros-noetic-tf \
+    ros-noetic-tf2-msgs \
+    ros-noetic-trajectory-msgs \
+    ros-noetic-transmission-interface \
+    ros-noetic-urdf \
+    ros-noetic-xmlrpcpp \
+    ros-noetic-xacro \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/franka /opt/franka
+COPY --from=builder /opt/franka_ros_ws/install /opt/franka_ros_ws/install
+COPY --from=builder /opt/colmag_ws/install /opt/colmag_ws/install
+COPY --from=builder /opt/colmag_python /opt/colmag_python
+COPY --from=builder /opt/src/libfranka/LICENSE /usr/share/doc/libfranka/LICENSE
+COPY --from=builder /opt/src/libfranka/NOTICE /usr/share/doc/libfranka/NOTICE
+COPY --from=builder /opt/franka_ros_ws/src/franka_ros/LICENSE /usr/share/doc/franka_ros/LICENSE
+COPY --from=builder /opt/franka_ros_ws/src/franka_ros/NOTICE /usr/share/doc/franka_ros/NOTICE
+COPY docker/fr3-entrypoint.sh /ros_entrypoint_colmag_fr3.sh
+
+RUN chmod +x /ros_entrypoint_colmag_fr3.sh && \
+    mkdir -p "${ROS_LOG_DIR}" && \
+    source /opt/ros/noetic/setup.bash && \
+    source "${FRANKA_WS}/install/setup.bash" && \
+    source "${COLMAG_WS}/install/setup.bash" && \
+    python3 -c "import serial, tkinter; from serial_mvp.reader import SerialPacketReader; from serial_mvp.sources import SerialPortSource" && \
+    test -x "${COLMAG_WS}/install/lib/colmag_ros/colmag_fr3_task_trajectory_adapter" && \
+    test -f "${COLMAG_WS}/install/share/colmag_ros/launch/colmag_mouse_fr3_hardware_demo.launch" && \
+    test -f "${COLMAG_WS}/install/share/colmag_ros/launch/colmag_real_board_fr3_hardware_demo.launch" && \
+    find "${FRANKA_WS}/install" "${COLMAG_WS}/install" \
+      -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete && \
+    find "${FRANKA_WS}/install" "${COLMAG_WS}/install" \
+      -type d -name __pycache__ -empty -delete
+
+WORKDIR /opt/colmag_ws
+ENTRYPOINT ["/ros_entrypoint_colmag_fr3.sh"]
+CMD ["bash"]

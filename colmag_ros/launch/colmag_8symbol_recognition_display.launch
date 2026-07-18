@@ -1,0 +1,39 @@
+<launch>
+  <!--
+    Stable COLMAG operator alias for the M104-C2C3 8-symbol recognition display.
+
+    Thin wrapper only. Display behavior is owned by:
+      m104c2c3_8symbol_dtw_recognition_display.launch
+
+    Recognition/display only. No dispatcher, no Gazebo, no /colmag/task_command,
+    no marker route, no candidate_panel, no auto-confirm, no real FR3.
+  -->
+
+  <arg name="symbol_capture_topic" default="/colmag/symbol_capture" />
+  <arg name="symbol_candidates_topic" default="/colmag/symbol_candidates" />
+  <arg name="recognized_label_topic" default="/colmag/recognized_label" />
+
+  <arg name="dtw_template_bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="dtw_template_allowed_labels" default="1,2,3,V,O,X,A,C" />
+  <arg name="dtw_template_top_k" default="3" />
+  <arg name="dtw_template_max_distance" default="0.12" />
+  <arg name="dtw_template_min_margin" default="0.01" />
+  <arg name="dtw_template_min_confidence" default="0.30" />
+  <arg name="label_set" default="1,2,3,V,O,X,A,C" />
+  <arg name="min_confidence" default="0.0" />
+
+  <include file="$(find colmag_ros)/launch/m104c2c3_8symbol_dtw_recognition_display.launch">
+    <arg name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <arg name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
+    <arg name="recognized_label_topic" value="$(arg recognized_label_topic)" />
+    <arg name="dtw_template_bank_path" value="$(arg dtw_template_bank_path)" />
+    <arg name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
+    <arg name="dtw_template_top_k" value="$(arg dtw_template_top_k)" />
+    <arg name="dtw_template_max_distance" value="$(arg dtw_template_max_distance)" />
+    <arg name="dtw_template_min_margin" value="$(arg dtw_template_min_margin)" />
+    <arg name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
+    <arg name="label_set" value="$(arg label_set)" />
+    <arg name="min_confidence" value="$(arg min_confidence)" />
+  </include>
+</launch>

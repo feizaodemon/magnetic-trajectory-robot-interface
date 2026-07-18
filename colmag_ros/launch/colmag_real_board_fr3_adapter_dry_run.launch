@@ -1,0 +1,61 @@
+<launch>
+  <!-- Official real-board-ready -> Strategy A FR3 adapter dry-run/future route.
+       Default board_source=mock is hardware-free. board_source:=serial is a
+       future user-authorized board run. Gazebo is disabled and send_goals is
+       fixed false, so this launch cannot move a real robot. -->
+
+  <arg name="board_source" default="mock" />
+  <arg name="port" default="/dev/ttyACM0" />
+  <arg name="baudrate" default="921600" />
+  <arg name="bank_path"
+       default="$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json" />
+  <arg name="real_board_demo_allowed_labels" default="1,2,3,V,O,C" />
+  <arg name="dispatcher_mapping_name" default="m104c4_8symbol_gazebo" />
+  <arg name="min_confidence" default="0.25" />
+  <arg name="follow_joint_trajectory_action"
+       default="/position_joint_trajectory_controller/follow_joint_trajectory" />
+  <arg name="joint_state_topic" default="/franka_state_controller/joint_states" />
+  <arg name="arm_id" default="fr3" />
+  <arg name="joint_names"
+       default="$(arg arm_id)_joint1, $(arg arm_id)_joint2, $(arg arm_id)_joint3, $(arg arm_id)_joint4, $(arg arm_id)_joint5, $(arg arm_id)_joint6, $(arg arm_id)_joint7" />
+  <arg name="start_adapter" default="true" />
+  <arg name="safety_badge" default="FR3 ADAPTER DRY-RUN / SEND_GOALS=FALSE" />
+  <arg name="footer_text" default="COLMAG trajectory dashboard | dwell confirm -> task_dispatcher | FR3 adapter dry-run" />
+
+  <include file="$(find colmag_ros)/launch/dtw_real_board_demo_frontend.launch">
+    <arg name="board_source" value="$(arg board_source)" />
+    <arg name="port" value="$(arg port)" />
+    <arg name="baudrate" value="$(arg baudrate)" />
+    <arg name="bank_path" value="$(arg bank_path)" />
+    <arg name="real_board_demo_allowed_labels" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="dtw_template_allowed_labels" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="label_set" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="dashboard_candidate_labels" value="$(arg real_board_demo_allowed_labels)" />
+    <arg name="enable_task_dispatch" value="false" />
+    <arg name="safety_badge" value="$(arg safety_badge)" />
+    <arg name="footer_text" value="$(arg footer_text)" />
+  </include>
+
+  <node pkg="colmag_ros" type="task_dispatcher_node.py"
+        name="task_dispatcher_node" output="screen">
+    <param name="confirmed_label_topic" value="/colmag/confirmed_label" />
+    <param name="task_command_topic" value="/colmag/task_command" />
+    <param name="min_confidence" value="$(arg min_confidence)" />
+    <param name="gazebo_only" value="false" />
+    <param name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
+    <param name="allowed_task_set" value="safe_gazebo_demo" />
+    <param name="allow_critical_tasks" value="false" />
+  </node>
+
+  <group if="$(arg start_adapter)">
+    <include file="$(find colmag_ros)/launch/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch">
+      <arg name="send_goals" value="false" />
+      <arg name="arm_id" value="$(arg arm_id)" />
+      <arg name="follow_joint_trajectory_action" value="$(arg follow_joint_trajectory_action)" />
+      <arg name="joint_state_topic" value="$(arg joint_state_topic)" />
+      <arg name="joint_names" value="$(arg joint_names)" />
+      <arg name="reject_gazebo_only_commands" value="true" />
+      <arg name="reject_controls_real_robot_true" value="true" />
+    </include>
+  </group>
+</launch>

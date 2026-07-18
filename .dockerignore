@@ -1,0 +1,33 @@
+.git/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.joblib
+
+# Generated COLMAG artifacts/logs stay host-side and ignored.
+outputs/
+**/logs/
+tests/
+
+# Local ROS/catkin build products should not enter the image build context.
+build/
+devel/
+install/
+log/
+catkin_ws/
+.catkin_tools/
+
+# Local Python environments and editor state.
+.venv/
+.venv_classifier/
+.venv_ocr/
+venv/
+.claude/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+.idea/
+.env
+*.pem
+*.key

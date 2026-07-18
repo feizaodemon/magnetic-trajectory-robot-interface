@@ -1,0 +1,45 @@
+name: magnetic-trajectory-interface-gazebo
+
+x-gazebo-common: &gazebo-common
+  image: ${COLMAG_DOCKER_IMAGE:-magnetic-trajectory-interface:gazebo-noetic}
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.noetic-gazebo
+    args:
+      COLMAG_GIT_SHA: ${COLMAG_GIT_SHA:-uncommitted}
+  network_mode: host
+  environment:
+    DISPLAY: ${DISPLAY:-:0}
+    QT_X11_NO_MITSHM: "1"
+    XAUTHORITY: /root/.Xauthority
+    ROS_LOG_DIR: /workspace/runtime_logs/ros
+  volumes:
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - ${COLMAG_XAUTHORITY:-/dev/null}:/root/.Xauthority:ro
+    - ${COLMAG_RUNTIME_LOG_DIR:-../outputs/runtime_logs/docker_current}:/workspace/runtime_logs:rw
+  stdin_open: true
+  tty: true
+
+services:
+  mouse-gazebo:
+    <<: *gazebo-common
+    profiles: [mouse-gazebo]
+    command:
+      - roslaunch
+      - colmag_ros
+      - colmag_8symbol_gazebo_robot_body_demo.launch
+
+  real-board-gazebo:
+    <<: *gazebo-common
+    profiles: [real-board-gazebo]
+    command:
+      - roslaunch
+      - colmag_ros
+      - colmag_real_board_ready_gazebo_robot_body_demo.launch
+      - board_source:=serial
+      - port:=/dev/ttyACM0
+      - baudrate:=921600
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    group_add:
+      - ${COLMAG_DIALOUT_GID:-20}
