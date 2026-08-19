@@ -42,6 +42,7 @@ from colmag_ros import dashboard_geometry as _dashboard_geometry
 from colmag_ros import dashboard_controller_input as _dashboard_controller_input
 from colmag_ros import dashboard_sample_lifecycle as _dashboard_sample_lifecycle
 from colmag_ros import dashboard_trajectory_processing as _dashboard_trajectory_processing
+from colmag_ros import control_mode
 from colmag_ros.dashboard_dwell_status import (
     format_interaction_instruction,
     format_integrated_dwell_status_texts,
@@ -561,6 +562,7 @@ class MagneticTrajectoryDashboardNode:
         self.dashboard_state_topic = rospy.get_param("~dashboard_state_topic", "/colmag/trajectory_dashboard_state")
         self.task_command_topic = rospy.get_param("~task_command_topic", "/colmag/task_command")
         self.demo_task_state_topic = rospy.get_param("~demo_task_state_topic", "/colmag/fr3_demo_task_state")
+        self._read_control_mode_parameters()
         self.integrated_confirm_enabled = bool_param(rospy.get_param("~integrated_dashboard_confirm_enabled", False))
         # Explicit publish gates. These were previously declared in the launch
         # files but never read (dead/misleading safety args). They are now honored:
@@ -667,6 +669,17 @@ class MagneticTrajectoryDashboardNode:
         self.gate_invalid_breaks_stroke = bool_param(rospy.get_param("~trajectory_gate_invalid_breaks_stroke", True))
         self._prev_sample = None  # (x, y, timestamp) for speed gating
 
+    def _read_control_mode_parameters(self):
+        self.control_mode_enabled = bool_param(
+            self.rospy.get_param("~control_mode_enabled", False)
+        )
+        self.control_mode_topic = self.rospy.get_param(
+            "~control_mode_topic", "/colmag/control_mode"
+        )
+        self.control_mode_request_topic = self.rospy.get_param(
+            "~control_mode_request_topic", "/colmag/control_mode/request"
+        )
+
     def _read_preview_and_recording_parameters(self):
         rospy = self.rospy
         # Preview-only DTW candidate display. It NEVER publishes
@@ -764,6 +777,8 @@ class MagneticTrajectoryDashboardNode:
         self.latest_inside_control_zone = False
         self.trajectory_sample_count = 0
         self.latest_sample_index = None
+        self.current_control_mode = control_mode.TASK
+        self.control_mode_observed = False
 
         trail_maxlen = self.traj_trace_window_points if self.is_trajectory_mode else self.trail_size
         self.trail = deque(maxlen=trail_maxlen)
@@ -848,6 +863,8 @@ class MagneticTrajectoryDashboardNode:
 
         self.ui_state_var = tk.StringVar(value="WAITING")
         self.capture_var = tk.StringVar(value="-")
+        self.control_mode_var = tk.StringVar(value="Mode: TASK")
+        self.control_mode_button_var = tk.StringVar(value="Switch to TELEOP")
 
         self.backend_status_var = tk.StringVar(value="Backend: unknown")
         self.recognizer_mode_var = tk.StringVar(value="Mode: unknown")
@@ -943,6 +960,18 @@ class MagneticTrajectoryDashboardNode:
         rospy.Subscriber(self.confirmed_label_topic, String, self._handle_confirmed, queue_size=10)
         rospy.Subscriber(self.task_command_topic, String, self._handle_task, queue_size=10)
         rospy.Subscriber(self.demo_task_state_topic, String, self._handle_gazebo, queue_size=10)
+        self.control_mode_request_pub = None
+        self.control_mode_subscriber = None
+        if self.control_mode_enabled:
+            self.control_mode_request_pub = rospy.Publisher(
+                self.control_mode_request_topic, String, queue_size=1, latch=False
+            )
+            self.control_mode_subscriber = rospy.Subscriber(
+                self.control_mode_topic,
+                String,
+                self._handle_control_mode,
+                queue_size=1,
+            )
         self.confirm_pub = None
         self.dashboard_state_pub = None
         self.symbol_capture_pub = rospy.Publisher(self.symbol_capture_topic, String, queue_size=10, latch=True)
@@ -1034,6 +1063,20 @@ class MagneticTrajectoryDashboardNode:
 
         right_frame = ttk.Frame(header, style="Header.TFrame")
         right_frame.pack(side=tk.RIGHT, padx=15, pady=10)
+        if self.control_mode_enabled:
+            mode_frame = ttk.Frame(right_frame, style="Header.TFrame")
+            mode_frame.pack(side=tk.LEFT, padx=(0, 10))
+            ttk.Label(
+                mode_frame,
+                textvariable=self.control_mode_var,
+                style="HeaderSub.TLabel",
+            ).pack(anchor=tk.E)
+            self.control_mode_button = ttk.Button(
+                mode_frame,
+                textvariable=self.control_mode_button_var,
+                command=self._request_control_mode_switch,
+            )
+            self.control_mode_button.pack(anchor=tk.E, pady=(3, 0))
         if self.safety_badge:
             ttk.Label(
                 right_frame, text=self.safety_badge, style="Badge.TLabel"
@@ -3321,6 +3364,41 @@ class MagneticTrajectoryDashboardNode:
             src = data.get("confirmed_by", "-")
             text = f"Confirmed: '{lbl}' by {src}"
             self.root.after(0, lambda: self.confirm_var.set(text))
+
+    def _request_control_mode_switch(self):
+        if self.control_mode_request_pub is None:
+            return
+        if not self.control_mode_observed:
+            requested = control_mode.TASK
+        else:
+            requested = (
+                control_mode.TELEOP
+                if self.current_control_mode == control_mode.TASK
+                else control_mode.TASK
+            )
+        self.control_mode_request_pub.publish(self.String(data=requested))
+        self.rospy.loginfo("requested control mode %s", requested)
+
+    def _handle_control_mode(self, msg):
+        selected = control_mode.normalize_mode(msg.data)
+        if selected is None:
+            self.current_control_mode = None
+            self.control_mode_observed = False
+            self.root.after(0, lambda: self.control_mode_var.set("Mode: INVALID — blocked"))
+            self.root.after(0, lambda: self.control_mode_button_var.set("Request TASK"))
+            return
+        self.current_control_mode = selected
+        self.control_mode_observed = True
+        next_mode = (
+            control_mode.TELEOP
+            if selected == control_mode.TASK
+            else control_mode.TASK
+        )
+        self.root.after(0, lambda m=selected: self.control_mode_var.set("Mode: %s" % m))
+        self.root.after(
+            0,
+            lambda m=next_mode: self.control_mode_button_var.set("Switch to %s" % m),
+        )
 
     def _handle_task(self, msg):
         data = safe_json_loads(msg.data)

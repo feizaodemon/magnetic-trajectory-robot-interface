@@ -175,6 +175,11 @@ public:
                                       &ColmagFr3TaskTrajectoryAdapter::commandCallback, this);
     joint_state_sub_ = root_nh_.subscribe(joint_state_topic_, 10,
                                           &ColmagFr3TaskTrajectoryAdapter::jointStateCallback, this);
+    if (!required_control_mode_.empty())
+    {
+      mode_sub_ = root_nh_.subscribe(control_mode_topic_, 1,
+                                     &ColmagFr3TaskTrajectoryAdapter::controlModeCallback, this);
+    }
     lifecycle_timer_ = root_nh_.createSteadyTimer(
         ros::WallDuration(watchdog_period_sec_),
         &ColmagFr3TaskTrajectoryAdapter::lifecycleTimer, this);
@@ -204,6 +209,7 @@ public:
       lifecycle_timer_.stop();
       command_sub_.shutdown();
       joint_state_sub_.shutdown();
+      mode_sub_.shutdown();
     }
     catch (const std::exception& exc)
     {
@@ -241,6 +247,8 @@ private:
     private_nh_.param<std::string>("robot_description_param", robot_description_param_,
                                    "/robot_description");
     private_nh_.param<std::string>("hardware_profile", hardware_profile_, "dry-run");
+    private_nh_.param<std::string>("control_mode_topic", control_mode_topic_, "");
+    private_nh_.param<std::string>("required_control_mode", required_control_mode_, "");
     private_nh_.param("send_goals", send_goals_, false);
     private_nh_.param("hardware_execution_enabled", hardware_execution_enabled_, false);
     private_nh_.param("require_confirmed", require_confirmed_, true);
@@ -309,6 +317,26 @@ private:
   {
     return send_goals_ && hardware_execution_enabled_ &&
            hardware_profile_ == "fr3-hardware-active";
+  }
+  bool taskModeAllowsAdmission() const
+  {
+    return required_control_mode_.empty() ||
+           (mode_observed_ && current_control_mode_ == required_control_mode_);
+  }
+  void controlModeCallback(const std_msgs::StringConstPtr& message)
+  {
+    const bool previously_allowed = taskModeAllowsAdmission();
+    const std::string selected = message->data == "TASK" || message->data == "TELEOP" ?
+                                     message->data : std::string();
+    current_control_mode_ = selected;
+    mode_observed_ = !selected.empty();
+    if (previously_allowed && !taskModeAllowsAdmission())
+    {
+      relinquishOwnedGoalForMode();
+    }
+    publishStatus(taskModeAllowsAdmission() ? "TASK_MODE" : "TASK_BLOCKED",
+                  "NO_OP", "control_mode",
+                  mode_observed_ ? "mode_state_updated" : "invalid_control_mode");
   }
   void jointStateCallback(const sensor_msgs::JointStateConstPtr& message)
   {
@@ -416,6 +444,13 @@ private:
   }
   void commandCallback(const std_msgs::StringConstPtr& message)
   {
+    if (!taskModeAllowsAdmission())
+    {
+      publishStatus("REJECTED", "NO_OP", "control_mode_rejected",
+                    mode_observed_ ? "task_mode_not_selected" :
+                                     "control_mode_not_observed");
+      return;
+    }
     boost::property_tree::ptree payload;
     std::istringstream input(message->data);
     try
@@ -690,6 +725,12 @@ private:
   }
   bool validateRuntimeParameters(std::string* reason) const
   {
+    if (!required_control_mode_.empty() &&
+        (required_control_mode_ != "TASK" || control_mode_topic_.empty()))
+    {
+      *reason = "invalid_control_mode_configuration";
+      return false;
+    }
     if (max_motion_goals_per_process_ < 0)
     {
       *reason = "negative_max_motion_goals_per_process";
@@ -993,6 +1034,18 @@ private:
     }
     cancelOwnedGoal(transition, "software_cancel");
   }
+  void relinquishOwnedGoalForMode()
+  {
+    const LifecycleSnapshot snapshot = goal_lifecycle_.snapshot();
+    const LifecycleTransition transition =
+        goal_lifecycle_.requestCancel(snapshot.goal_generation, SteadyClock::now());
+    if (transition.accepted())
+    {
+      publishLifecycleTransition(transition, "control_mode_transition",
+                                 "owned_goal_relinquish_requested");
+    }
+    cancelOwnedGoal(transition, "control_mode_transition");
+  }
   void lifecycleTimer(const ros::SteadyTimerEvent&)
   {
     LifecycleTransition execution_timeout;
@@ -1161,7 +1214,7 @@ private:
     state_pub_.publish(message);
   }
   ros::NodeHandle root_nh_, private_nh_;
-  ros::Subscriber command_sub_, joint_state_sub_;
+  ros::Subscriber command_sub_, joint_state_sub_, mode_sub_;
   ros::Publisher state_pub_, adapter_session_pub_;
   ros::SteadyTimer lifecycle_timer_;
   std::unique_ptr<CommandReplayGuard> command_guard_;
@@ -1185,6 +1238,8 @@ private:
   std::string joint_state_topic_, arm_id_, target_joint_name_;
   std::string hexagon_primary_joint_name_, hexagon_secondary_joint_name_;
   std::string controller_joint_names_param_, robot_description_param_, hardware_profile_;
+  std::string control_mode_topic_, required_control_mode_, current_control_mode_;
+  bool mode_observed_ = false;
   bool send_goals_ = false;
   bool hardware_execution_enabled_ = false;
   bool require_confirmed_ = true;

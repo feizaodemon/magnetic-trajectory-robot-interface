@@ -8,6 +8,21 @@ python3 -m pytest -p no:cacheprovider -q
 
 The suite covers ROS-free parsing and helpers, dashboard state, DTW ranking, dispatcher behavior, Gazebo bridge behavior, FR3 safety modules, Docker configuration, package/install references, and selected route-isolation contracts. It does not start ROS, Gazebo, serial, GUI, or physical hardware.
 
+## ROS1 compile/link build
+
+From a catkin workspace whose `src/` contains `colmag_ros` and
+`colmag_gazebo_stub` from this checkout:
+
+```bash
+source /opt/ros/noetic/setup.bash
+catkin_make --pkg colmag_ros colmag_gazebo_stub
+```
+
+This build compiles and links the shared `Fr3CartesianTeleopCore`, the Cartesian
+adapter used by both backends, and the discrete FR3 task adapter. A successful
+build does not authorize or execute Gazebo, serial, GUI, controller, or physical
+hardware runtime.
+
 ## Portfolio-specific gates
 
 The portfolio review also checks:

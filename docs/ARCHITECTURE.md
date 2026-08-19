@@ -29,6 +29,21 @@ The system has four distinct decision boundaries:
 
 No recognizer component owns `/colmag/task_command`.
 
+## Dual-mode ownership
+
+The latched `/colmag/control_mode` state has exactly two values: `TASK` and
+`TELEOP`. `TASK` admits the supervised recognition/confirmation/dispatch route.
+`TELEOP` blocks new task dispatch and admits the continuous Cartesian adapter.
+Mode selection and backend/hardware authorization are independent.
+
+| Backend | `TASK` | `TELEOP` |
+| --- | --- | --- |
+| Gazebo | DTW confirmation to task bridge | Keyboard input to shared Cartesian core |
+| Real FR3 | Discrete FR3 task adapter | Magnetic-board input to shared Cartesian core |
+
+See [Dual-Mode Teleoperation](DUAL_MODE_TELEOPERATION.md) for routes, ownership
+transitions, validation evidence, and the physical-runtime boundary.
+
 ## Component ownership
 
 | Responsibility | Primary implementation |
@@ -40,6 +55,10 @@ No recognizer component owns `/colmag/task_command`.
 | Confirmation payload | `colmag_ros/src/colmag_ros/dashboard_confirm_publisher.py` |
 | DTW ranking | `colmag_ros/scripts/trajectory_symbol_top3_recognizer_node.py` |
 | Dispatcher | `colmag_ros/scripts/task_dispatcher_node.py` |
+| Control-mode source | `colmag_ros/scripts/control_mode_node.py` |
+| Cartesian input | `colmag_ros/scripts/keyboard_cartesian_teleop_node.py` |
+| Shared Cartesian core | `colmag_ros/src/fr3_cartesian_teleop_core.cpp` |
+| Cartesian adapter | `colmag_ros/src/colmag_fr3_cartesian_teleop_adapter.cpp` |
 | Gazebo robot-body bridge | `colmag_gazebo_stub/scripts/fr3_gazebo_visible_task_bridge_node.py` |
 | FR3 adapter | `colmag_ros/src/colmag_fr3_task_trajectory_adapter.cpp` |
 | Runtime packaging | `docker/` |

@@ -74,8 +74,10 @@ def test_ros_interface_setup_preserves_subscriber_then_publisher_order():
     source_lines = DASHBOARD.read_text().splitlines()
     body = "\n".join(source_lines[method.lineno - 1:method.end_lineno])
     assert body.index("rospy.Subscriber") < body.index("rospy.Publisher")
-    assert body.count("rospy.Subscriber") == 7
-    assert body.count("rospy.Publisher") == 3
+    assert body.count("rospy.Subscriber") == 8
+    assert "self.control_mode_subscriber = rospy.Subscriber" in body
+    assert body.count("rospy.Publisher") == 4
+    assert "self.control_mode_request_pub = rospy.Publisher" in body
 
 
 def test_display_state_and_formatter_live_only_in_canonical_package():

@@ -2,7 +2,7 @@
 
 > Private portfolio review copy. Public redistribution rights have not yet been confirmed.
 
-Magnetic Trajectory Robot Interface is a ROS-based supervised interaction system that converts trajectories from a magnetic input board or mouse into ranked DTW recognition candidates. An explicit confirmation step separates recognition from execution before dispatching commands to Gazebo or an FR3-compatible trajectory interface.
+Magnetic Trajectory Robot Interface is a dual-mode ROS1 robot interaction system. `TASK` converts magnetic-board or mouse trajectories into ranked DTW candidates and keeps explicit confirmation between recognition and execution. `TELEOP` provides continuous Cartesian manual control through a shared damped-least-squares inverse-kinematics core.
 
 ## Architecture at a glance
 
@@ -21,6 +21,24 @@ flowchart LR
 
 Recognition never sends motion directly. Candidate display, confirmation, dispatch, and backend execution remain separate boundaries.
 
+## Control modes
+
+| Backend | `TASK` | `TELEOP` |
+| --- | --- | --- |
+| Gazebo | Recognition-driven task execution | Keyboard Cartesian control |
+| Real FR3 | Discrete task execution | Magnetic-board Cartesian teleoperation |
+
+`TASK` is the fail-closed startup mode. The dashboard can request `TASK` or
+`TELEOP`, but GUI mode selection is not hardware authorization: it does not
+start Gazebo, open serial, connect an FR3, load a controller, approve
+calibration, or enable physical commands.
+
+The continuous Gazebo path was runtime validated with keyboard Cartesian input,
+the shared `Fr3CartesianTeleopCore`, the simulated trajectory controller, and a
+moving Gazebo Panda. The Real-FR3 Cartesian and discrete adapters were compiled
+and integrated, but physical Real-FR3 TELEOP runtime was not executed. See
+[Dual-Mode Teleoperation](docs/DUAL_MODE_TELEOPERATION.md).
+
 ## What the system does
 
 - Captures 2D trajectories from a serial magnetic board or a mouse-driven dashboard.
@@ -28,6 +46,7 @@ Recognition never sends motion directly. Candidate display, confirmation, dispat
 - Presents ranked candidates and requires an explicit `C Confirm` action.
 - Maps confirmed labels to a bounded task vocabulary in the dispatcher.
 - Routes accepted tasks to a Gazebo Panda robot-body bridge or an FR3-compatible `FollowJointTrajectory` adapter.
+- Switches between supervised `TASK` ownership and continuous Cartesian `TELEOP` ownership without treating mode selection as a hardware gate.
 - Packages Gazebo and FR3 environments in separate Docker profiles.
 
 ## Key technical contributions
@@ -37,6 +56,7 @@ Recognition never sends motion directly. Candidate display, confirmation, dispat
 - A single dashboard for drawing, ranked-candidate review, dwell feedback, and explicit confirmation.
 - A dispatcher boundary that prevents recognition output from becoming motion without confirmation.
 - Separate Gazebo and FR3 execution adapters with conservative defaults and validation gates.
+- A shared C++ Cartesian core for keyboard-driven Gazebo development and magnetic-board Real-FR3 integration.
 - Docker build-time provenance labels plus static, unit, route-isolation, and safety tests.
 
 ## System architecture
@@ -75,10 +95,12 @@ The tracked bank was generated from user-handwritten mouse seeds and retains per
 
 ## Gazebo and FR3 backends
 
-- **Gazebo:** a simulation-only bridge creates bounded Panda joint trajectories and uses a `FollowJointTrajectory` action interface. It does not control a real robot.
-- **FR3:** a C++ task-to-trajectory adapter validates accepted commands and constructs bounded trajectories for a standard controller path. Real hardware remains disabled until all environment, revision, network, controller, and physical safety gates pass.
+- **Gazebo TASK:** a simulation-only bridge creates bounded Panda joint trajectories and uses a `FollowJointTrajectory` action interface.
+- **Gazebo TELEOP:** normalized keyboard Cartesian input passes through the shared `Fr3CartesianTeleopCore` and publishes bounded controller `JointTrajectory` commands.
+- **Real FR3 TASK:** a C++ task-to-trajectory adapter validates accepted discrete commands and constructs bounded trajectories for a standard controller path.
+- **Real FR3 TELEOP:** continuous magnetic-board position passes through the same Cartesian core and a separately gated controller adapter.
 
-No real robot, serial device, GUI, or Gazebo runtime is started by repository tests. See [Hardware Boundaries](docs/HARDWARE_BOUNDARIES.md).
+Repository tests start none of these runtime surfaces. Real hardware remains disabled until all environment, revision, network, controller, calibration, and physical safety gates pass. See [Hardware Boundaries](docs/HARDWARE_BOUNDARIES.md).
 
 ## Technology stack
 
@@ -149,6 +171,7 @@ Exact results for this revision are recorded in [Validation](docs/VALIDATION.md)
 - DTW quality depends on trajectory quality and template coverage.
 - The Board orientation clutch is an application convention, not a safety-rated sensor mode.
 - Static and unit tests do not prove live ROS timing, rendered GUI behavior, Gazebo motion, or physical FR3 safety.
+- Gazebo Cartesian TELEOP has runtime evidence; physical Real-FR3 Cartesian TELEOP does not.
 - The FR3 route depends on specific upstream versions and must be requalified when the environment changes.
 - Repository-level publication rights remain unresolved; the repository must stay private.
 
@@ -162,6 +185,7 @@ The contribution wording below is supported by the fixed branch history, source 
 | Recognition integration | Implemented and integrated the DTW template-bank path, ranking gates, tracked bank, and evaluation tooling. |
 | UI/dashboard | Implemented, refactored, and validated the shared dashboard, candidate display, dwell state, and explicit confirmation flow. |
 | Execution integration | Integrated the dispatcher, Gazebo robot-body bridge, and FR3 task-to-trajectory adapter while preserving supervised execution boundaries. |
+| Dual-mode teleoperation | Implemented and integrated `TASK`/`TELEOP` ownership, keyboard Cartesian Gazebo control, magnetic-board Real-FR3 integration, and the shared Cartesian core. |
 | Docker/testing | Implemented Docker packaging and maintained static, unit, route-isolation, and safety validation. |
 | Documentation | Authored and maintained architecture, operator, safety, and validation documentation for the fixed branch. |
 
@@ -171,7 +195,7 @@ These claims do not assert sole authorship of the original collaborative project
 
 This repository is a personal portfolio edition derived from a collaborative robotics project. It focuses on the components I designed, integrated, validated, and documented. Collaborative and third-party contributions remain credited in [CREDITS.md](CREDITS.md) and applicable notices in [NOTICE.md](NOTICE.md).
 
-The candidate was exported as a filtered tracked snapshot from source commit `e3c81fb31f5113c50f197bb11eff183295cf3163`. The original Git history, branches, tags, internal process records, private evidence, and nontechnical materials were not copied.
+The portfolio baseline was exported as a filtered tracked snapshot from source commit `e3c81fb31f5113c50f197bb11eff183295cf3163`. This revision adds the subsequently developed and validated dual-mode Cartesian teleoperation working-tree changes as a curated file export. The original Git history, branches, tags, internal process records, private evidence, and nontechnical materials were not copied.
 
 ## License and status
 

@@ -73,6 +73,25 @@ docker/run_gazebo_demo.sh mouse-gazebo
 
 The Board profile is `real-board-gazebo` and additionally requires an authorized serial device.
 
+## Native Gazebo TASK/TELEOP profile
+
+After a ROS1 Noetic build, start the combined Gazebo profile only when Gazebo
+and GUI runtime are authorized:
+
+```bash
+roslaunch colmag_ros colmag_keyboard_gazebo_teleop.launch
+```
+
+`TASK` is the startup default. To use continuous Cartesian `TELEOP`, select it
+in the dashboard and run the terminal input owner separately:
+
+```bash
+rosrun colmag_ros keyboard_cartesian_teleop_node.py
+```
+
+The GUI selection does not authorize hardware. The physical-board/Real-FR3
+profile remains outside the quick path and requires every gate below.
+
 ## FR3 profiles
 
 FR3 is intentionally not a quick-start path. Read [Hardware Boundaries](HARDWARE_BOUNDARIES.md), create the ignored `docker/fr3-hardware.env` from the example, and complete all provenance, network, controller, E-stop, workspace, and operator gates before any connected run.

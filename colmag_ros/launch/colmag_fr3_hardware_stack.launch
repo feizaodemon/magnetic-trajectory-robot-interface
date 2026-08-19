@@ -10,6 +10,7 @@
        default="$(find colmag_ros)/config/colmag_fr3_hardware_controllers.yaml" />
   <arg name="realtime_config" default="enforce" />
   <arg name="start_controller" default="true" />
+  <arg name="command_topic" default="/colmag/task_command" />
   <arg name="send_goals" default="false" />
   <arg name="hardware_execution_enabled" default="false" />
   <arg name="hardware_profile" default="dry-run" />
@@ -41,6 +42,7 @@
     <arg name="controller_joint_names_param" value="/$(arg controller_name)/joints" />
     <arg name="joint_names" value="$(arg joint_names)" />
     <arg name="target_joint_name" value="$(arg target_joint_name)" />
+    <arg name="command_topic" value="$(arg command_topic)" />
     <arg name="send_goals" value="$(arg send_goals)" />
     <arg name="hardware_execution_enabled" value="$(arg hardware_execution_enabled)" />
     <arg name="hardware_profile" value="$(arg hardware_profile)" />

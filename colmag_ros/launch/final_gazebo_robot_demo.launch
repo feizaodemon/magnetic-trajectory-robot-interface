@@ -43,6 +43,10 @@
 
   <!-- Operator knobs -->
   <arg name="start_franka_gazebo" default="true" />
+  <arg name="start_dtw_frontend" default="true" />
+  <arg name="start_cartesian_teleop" default="true" />
+  <!-- Compatibility knob for the older predefined-task keyboard diagnostic. -->
+  <arg name="start_keyboard_teleop" default="true" />
   <arg name="headless" default="false" />
   <arg name="paused" default="false" />
   <arg name="rviz" default="false" />
@@ -77,6 +81,15 @@
 
   <arg name="confirmed_topic" default="/colmag/confirmed_label" />
   <arg name="task_command_topic" default="/colmag/task_command" />
+  <arg name="keyboard_confirmed_topic" default="/colmag/teleop/confirmed_label" />
+  <arg name="cartesian_input_topic" default="/colmag/teleop/cartesian_input" />
+  <arg name="cartesian_teleop_state_topic"
+       default="/colmag/gazebo_cartesian_teleop_state" />
+  <arg name="cartesian_teleop_config_file"
+       default="$(find colmag_ros)/config/colmag_fr3_cartesian_teleop.yaml" />
+  <arg name="control_mode_topic" default="/colmag/control_mode" />
+  <arg name="control_mode_request_topic" default="/colmag/control_mode/request" />
+  <arg name="initial_control_mode" default="TASK" />
   <!-- Documentary: the fr3 bridge already targets this action by default; the
        external franka_gazebo controller exposes exactly this action server. -->
   <arg name="follow_joint_trajectory_action"
@@ -88,6 +101,15 @@
   <arg name="visible_bridge_home_or_ready_final_hold_sec" default="1.0" />
   <arg name="visible_bridge_home_or_ready_bounded_success_enabled" default="true" />
   <arg name="visible_bridge_home_or_ready_bounded_success_tolerance_rad" default="0.01" />
+
+  <!-- One latched logical mode source. It selects TASK or TELEOP only; it has
+       no robot/backend/hardware-enable parameter. -->
+  <node pkg="colmag_ros" type="control_mode_node.py"
+        name="control_mode_node" output="screen">
+    <param name="state_topic" value="$(arg control_mode_topic)" />
+    <param name="request_topic" value="$(arg control_mode_request_topic)" />
+    <param name="initial_mode" value="$(arg initial_control_mode)" />
+  </node>
 
   <!-- External franka_gazebo Panda action-server stack (robot body + controller).
        Set start_franka_gazebo:=false to run this stack in a separate terminal. -->
@@ -104,7 +126,8 @@
        task_command is produced ONLY by task_dispatcher_node; the dashboard keeps
        publish_task_command=false. gazebo_task_executor / marker route is never
        included here. -->
-  <include file="$(find colmag_ros)/launch/dtw_mouse_demo_frontend.launch">
+  <include file="$(find colmag_ros)/launch/dtw_mouse_demo_frontend.launch"
+           if="$(arg start_dtw_frontend)">
     <arg name="enable_task_dispatch" value="true" />
     <arg name="require_manual_confirm" value="$(arg require_manual_confirm)" />
     <arg name="allowed_task_set" value="$(arg allowed_task_set)" />
@@ -123,6 +146,11 @@
     <arg name="dashboard_debug_sample_panel" value="$(arg dashboard_debug_sample_panel)" />
     <arg name="confirmed_topic" value="$(arg confirmed_topic)" />
     <arg name="task_command_topic" value="$(arg task_command_topic)" />
+    <arg name="control_mode_enabled" value="true" />
+    <arg name="control_mode_topic" value="$(arg control_mode_topic)" />
+    <arg name="control_mode_request_topic" value="$(arg control_mode_request_topic)" />
+    <arg name="required_control_mode" value="TASK" />
+    <arg name="latch_task_command" value="false" />
     <arg name="recognizer_backend" value="$(arg recognizer_backend)" />
     <arg name="dtw_template_bank_path" value="$(arg dtw_template_bank_path)" />
     <arg name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
@@ -132,6 +160,53 @@
     <arg name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
     <arg name="dispatcher_gazebo_only" value="true" />
   </include>
+
+  <!-- Older predefined-task keyboard diagnostic. keyboard_teleop_node.py runs
+       separately for stdin. It remains a TASK-mode semantic command source and
+       is not the canonical continuous TELEOP frontend. -->
+  <node if="$(arg start_keyboard_teleop)"
+        pkg="colmag_ros"
+        type="task_dispatcher_node.py"
+        name="keyboard_manual_task_dispatcher"
+        output="screen">
+    <param name="confirmed_label_topic" value="$(arg keyboard_confirmed_topic)" />
+    <param name="task_command_topic" value="$(arg task_command_topic)" />
+    <param name="min_confidence" value="1.0" />
+    <param name="gazebo_only" value="true" />
+    <param name="publish_once" value="false" />
+    <param name="latch_task_command" value="false" />
+    <param name="dispatcher_mapping_name" value="m104c4_8symbol_gazebo" />
+    <param name="allowed_task_set" value="safe_gazebo_demo" />
+    <param name="allow_critical_tasks" value="false" />
+    <param name="source_id" value="keyboard_manual_task_dispatcher" />
+    <param name="control_mode_topic" value="$(arg control_mode_topic)" />
+    <param name="required_control_mode" value="TASK" />
+  </node>
+
+  <!-- Canonical Gazebo TELEOP backend. The raw-terminal producer runs
+       separately, but this adapter remains present across GUI mode changes. It
+       uses the same C++ Cartesian core as the physical-board Real-FR3 path. -->
+  <node if="$(arg start_cartesian_teleop)"
+        pkg="colmag_ros"
+        type="colmag_fr3_cartesian_teleop_adapter"
+        name="colmag_gazebo_cartesian_teleop_adapter"
+        output="screen">
+    <rosparam command="load" file="$(arg cartesian_teleop_config_file)" />
+    <param name="input_mode" value="normalized_cartesian" />
+    <param name="normalized_input_topic" value="$(arg cartesian_input_topic)" />
+    <param name="joint_state_topic" value="/joint_states" />
+    <param name="control_mode_topic" value="$(arg control_mode_topic)" />
+    <param name="command_topic"
+           value="/position_joint_trajectory_controller/command" />
+    <param name="state_topic" value="$(arg cartesian_teleop_state_topic)" />
+    <param name="arm_id" value="panda" />
+    <param name="simulation_commands_enabled" value="true" />
+    <param name="hardware_bringup_enabled" value="false" />
+    <param name="allow_real_robot" value="false" />
+    <param name="send_commands" value="false" />
+    <param name="calibration_valid" value="false" />
+    <param name="hardware_profile" value="gazebo" />
+  </node>
 
   <node pkg="colmag_gazebo_stub"
         type="fr3_gazebo_visible_task_bridge_node.py"
@@ -147,5 +222,7 @@
     <param name="home_or_ready_bounded_success_enabled" value="$(arg visible_bridge_home_or_ready_bounded_success_enabled)" />
     <param name="home_or_ready_bounded_success_tolerance_rad" value="$(arg visible_bridge_home_or_ready_bounded_success_tolerance_rad)" />
     <param name="allow_missing_gazebo_flag" value="false" />
+    <param name="control_mode_topic" value="$(arg control_mode_topic)" />
+    <param name="required_control_mode" value="TASK" />
   </node>
 </launch>

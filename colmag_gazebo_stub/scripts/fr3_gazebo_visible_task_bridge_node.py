@@ -106,6 +106,14 @@ class Fr3GazeboVisibleTaskBridgeNode:
         self.visible_motion_scale = float(rospy.get_param("~visible_motion_scale", 1.0))
         self.queue_until_ready = bool_param(rospy.get_param("~queue_until_ready", True))
         self.allow_initial_pose_fallback = bool_param(rospy.get_param("~allow_initial_pose_fallback", False))
+        self.control_mode_topic = str(rospy.get_param("~control_mode_topic", "")).strip()
+        self.required_control_mode = str(
+            rospy.get_param("~required_control_mode", "")
+        ).strip().upper()
+        if self.required_control_mode not in ("", "TASK"):
+            raise ValueError("~required_control_mode must be TASK or empty")
+        if self.required_control_mode and not self.control_mode_topic:
+            raise ValueError("~control_mode_topic is required for mode-managed execution")
 
         self.latest_joint_positions = None
         self.latest_joint_state_wall_time = 0.0
@@ -116,13 +124,23 @@ class Fr3GazeboVisibleTaskBridgeNode:
         self.queued_time = 0.0
         self.queue_lock = threading.Lock()
         self.goal_lock = threading.Lock()
+        self.mode_lock = threading.Lock()
         self.goal_active = False
+        self.current_control_mode = None
+        self.control_mode_observed = False
 
         self.status_pub = rospy.Publisher(self.output_topic, String, queue_size=10, latch=True)
         self.client = actionlib.SimpleActionClient(self.action_server, FollowJointTrajectoryAction)
 
         rospy.Subscriber(self.joint_state_topic, JointState, self._handle_joint_state, queue_size=10)
         rospy.Subscriber(self.input_topic, String, self._handle_task_command, queue_size=10)
+        if self.required_control_mode:
+            rospy.Subscriber(
+                self.control_mode_topic,
+                String,
+                self._handle_control_mode,
+                queue_size=1,
+            )
 
         rospy.loginfo(
             "fr3_gazebo_visible_task_bridge_node started: follow_joint_trajectory_action=%s "
@@ -172,9 +190,13 @@ class Fr3GazeboVisibleTaskBridgeNode:
         return self.server_ready
 
     def _send_goal(self, goal):
-        with self.goal_lock:
-            self.client.send_goal(goal)
-            self.goal_active = True
+        with self.mode_lock:
+            if not self._mode_allows_task_unlocked():
+                return False
+            with self.goal_lock:
+                self.client.send_goal(goal)
+                self.goal_active = True
+        return True
 
     def _claim_cancellable_goal(self):
         with self.goal_lock:
@@ -186,6 +208,39 @@ class Fr3GazeboVisibleTaskBridgeNode:
     def _clear_active_goal(self):
         with self.goal_lock:
             self.goal_active = False
+
+    def _mode_allows_task(self):
+        with self.mode_lock:
+            return self._mode_allows_task_unlocked()
+
+    def _mode_allows_task_unlocked(self):
+        return not self.required_control_mode or (
+            self.control_mode_observed
+            and self.current_control_mode == self.required_control_mode
+        )
+
+    def _handle_control_mode(self, message):
+        selected = str(message.data or "").strip().upper()
+        if selected not in ("TASK", "TELEOP"):
+            selected = None
+        with self.mode_lock:
+            previously_allowed = self._mode_allows_task_unlocked()
+            self.current_control_mode = selected
+            self.control_mode_observed = selected is not None
+            relinquish = previously_allowed and not self._mode_allows_task_unlocked()
+        if relinquish:
+            with self.queue_lock:
+                self.queued_task = None
+                self.queued_task_payload = None
+            cancelled = self._claim_cancellable_goal()
+            if cancelled:
+                self.client.cancel_goal()
+            self._publish_status(
+                "task_ownership_relinquished",
+                task="NO_OP",
+                phase="control_mode_transition",
+                reason="owned_goal_cancel_requested" if cancelled else "no_owned_active_goal",
+            )
 
     def _handle_joint_state(self, message):
         positions_by_name = dict(zip(message.name, message.position))
@@ -368,6 +423,19 @@ class Fr3GazeboVisibleTaskBridgeNode:
 
         task = str(task_payload.get("task", "NO_OP")).strip().upper() or "NO_OP"
 
+        if not self._mode_allows_task():
+            self._publish_status(
+                "rejected",
+                task=task,
+                phase="control_mode_rejected",
+                reason=(
+                    "task_mode_not_selected"
+                    if self.control_mode_observed
+                    else "control_mode_not_observed"
+                ),
+            )
+            return
+
         # Safety checks
         if bool_param(task_payload.get("controls_real_robot", False)):
             self._publish_status("rejected", task=task, phase="rejected", reason="real_robot_not_supported_in_gazebo_bridge")
@@ -438,7 +506,15 @@ class Fr3GazeboVisibleTaskBridgeNode:
                         self.queued_task_payload = None
 
             if task_to_execute:
-                self._execute_task(task_to_execute, joint_positions, task_payload_to_execute)
+                if self._mode_allows_task():
+                    self._execute_task(task_to_execute, joint_positions, task_payload_to_execute)
+                else:
+                    self._publish_status(
+                        "rejected",
+                        task=task_to_execute,
+                        phase="control_mode_rejected",
+                        reason="task_mode_not_selected",
+                    )
 
             time.sleep(0.1)
 
@@ -470,6 +546,14 @@ class Fr3GazeboVisibleTaskBridgeNode:
         return max_error <= tolerance, details
 
     def _execute_task(self, task, current_positions, task_payload=None):
+        if not self._mode_allows_task():
+            self._publish_status(
+                "rejected",
+                task=task,
+                phase="control_mode_rejected",
+                reason="task_mode_not_selected",
+            )
+            return
         waypoints, phases = self._get_task_waypoints(task, current_positions)
         if waypoints is None:
             reason = "no_op_task" if task == "NO_OP" else "unsupported_task"
@@ -482,7 +566,14 @@ class Fr3GazeboVisibleTaskBridgeNode:
 
         goal = self._build_goal(current_positions, waypoints, task=task)
         try:
-            self._send_goal(goal)
+            if not self._send_goal(goal):
+                self._publish_status(
+                    "rejected",
+                    task=task,
+                    phase="control_mode_rejected",
+                    reason="task_mode_not_selected",
+                )
+                return
 
             for i in range(1, len(phases)):
                 self._publish_status("running", task=task, phase=phases[i])

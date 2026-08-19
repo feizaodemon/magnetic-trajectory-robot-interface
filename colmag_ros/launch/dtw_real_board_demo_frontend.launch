@@ -22,6 +22,10 @@
   <arg name="confirmed_topic" default="/colmag/confirmed_label" />
   <arg name="task_command_topic" default="/colmag/task_command" />
   <arg name="demo_task_state_topic" default="/colmag/fr3_demo_task_state" />
+  <arg name="control_mode_enabled" default="false" />
+  <arg name="control_mode_topic" default="/colmag/control_mode" />
+  <arg name="control_mode_request_topic" default="/colmag/control_mode/request" />
+  <arg name="required_control_mode" default="" />
 
   <!-- ===== legacy magnetic_ui_state diagnostics (controls disabled here) = -->
   <arg name="enable_legacy_control_zones" default="false" />
@@ -88,6 +92,8 @@
   <arg name="allowed_task_set" default="safe_gazebo_demo" />
   <arg name="allow_critical_tasks" default="false" />
   <arg name="dispatcher_mapping_name" default="m104c4_8symbol_gazebo" />
+  <arg name="publish_once" default="false" />
+  <arg name="latch_task_command" default="true" />
 
   <!-- 1a. Real board serial source -> /colmag/raw_packet -->
   <node if="$(eval arg('board_source') == 'serial')"
@@ -171,6 +177,9 @@
     <param name="confirmed_label_topic" value="$(arg confirmed_topic)" />
     <param name="task_command_topic" value="$(arg task_command_topic)" />
     <param name="demo_task_state_topic" value="$(arg demo_task_state_topic)" />
+    <param name="control_mode_enabled" value="$(arg control_mode_enabled)" />
+    <param name="control_mode_topic" value="$(arg control_mode_topic)" />
+    <param name="control_mode_request_topic" value="$(arg control_mode_request_topic)" />
     <param name="candidate_preview_enabled" value="$(arg candidate_preview_enabled)" />
     <param name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
     <param name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
@@ -211,10 +220,14 @@
       <param name="confirmed_label_topic" value="$(arg confirmed_topic)" />
       <param name="task_command_topic" value="$(arg task_command_topic)" />
       <param name="min_confidence" value="$(arg min_confidence)" />
+      <param name="publish_once" value="$(arg publish_once)" />
+      <param name="latch_task_command" value="$(arg latch_task_command)" />
       <param name="gazebo_only" value="$(arg dispatcher_gazebo_only)" />
       <param name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
       <param name="allowed_task_set" value="$(arg allowed_task_set)" />
       <param name="allow_critical_tasks" value="$(arg allow_critical_tasks)" />
+      <param name="control_mode_topic" value="$(arg control_mode_topic)" />
+      <param name="required_control_mode" value="$(arg required_control_mode)" />
     </node>
   </group>
 

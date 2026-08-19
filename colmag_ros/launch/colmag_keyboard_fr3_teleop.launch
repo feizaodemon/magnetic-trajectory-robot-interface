@@ -1,0 +1,68 @@
+<launch>
+  <!--
+    Terminal-keyboard -> task dispatcher -> Strategy A -> real FR3 route.
+
+    The keyboard node runs separately with rosrun so it owns interactive stdin.
+    Selecting this launch is not sufficient to send a goal: allow_real_robot,
+    send_goals, and the exact active hardware profile must all be selected.
+  -->
+  <arg name="robot_ip"
+       doc="Required IP/hostname of the lab FR3; never hardcode it here" />
+  <arg name="arm_id" default="fr3" />
+  <arg name="confirmed_topic" default="/colmag/teleop/confirmed_label" />
+  <arg name="task_command_topic" default="/colmag/teleop/task_command" />
+  <arg name="allow_real_robot" default="false"
+       doc="Explicit teleop hardware enable gate; false cannot send an FR3 goal" />
+  <arg name="send_goals" default="false" />
+  <arg name="hardware_profile" default="dry-run" />
+  <arg name="realtime_config" default="enforce" />
+  <arg name="one_shot_hardware_mode" default="true" />
+  <arg name="max_motion_goals_per_process" default="1" />
+  <arg name="execution_timeout_sec" default="15.0" />
+  <arg name="allowed_tasks"
+       default="MOVE_LEFT, HEXAGON_TRAJECTORY, MOVE_RIGHT, STOP_OR_CANCEL" />
+  <arg name="control_mode_topic" default="/colmag/control_mode" />
+  <arg name="control_mode_request_topic" default="/colmag/control_mode/request" />
+
+  <!-- This focused terminal profile explicitly starts in TELEOP. Physical
+       command authorization remains the independent three-gate contract below. -->
+  <node pkg="colmag_ros" type="control_mode_node.py"
+        name="control_mode_node" output="screen">
+    <param name="state_topic" value="$(arg control_mode_topic)" />
+    <param name="request_topic" value="$(arg control_mode_request_topic)" />
+    <param name="initial_mode" value="TELEOP" />
+  </node>
+
+  <node pkg="colmag_ros"
+        type="task_dispatcher_node.py"
+        name="keyboard_teleop_task_dispatcher"
+        output="screen">
+    <param name="confirmed_label_topic" value="$(arg confirmed_topic)" />
+    <param name="task_command_topic" value="$(arg task_command_topic)" />
+    <param name="min_confidence" value="1.0" />
+    <param name="latch_task_command" value="false" />
+    <param name="gazebo_only" value="false" />
+    <param name="publish_once" value="false" />
+    <param name="dispatcher_mapping_name" value="m104c4_8symbol_gazebo" />
+    <param name="allowed_task_set" value="safe_gazebo_demo" />
+    <param name="allow_critical_tasks" value="false" />
+    <param name="source_id" value="keyboard_teleop_task_dispatcher" />
+    <param name="control_mode_topic" value="$(arg control_mode_topic)" />
+    <param name="required_control_mode" value="TELEOP" />
+  </node>
+
+  <include file="$(find colmag_ros)/launch/colmag_fr3_hardware_stack.launch">
+    <arg name="robot_ip" value="$(arg robot_ip)" />
+    <arg name="arm_id" value="$(arg arm_id)" />
+    <arg name="command_topic" value="$(arg task_command_topic)" />
+    <arg name="send_goals" value="$(arg send_goals)" />
+    <arg name="hardware_execution_enabled" value="$(arg allow_real_robot)" />
+    <arg name="hardware_profile" value="$(arg hardware_profile)" />
+    <arg name="realtime_config" value="$(arg realtime_config)" />
+    <arg name="one_shot_hardware_mode" value="$(arg one_shot_hardware_mode)" />
+    <arg name="max_motion_goals_per_process"
+         value="$(arg max_motion_goals_per_process)" />
+    <arg name="execution_timeout_sec" value="$(arg execution_timeout_sec)" />
+    <arg name="allowed_tasks" value="$(arg allowed_tasks)" />
+  </include>
+</launch>

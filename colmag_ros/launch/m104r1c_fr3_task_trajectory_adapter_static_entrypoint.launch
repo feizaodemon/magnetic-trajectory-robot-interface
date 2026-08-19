@@ -24,6 +24,8 @@
   <arg name="send_goals" default="false" />
   <arg name="hardware_execution_enabled" default="false" />
   <arg name="hardware_profile" default="dry-run" />
+  <arg name="control_mode_topic" default="" />
+  <arg name="required_control_mode" default="" />
   <arg name="reject_gazebo_only_commands" default="true" />
   <arg name="reject_controls_real_robot_true" default="true" />
   <arg name="joint_state_max_age_sec" default="0.5" />
@@ -73,6 +75,8 @@
     <param name="send_goals" value="$(arg send_goals)" />
     <param name="hardware_execution_enabled" value="$(arg hardware_execution_enabled)" />
     <param name="hardware_profile" value="$(arg hardware_profile)" />
+    <param name="control_mode_topic" value="$(arg control_mode_topic)" />
+    <param name="required_control_mode" value="$(arg required_control_mode)" />
     <param name="reject_gazebo_only_commands" value="$(arg reject_gazebo_only_commands)" />
     <param name="reject_controls_real_robot_true" value="$(arg reject_controls_real_robot_true)" />
     <param name="joint_state_max_age_sec" value="$(arg joint_state_max_age_sec)" />

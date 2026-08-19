@@ -2,18 +2,19 @@
 
 ## Private review status
 
-This repository is a **private portfolio review copy** exported from a fixed tracked snapshot. **PUBLICATION RIGHTS NOT YET CONFIRMED.** It must not be made public until the relevant contributors and rights holders confirm redistribution terms.
+This repository is a **private portfolio review copy** whose baseline was exported from a fixed tracked snapshot and whose current edition includes a subsequent curated dual-mode working-tree export. **PUBLICATION RIGHTS NOT YET CONFIRMED.** It must not be made public until the relevant contributors and rights holders confirm redistribution terms.
 
 The source snapshot contains no root `LICENSE`, `LICENSE.md`, `LICENSE.txt`, `COPYING`, or repository-level notice. The ROS package manifests declare `MIT` in metadata, but the corresponding license text is absent and repository-wide ownership is not established. No new license is asserted by this portfolio edition.
 
 ## Provenance
 
 - Source repository: [original collaborative repository](https://github.com/emaema99/COLMAG-seminar-SS26)
-- Source branch: `xiaowei`
-- Source commit: `e3c81fb31f5113c50f197bb11eff183295cf3163`
-- Export form: filtered tracked snapshot with a new Git history
+- Baseline source branch: `xiaowei`
+- Baseline source commit: `e3c81fb31f5113c50f197bb11eff183295cf3163`
+- Subsequent source: validated dual-mode working tree based on the baseline, exported 2026-08-19
+- Export form: curated files with a clean portfolio Git history
 
-The source repository, its branches, tags, issues, pull requests, releases, settings, and Git history were not modified or mirrored.
+The source repository, its branches, tags, issues, pull requests, releases, settings, and Git history were not modified or mirrored. No claim of sole authorship is introduced by the portfolio curation.
 
 ## Compatibility identifiers
 
@@ -39,4 +40,4 @@ The tracked DTW bank was generated from user-handwritten mouse seeds and records
 
 ## Hardware evidence boundary
 
-No private robot address, network credential, lab screenshot, machine path, raw hardware log, or identifiable background is included. Documentation describes the code boundary and previously recorded evidence conservatively; it does not certify current hardware behavior, arbitrary trajectories, sequential sessions, or physical safety.
+No private robot address, network credential, lab screenshot, machine path, raw hardware log, or identifiable background is included. Continuous Cartesian Gazebo TELEOP has recorded runtime evidence, while the Real-FR3 adapters are compile/integration validated only; physical Real-FR3 TELEOP was not executed. Nothing here certifies current hardware behavior, arbitrary trajectories, sequential sessions, or physical safety.

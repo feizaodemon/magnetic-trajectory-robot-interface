@@ -11,6 +11,7 @@ _PACKAGE_SRC = Path(__file__).resolve().parents[1] / "src"
 if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(_PACKAGE_SRC))
 
+from colmag_ros import control_mode
 from colmag_ros import m104c4_execution_semantics
 
 _C4_CONTRACT = m104c4_execution_semantics.validated_execution_contract()
@@ -194,11 +195,27 @@ class TaskDispatcherNode:
         self.min_confidence = float(rospy.get_param("~min_confidence", 0.0))
         self.gazebo_only = bool_param(rospy.get_param("~gazebo_only", True))
         self.publish_once = bool_param(rospy.get_param("~publish_once", False))
+        self.latch_task_command = bool_param(
+            rospy.get_param("~latch_task_command", True)
+        )
         self.dispatcher_mapping_name = rospy.get_param("~dispatcher_mapping_name", "m104c4_8symbol_gazebo")
         self.allowed_task_set = normalize_allowed_task_set(rospy.get_param("~allowed_task_set", "all_legacy"))
         self.allow_critical_tasks = bool_param(rospy.get_param("~allow_critical_tasks", True))
         self.source_id = str(rospy.get_param("~source_id", "task_dispatcher_node"))
         self.schema_version = int(rospy.get_param("~schema_version", 1))
+        self.control_mode_topic = str(
+            rospy.get_param("~control_mode_topic", "")
+        ).strip()
+        self.required_control_mode = str(
+            rospy.get_param("~required_control_mode", "")
+        ).strip()
+        if (
+            self.required_control_mode
+            and control_mode.normalize_mode(self.required_control_mode) is None
+        ):
+            raise ValueError("~required_control_mode must be TASK, TELEOP, or empty")
+        self.current_control_mode = None
+        self.control_mode_observed = False
         self.has_published = False
         self.adapter_session_id = ""
         label_to_task_json = rospy.get_param("~label_to_task_json", "")
@@ -206,23 +223,63 @@ class TaskDispatcherNode:
             self.label_to_task = parse_mapping(label_to_task_json)
         else:
             self.label_to_task = label_to_task_mapping_for_name(self.dispatcher_mapping_name)
-        self.publisher = rospy.Publisher(self.output_topic, String, queue_size=10, latch=True)
+        self.publisher = rospy.Publisher(
+            self.output_topic,
+            String,
+            queue_size=10,
+            latch=self.latch_task_command,
+        )
         self.subscriber = rospy.Subscriber(self.input_topic, String, self._handle_confirmed_label, queue_size=10)
         self.adapter_session_subscriber = rospy.Subscriber(
             self.adapter_session_topic, String, self._handle_adapter_session, queue_size=1
         )
+        self.control_mode_subscriber = None
+        if self.required_control_mode:
+            if not self.control_mode_topic:
+                raise ValueError(
+                    "~control_mode_topic is required when ~required_control_mode is set"
+                )
+            self.control_mode_subscriber = rospy.Subscriber(
+                self.control_mode_topic,
+                String,
+                self._handle_control_mode,
+                queue_size=1,
+            )
         rospy.loginfo("task_dispatcher_node started")
         rospy.loginfo("input_topic=%s output_topic=%s", self.input_topic, self.output_topic)
         rospy.loginfo("adapter_session_topic=%s", self.adapter_session_topic)
         rospy.loginfo("label_to_task=%s", self.label_to_task)
         rospy.loginfo("allowed_task_set=%s allow_critical_tasks=%s",
                       self.allowed_task_set, self.allow_critical_tasks)
+        rospy.loginfo(
+            "control_mode_topic=%s required_control_mode=%s",
+            self.control_mode_topic or "disabled",
+            self.required_control_mode or "disabled",
+        )
 
     def _handle_adapter_session(self, message):
         self.adapter_session_id = str(message.data or "").strip()
 
+    def _handle_control_mode(self, message):
+        self.current_control_mode = control_mode.normalize_mode(message.data)
+        self.control_mode_observed = self.current_control_mode is not None
+        if not self.control_mode_observed:
+            self.rospy.logwarn("Invalid control mode state %r; command admission blocked", message.data)
+
     def _handle_confirmed_label(self, message):
         if self.publish_once and self.has_published:
+            return
+        if not control_mode.mode_allows(
+            self.required_control_mode,
+            self.current_control_mode,
+            self.control_mode_observed,
+        ):
+            self.rospy.logwarn_throttle(
+                1.0,
+                "task command admission blocked: required_mode=%s current_mode=%s",
+                self.required_control_mode,
+                self.current_control_mode or "unavailable",
+            )
             return
 
         try:

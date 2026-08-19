@@ -16,7 +16,7 @@ catkin_python_setup()
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES colmag_real_fr3_command_admission colmag_fr3_hardware_safety colmag_fr3_trajectory_safety colmag_fr3_hexagon_trajectory colmag_fr3_joint_excursion_trajectory
+  LIBRARIES colmag_real_fr3_command_admission colmag_fr3_hardware_safety colmag_fr3_trajectory_safety colmag_fr3_hexagon_trajectory colmag_fr3_joint_excursion_trajectory colmag_fr3_cartesian_teleop_core
   CATKIN_DEPENDS actionlib control_msgs roscpp sensor_msgs std_msgs trajectory_msgs urdf
 )
 
@@ -56,6 +56,21 @@ target_link_libraries(colmag_fr3_hexagon_trajectory
   colmag_fr3_trajectory_safety
 )
 
+add_library(colmag_fr3_cartesian_teleop_core
+  src/fr3_cartesian_teleop_core.cpp
+)
+target_compile_features(colmag_fr3_cartesian_teleop_core PUBLIC cxx_std_11)
+
+add_executable(colmag_fr3_cartesian_teleop_adapter
+  src/colmag_fr3_cartesian_teleop_adapter.cpp
+)
+target_compile_features(colmag_fr3_cartesian_teleop_adapter PUBLIC cxx_std_11)
+target_link_libraries(colmag_fr3_cartesian_teleop_adapter
+  colmag_fr3_cartesian_teleop_core
+  ${catkin_LIBRARIES}
+)
+add_dependencies(colmag_fr3_cartesian_teleop_adapter ${catkin_EXPORTED_TARGETS})
+
 add_executable(colmag_fr3_task_trajectory_adapter
   src/colmag_fr3_task_trajectory_adapter.cpp
 )
@@ -79,6 +94,9 @@ catkin_install_python(PROGRAMS
   scripts/raw_packet_to_trajectory_2d_node.py
   scripts/magnetic_ui_state_node.py
   scripts/magnetic_trajectory_dashboard_node.py
+  scripts/control_mode_node.py
+  scripts/keyboard_teleop_node.py
+  scripts/keyboard_cartesian_teleop_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -88,6 +106,8 @@ install(TARGETS
   colmag_fr3_hexagon_trajectory
   colmag_fr3_joint_excursion_trajectory
   colmag_fr3_trajectory_safety
+  colmag_fr3_cartesian_teleop_core
+  colmag_fr3_cartesian_teleop_adapter
   colmag_fr3_task_trajectory_adapter
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

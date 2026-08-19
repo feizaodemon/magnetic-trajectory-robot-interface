@@ -4,6 +4,10 @@
 
 Real-robot motion is disabled by default. Offline tests must not start ROS, Gazebo, GUI, serial, or hardware processes.
 
+The dashboard's `TASK`/`TELEOP` selection is command-mode state only. It never
+sets `allow_real_robot`, enables command publication, validates calibration,
+starts controller bringup, or grants physical-runtime authorization.
+
 ## Simulation
 
 The Gazebo route is simulation-only. A valid simulation claim requires a Panda robot body, an active controller-like path, `FollowJointTrajectory` evidence, and changing joint state. Marker-only movement is not robot-body motion.
@@ -21,6 +25,10 @@ The FR3 route uses a C++ adapter between `/colmag/task_command` and the standard
 - cancel behavior limited to adapter-owned goals.
 
 These guards are necessary but do not independently prove a safe physical run.
+
+The shared Cartesian core and both Cartesian adapters compile in the ROS1
+build. Continuous keyboard Cartesian Gazebo TELEOP was runtime validated.
+Physical magnetic-board Cartesian TELEOP on a Real FR3 was not executed.
 
 ## Required connected-run gates
 
