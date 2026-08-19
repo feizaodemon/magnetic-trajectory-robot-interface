@@ -1,6 +1,6 @@
 # Magnetic Trajectory Robot Interface
 
-> Private portfolio review copy. Public redistribution rights have not yet been confirmed.
+> Public portfolio edition. Attribution, provenance, hardware-validation boundaries, and third-party license notices are retained below.
 
 Magnetic Trajectory Robot Interface is a dual-mode ROS1 robot interaction system. `TASK` converts magnetic-board or mouse trajectories into ranked DTW candidates and keeps explicit confirmation between recognition and execution. `TELEOP` provides continuous Cartesian manual control through a shared damped-least-squares inverse-kinematics core.
 
@@ -91,7 +91,7 @@ The Board profile separates cursor navigation from recorded drawing so movement 
 
 The recognizer normalizes a completed trajectory, compares it with the tracked DTW bank, and publishes ranked candidates on `/colmag/symbol_candidates`. The dashboard may publish a selected label on `/colmag/confirmed_label` only after explicit confirmation. The dispatcher is the sole owner of `/colmag/task_command`; candidate display alone cannot execute a task.
 
-The tracked bank was generated from user-handwritten mouse seeds and retains per-template provenance fields. It is included only in this private review copy while repository-level redistribution rights remain unresolved.
+The tracked bank was generated from user-handwritten mouse seeds and retains per-template provenance fields. It is included in this public portfolio edition with those provenance fields preserved.
 
 ## Gazebo and FR3 backends
 
@@ -154,7 +154,7 @@ The FR3 profiles are intentionally excluded from the quick path. See [Running](d
 
 ## Validation
 
-The portfolio candidate is checked for:
+The public portfolio edition is checked for:
 
 - Python/static/unit contracts and ROS-free C++ safety helpers;
 - Markdown and image-link closure with case-sensitive paths;
@@ -173,7 +173,7 @@ Exact results for this revision are recorded in [Validation](docs/VALIDATION.md)
 - Static and unit tests do not prove live ROS timing, rendered GUI behavior, Gazebo motion, or physical FR3 safety.
 - Gazebo Cartesian TELEOP has runtime evidence; physical Real-FR3 Cartesian TELEOP does not.
 - The FR3 route depends on specific upstream versions and must be requalified when the environment changes.
-- Repository-level publication rights remain unresolved; the repository must stay private.
+- Public availability does not change the authorship, attribution, or third-party license boundaries documented in `CREDITS.md` and `NOTICE.md`.
 
 ## My contribution
 
@@ -193,12 +193,12 @@ These claims do not assert sole authorship of the original collaborative project
 
 ## Attribution and provenance
 
-This repository is a personal portfolio edition derived from a collaborative robotics project. It focuses on the components I designed, integrated, validated, and documented. Collaborative and third-party contributions remain credited in [CREDITS.md](CREDITS.md) and applicable notices in [NOTICE.md](NOTICE.md).
+This repository is a public personal portfolio edition derived from a collaborative robotics project. It focuses on the components I designed, integrated, validated, and documented. Collaborative and third-party contributions remain credited in [CREDITS.md](CREDITS.md) and applicable notices in [NOTICE.md](NOTICE.md).
 
 The portfolio baseline was exported as a filtered tracked snapshot from source commit `e3c81fb31f5113c50f197bb11eff183295cf3163`. This revision adds the subsequently developed and validated dual-mode Cartesian teleoperation working-tree changes as a curated file export. The original Git history, branches, tags, internal process records, private evidence, and nontechnical materials were not copied.
 
 ## License and status
 
-**Private portfolio review copy. PUBLICATION RIGHTS NOT YET CONFIRMED.**
+**Public portfolio edition.**
 
-The source snapshot has no repository-level license text. Two ROS package manifests contain an `MIT` metadata field, but that is not sufficient to establish public redistribution rights for the repository as a whole. No new license has been added. Keep this repository private until the original contributors and rights holders confirm publication terms. See [NOTICE.md](NOTICE.md).
+This repository does not add a repository-wide license beyond the license information already present in retained source/package metadata. Public availability does not alter third-party ownership or upstream license obligations. See [NOTICE.md](NOTICE.md) for provenance and dependency-license boundaries.
