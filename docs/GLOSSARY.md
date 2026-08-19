@@ -14,4 +14,4 @@
 | FR3 adapter | C++ component that validates accepted tasks and constructs bounded joint trajectories. |
 | `FollowJointTrajectory` | ROS action interface used by the simulation and controller paths. |
 | provenance label | OCI image metadata that records the source Git revision used at build time. |
-| private review copy | Non-public portfolio candidate whose redistribution rights are unresolved. |
+| public portfolio edition | Public curated repository derived from a collaborative baseline while retaining attribution, provenance, validation boundaries, and third-party license notices. |
