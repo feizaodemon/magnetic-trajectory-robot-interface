@@ -1,10 +1,10 @@
 # Notice
 
-## Private review status
+## Public portfolio status
 
-This repository is a **private portfolio review copy** whose baseline was exported from a fixed tracked snapshot and whose current edition includes a subsequent curated dual-mode working-tree export. **PUBLICATION RIGHTS NOT YET CONFIRMED.** It must not be made public until the relevant contributors and rights holders confirm redistribution terms.
+This repository is published as a **public portfolio edition**. Its baseline was exported from a fixed tracked snapshot and the current edition includes a subsequent curated dual-mode working-tree export. Public availability does not change the authorship of the collaborative baseline, remove attribution, or alter third-party license obligations.
 
-The source snapshot contains no root `LICENSE`, `LICENSE.md`, `LICENSE.txt`, `COPYING`, or repository-level notice. The ROS package manifests declare `MIT` in metadata, but the corresponding license text is absent and repository-wide ownership is not established. No new license is asserted by this portfolio edition.
+The source snapshot contains no root `LICENSE`, `LICENSE.md`, `LICENSE.txt`, `COPYING`, or repository-level notice. The ROS package manifests declare `MIT` in metadata, but the corresponding repository-wide license text is absent and repository-wide ownership is not asserted by this portfolio edition. No new repository-wide license is granted by this notice.
 
 ## Provenance
 
@@ -36,7 +36,7 @@ The FR3 Dockerfile copies the pinned upstream Apache-2.0 `LICENSE` and `NOTICE` 
 
 ## Model and data boundary
 
-The tracked DTW bank was generated from user-handwritten mouse seeds and records source provenance per template. Raw seed directories, ignored outputs, logs, screenshots, external datasets, and large binary evidence are not included. The tracked bank remains covered by the unresolved repository-level publication boundary and may not be publicly redistributed without approval.
+The tracked DTW bank was generated from user-handwritten mouse seeds and records source provenance per template. Raw seed directories, ignored outputs, logs, screenshots, external datasets, and large binary evidence are not included. The tracked bank is included in this public portfolio edition with its provenance metadata retained. This notice does not grant a separate license for the bank beyond applicable rights and license terms.
 
 ## Hardware evidence boundary
 
