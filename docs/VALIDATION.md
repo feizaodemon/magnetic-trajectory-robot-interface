@@ -23,9 +23,9 @@ adapter used by both backends, and the discrete FR3 task adapter. A successful
 build does not authorize or execute Gazebo, serial, GUI, controller, or physical
 hardware runtime.
 
-## Portfolio-specific gates
+## Public portfolio publication gates
 
-The portfolio review also checks:
+The public portfolio edition also checks:
 
 - `git diff --check` and staged diff checks;
 - local Markdown links and images using case-sensitive repository paths;
@@ -48,7 +48,7 @@ The portfolio review also checks:
 
 ## Documentation-test consolidation
 
-The source snapshot included release-gate tests whose only purpose was to assert internal archive, task-ledger, agent-context, or process-document wording. Those process documents are intentionally excluded from the portfolio edition. Portfolio-irrelevant document-coupled tests were removed only where the underlying technical behavior remains covered by focused implementation tests; Markdown closure was replaced with a repository-wide portfolio link and exact-case check.
+The source snapshot included release-gate tests whose only purpose was to assert internal archive, task-ledger, agent-context, or process-document wording. Those process documents are intentionally excluded from the public portfolio edition. Portfolio-irrelevant document-coupled tests were removed only where the underlying technical behavior remains covered by focused implementation tests; Markdown closure was replaced with a repository-wide portfolio link and exact-case check.
 
 Removed document-coupled release tests:
 
@@ -69,4 +69,4 @@ Retained coverage includes DTW ranking, tracked-bank shape/provenance, dashboard
 
 ## Current result
 
-The exact pytest count, link result, privacy scan, browser result, commit SHA, and remote verification are recorded in the final creation report for this repository revision rather than hard-coded here.
+The exact pytest count, link result, publication scan, browser result, commit SHA, and remote verification are recorded in the final creation report for this repository revision rather than hard-coded here.
