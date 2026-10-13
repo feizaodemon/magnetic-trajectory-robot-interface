@@ -26,7 +26,6 @@ def format_ocr_canvas_dwell_texts(panel_state, hover_button, dwell_progress, dwe
             progress * 100.0,
             float(dwell_confirm_sec),
         ),
-        "hover": "Hover: %s | Dwell: %.0f%%" % (button_id, progress * 100.0),
     }
 
 
@@ -53,7 +52,6 @@ def format_integrated_dwell_status_texts(
     current_button_id,
     dwell_progress,
     dwell_confirm_sec,
-    last_command_intent,
 ):
     button_id = current_button_id or "-"
     progress = float(dwell_progress or 0.0)
@@ -66,5 +64,4 @@ def format_integrated_dwell_status_texts(
             progress * dwell_sec,
             dwell_sec,
         ),
-        "hover": "Hover: %s | Last intent: %s" % (button_id, last_command_intent or "-"),
     }

@@ -218,7 +218,6 @@ class MagneticTrajectoryDashboardNode(
         self.recognizer_labels_var = tk.StringVar(value="Labels: unknown")
         self.rank_vars = [tk.StringVar(value="-") for _ in range(3)]
         self.dwell_var = tk.StringVar(value="Integrated dwell confirm: disabled")
-        self.hover_var = tk.StringVar(value="Hover: -")
         if self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
             initial_hint = format_interaction_instruction(self.config.interaction_profile)
         elif self.config.is_trajectory_mode:
@@ -451,7 +450,6 @@ class MagneticTrajectoryDashboardNode(
                 self.config.dwell_confirm_sec,
             )
             self.root.after(0, lambda t=texts["dwell"]: self.dwell_var.set(t))
-            self.root.after(0, lambda t=texts["hover"]: self.hover_var.set(t))
             self.root.after(0, lambda: self.ocr_hint_var.set(self._ocr_state_hint_text()))
             self._refresh_mouse_operator_presentation()
             return
@@ -475,10 +473,8 @@ class MagneticTrajectoryDashboardNode(
             self.dwell_state.get("current_button_id", ""),
             self.dwell_state.get("dwell_progress", 0.0),
             self.config.dwell_confirm_sec,
-            self.last_command_intent,
         )
         self.root.after(0, lambda t=texts["dwell"]: self.dwell_var.set(t))
-        self.root.after(0, lambda t=texts["hover"]: self.hover_var.set(t))
 
     def _publish_dashboard_state(self):
         if not self.config.integrated_confirm_enabled or self.dashboard_state_pub is None:

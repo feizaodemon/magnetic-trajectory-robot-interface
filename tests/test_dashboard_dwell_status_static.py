@@ -17,7 +17,6 @@ def test_ocr_canvas_dwell_texts_preserve_existing_strings():
 
     assert texts == {
         "dwell": "Mode: OCR_CANVAS | State: DRAWING | Hover: B | Dwell: 42% | Hover control: enabled | Dwell confirm: 2.0s",
-        "hover": "Hover: B | Dwell: 42%",
     }
 
 
@@ -33,7 +32,6 @@ def test_ocr_canvas_dwell_texts_use_dash_for_no_hover():
         "Mode: OCR_CANVAS | State: WAITING | Hover: - | Dwell: 0% | "
         "Hover control: enabled | Dwell confirm: 1.5s"
     )
-    assert texts["hover"] == "Hover: - | Dwell: 0%"
 
 
 def test_trajectory_preview_interaction_text_preserves_enabled_progress():
@@ -74,12 +72,10 @@ def test_integrated_status_texts():
         current_button_id="rank_1",
         dwell_progress=0.5,
         dwell_confirm_sec=2.0,
-        last_command_intent="MOVE_LEFT",
     )
 
     assert texts == {
         "dwell": "Integrated dwell confirm: enabled | Hover: rank_1 | Dwell: 1.0 / 2.0 s",
-        "hover": "Hover: rank_1 | Last intent: MOVE_LEFT",
     }
 
 
@@ -89,10 +85,8 @@ def test_integrated_status_texts_fallbacks():
         current_button_id="",
         dwell_progress=0.25,
         dwell_confirm_sec=4.0,
-        last_command_intent="",
     )
 
     assert texts == {
         "dwell": "Integrated dwell confirm: disabled | Hover: - | Dwell: 1.0 / 4.0 s",
-        "hover": "Hover: - | Last intent: -",
     }

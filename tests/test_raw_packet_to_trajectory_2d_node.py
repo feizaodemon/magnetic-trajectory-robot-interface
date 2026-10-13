@@ -1,4 +1,9 @@
 import json
+
+import pytest
+
+# The node imports ROS message packages, which only exist in ROS Noetic.
+pytest.importorskip("std_msgs.msg", reason="needs ROS Noetic std_msgs")
 from std_msgs.msg import String
 
 class MockPublisher:
@@ -15,7 +20,6 @@ class MockTime:
 # We must mock rospy before importing our node
 import sys
 from unittest import mock
-import pytest
 
 mock_rospy = mock.MagicMock()
 mock_rospy.get_time = MockTime().get_time

@@ -1,48 +1,40 @@
 """Display-only semantic labels for the 8-symbol recognition display.
 
 This module is intentionally small and ROS-free. It does not dispatch tasks,
-publish labels, or touch Gazebo / robot routes. The strings here are future
-intent names for recognition display only.
+publish labels, or touch Gazebo / robot routes. The strings here are for
+recognition display only.
 """
 
 C2C3_DISPLAY_SEMANTICS = {
     "1": {
-        "future_intent": "MOVE_LEFT",
         "display_name": "MOVE_LEFT",
         "note": "Existing safe Gazebo subset member; display-only in C2C3.",
     },
     "2": {
-        "future_intent": "HEXAGON_TRAJECTORY",
         "display_name": "HEXAGON_TRAJECTORY",
         "note": "Existing safe Gazebo subset member; display-only in C2C3.",
     },
     "3": {
-        "future_intent": "MOVE_RIGHT",
         "display_name": "MOVE_RIGHT",
         "note": "Existing safe Gazebo subset member; display-only in C2C3.",
     },
     "V": {
-        "future_intent": "HOVER_APPROACH",
         "display_name": "HOVER_APPROACH",
         "note": "Future planning metadata only; no execution binding.",
     },
     "O": {
-        "future_intent": "ORBIT_SMALL",
         "display_name": "ORBIT_SMALL / CIRCLE_PREVIEW",
         "note": "Future planning metadata only; no execution binding.",
     },
     "X": {
-        "future_intent": "STOP_OR_CANCEL",
         "display_name": "STOP_OR_CANCEL",
         "note": "Future planning metadata only; no execution binding.",
     },
     "A": {
-        "future_intent": "HOME_OR_READY",
         "display_name": "HOME_OR_READY",
         "note": "Future planning metadata only; no execution binding.",
     },
     "C": {
-        "future_intent": "COMPLIANT_DEMO_SAFE",
         "display_name": "COMPLIANT_DEMO_SAFE / SOFT_DESCEND_PREVIEW",
         "note": "Future planning metadata only; no execution binding.",
     },
