@@ -1,4 +1,5 @@
 #include "colmag_ros/fr3_cartesian_teleop_core.h"
+#include "colmag_ros/json_escape.h"
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -70,21 +71,6 @@ bool readDoubleArray(ros::NodeHandle* node,
     (*output)[index] = values[index];
   }
   return true;
-}
-
-std::string jsonEscape(const std::string& value)
-{
-  std::string result;
-  result.reserve(value.size());
-  for (char character : value)
-  {
-    if (character == '\\' || character == '"')
-    {
-      result.push_back('\\');
-    }
-    result.push_back(character);
-  }
-  return result;
 }
 
 }  // namespace

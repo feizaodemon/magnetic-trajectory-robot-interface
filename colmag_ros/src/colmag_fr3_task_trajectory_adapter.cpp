@@ -27,6 +27,7 @@
 #include "colmag_ros/fr3_hexagon_trajectory.h"
 #include "colmag_ros/fr3_joint_excursion_trajectory.h"
 #include "colmag_ros/fr3_trajectory_safety.h"
+#include "colmag_ros/json_escape.h"
 #include "colmag_ros/real_fr3_command_admission.h"
 
 namespace colmag_ros
@@ -102,36 +103,6 @@ std::vector<std::string> defaultJointNames(const std::string& arm_id)
     names.push_back(arm_id + "_joint" + std::to_string(index));
   }
   return names;
-}
-
-std::string jsonEscape(const std::string& value)
-{
-  std::ostringstream out;
-  for (const char ch : value)
-  {
-    switch (ch)
-    {
-      case '\\':
-        out << "\\\\";
-        break;
-      case '"':
-        out << "\\\"";
-        break;
-      case '\n':
-        out << "\\n";
-        break;
-      case '\r':
-        out << "\\r";
-        break;
-      case '\t':
-        out << "\\t";
-        break;
-      default:
-        out << ch;
-        break;
-    }
-  }
-  return out.str();
 }
 
 std::string actionResultReason(int error_code)
