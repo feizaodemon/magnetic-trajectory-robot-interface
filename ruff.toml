@@ -7,9 +7,3 @@ target-version = "py38"
 extend-select = ["FA102"]
 # Nodes, scripts and tests put package paths on sys.path before importing.
 ignore = ["E402"]
-
-[lint.per-file-ignores]
-# FR3 operator tooling is hardware scope; changes there need separate review.
-# Known finding, not fixed yet: fr3_lab_runtime.py imports argparse, getpass
-# and sys without using them.
-"scripts/fr3_lab_runtime.py" = ["F401"]

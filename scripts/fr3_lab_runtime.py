@@ -8,10 +8,8 @@ it does not implement controller, trajectory, lifecycle, or command logic.
 
 from __future__ import annotations
 
-import argparse
 import ast
 import csv
-import getpass
 import hashlib
 import io
 import json
@@ -23,7 +21,6 @@ import shutil
 import signal
 import socket
 import subprocess
-import sys
 import threading
 import time
 from dataclasses import dataclass
