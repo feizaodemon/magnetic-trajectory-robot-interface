@@ -4,7 +4,7 @@
 Recognition-only. This script does NOT touch ROS, Gazebo, GUI, serial, the real
 board, the task dispatcher, the task-command topic, or any robot execution path.
 It only measures whether the existing ``dtw_template_bank`` backend can separate
-the C1 target vocabulary ``1,2,3,V,O,X,A,C`` on mouse seeds.
+the 8-symbol vocabulary ``1,2,3,V,O,X,A,C`` on mouse seeds.
 
 Because no runtime samples exist for ``V/O/X/A/C``, the existing
 ``scripts/eval_dtw_bank_on_runtime_samples.py`` cannot score them. Instead this
@@ -14,7 +14,7 @@ label become templates, the later seeds become held-out queries. Both templates
 and queries share the same y-flip + preprocess profile, so this is an offline
 mouse-seed cross-validation, NOT a runtime or real-board PASS.
 
-Reports go under ignored ``outputs/classifier_artifacts/m104c1_8symbol_eval/``.
+Reports go under ignored ``outputs/classifier_artifacts/dtw_seed_holdout_eval/``.
 """
 
 from __future__ import annotations
@@ -52,9 +52,9 @@ from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
     rank_labels_for_query,
 )
 
-# C1 target vocabulary. Recognition-only; no executable semantics are bound.
-C1_TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
-C1_EVAL_DIR = Path("outputs") / "classifier_artifacts" / "m104c1_8symbol_eval"
+# The 8-symbol vocabulary. Recognition-only; no executable semantics are bound.
+TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
+HOLDOUT_EVAL_DIR = Path("outputs") / "classifier_artifacts" / "dtw_seed_holdout_eval"
 
 # The gate defaults come from dtw_template_bank_tools so offline numbers stay
 # comparable with the runtime recognizer.
@@ -65,12 +65,12 @@ def build_parser():
         description="Offline: held-out 8-symbol DTW recognition-only evaluation."
     )
     parser.add_argument("--seeds-root", default="outputs/classifier_training/seeds")
-    parser.add_argument("--labels", default=",".join(C1_TARGET_LABELS),
+    parser.add_argument("--labels", default=",".join(TARGET_LABELS),
                         help="Comma-separated recognition labels (default: 1,2,3,V,O,X,A,C)")
     parser.add_argument("--holdout-fraction", type=float, default=0.4,
                         help="Fraction of each label's sorted seeds held out as queries")
     parser.add_argument("--out-dir", default="",
-                        help="Report dir; default outputs/classifier_artifacts/m104c1_8symbol_eval/eval_<ts>")
+                        help="Report dir; default outputs/classifier_artifacts/dtw_seed_holdout_eval/eval_<ts>")
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--max-distance", type=float, default=DEFAULT_MAX_DISTANCE)
     parser.add_argument("--min-margin", type=float, default=DEFAULT_MIN_MARGIN)
@@ -127,7 +127,7 @@ def build_bank(template_pairs, args):
         per_label_index[label] += 1
     bank = build_template_bank(
         templates, labels=labels, profile=args.preprocess_profile, y_flip=args.y_flip,
-        generated_by="scripts/eval_m104c1_8symbol_dtw_bank.py",
+        generated_by="scripts/eval_dtw_bank_seed_holdout.py",
     )
     return bank
 
@@ -239,7 +239,7 @@ def main(argv=None):
     summary["preprocess_profile"] = args.preprocess_profile
 
     out_dir = ensure_output_dir(
-        _repo_path(args.out_dir or (C1_EVAL_DIR / time.strftime("eval_%Y%m%d_%H%M%S"))),
+        _repo_path(args.out_dir or (HOLDOUT_EVAL_DIR / time.strftime("eval_%Y%m%d_%H%M%S"))),
         [REPO / "outputs"],
     )
     write_csv(out_dir / "eval_rows.csv", rows)

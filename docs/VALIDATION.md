@@ -3,10 +3,24 @@
 ## Automated command
 
 ```bash
+python3 -m pip install -r requirements.txt
 python3 -m pytest -p no:cacheprovider -q
 ```
 
 The suite covers ROS-free parsing and helpers, dashboard state, DTW ranking, dispatcher behavior, Gazebo bridge behavior, FR3 safety modules, Docker configuration, package/install references, and selected route-isolation contracts. It does not start ROS, Gazebo, serial, GUI, or physical hardware.
+
+Tests that import `rospy` or ROS message packages skip themselves when ROS Noetic is absent; `pytest -rs` prints each skip reason.
+
+## Continuous integration
+
+`.github/workflows/pytest.yml` runs on every pull request and every push to `main`:
+
+| Job | Environment | Runs |
+| --- | --- | --- |
+| `pytest` | Python 3.10, no ROS | the suite; ROS-only tests skip |
+| `pytest-noetic` | `ros:noetic-ros-base` container, Python 3.8 | the full suite, including the ROS-only tests |
+
+Both jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. Neither job runs `catkin_make`, starts ROS nodes, or touches Gazebo, GUI, serial, or hardware. The job logs on each commit hold its exact result.
 
 ## ROS1 compile/link build
 
@@ -23,9 +37,9 @@ adapter used by both backends, and the discrete FR3 task adapter. A successful
 build does not authorize or execute Gazebo, serial, GUI, controller, or physical
 hardware runtime.
 
-## Public portfolio publication gates
+## Export-time checks
 
-The public portfolio edition also checks:
+These checks ran by hand when the public portfolio edition was exported. CI does not repeat them, except the Markdown link check and the `outputs/` check, which are also pytest tests:
 
 - `git diff --check` and staged diff checks;
 - local Markdown links and images using case-sensitive repository paths;
@@ -66,7 +80,3 @@ Removed document-coupled release tests:
 - `tests/test_m104r2_param1_fr3_adapter_params_static.py`
 
 Retained coverage includes DTW ranking, tracked-bank shape/provenance, dashboard behavior, confirmation, dispatcher semantics, Gazebo bridge behavior, FR3 safety modules and ROS-free C++ tests, FR3 operator logic, Docker configuration, packaging, and route isolation.
-
-## Current result
-
-The exact pytest count, link result, publication scan, browser result, commit SHA, and remote verification are recorded in the final creation report for this repository revision rather than hard-coded here.

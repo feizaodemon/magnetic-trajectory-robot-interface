@@ -3,8 +3,11 @@
 Run the offline/static suite from the repository root:
 
 ```bash
+python3 -m pip install -r requirements.txt
 python3 -m pytest -p no:cacheprovider -q
 ```
+
+Without ROS Noetic, the tests that import ROS packages skip themselves.
 
 The tests cover serial parsing, dashboard state, DTW ranking, confirmation,
 dispatch, control-mode admission, keyboard Cartesian input, the shared
