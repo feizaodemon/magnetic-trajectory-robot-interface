@@ -62,3 +62,34 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           source /opt/ros/noetic/setup.bash
           python3 -m pytest -q -rs
+
+  catkin-build:
+    # Compiles and installs both ROS packages, including the FR3 C++ adapters.
+    # Build only: it starts no node, launch file, controller or robot.
+    runs-on: ubuntu-22.04
+    container: ros:noetic-ros-base
+    steps:
+      - name: Install build dependencies
+        # ros-base lacks urdf and control_msgs. franka_ros is only an exec
+        # dependency, so the build does not need it.
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            libboost-dev ros-noetic-control-msgs ros-noetic-urdf
+      - uses: actions/checkout@v7
+      - name: catkin_make install
+        shell: bash
+        run: |
+          mkdir -p /catkin_ws/src
+          cp -r colmag_ros colmag_gazebo_stub /catkin_ws/src/
+          cd /catkin_ws
+          source /opt/ros/noetic/setup.bash
+          catkin_make install -DCMAKE_BUILD_TYPE=Release
+      - name: Check installed artifacts
+        shell: bash
+        run: |
+          cd /catkin_ws
+          source install/setup.bash
+          test -x install/lib/colmag_ros/colmag_fr3_task_trajectory_adapter
+          test -x install/lib/colmag_ros/colmag_fr3_cartesian_teleop_adapter
+          python3 -c "import colmag_ros.execution_semantics, colmag_gazebo_stub"
