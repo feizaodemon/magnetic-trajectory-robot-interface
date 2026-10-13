@@ -19,8 +19,9 @@ Tests that import `rospy` or ROS message packages skip themselves when ROS Noeti
 | --- | --- | --- |
 | `pytest` | Python 3.10, no ROS | the suite; ROS-only tests skip |
 | `pytest-noetic` | `ros:noetic-ros-base` container, Python 3.8 | the full suite, including the ROS-only tests |
+| `ruff` | Python 3.10 | `ruff check` with the settings in `ruff.toml`: undefined names, unused imports and variables, and annotations that would not run on Python 3.8 |
 
-Both jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. Neither job runs `catkin_make`, starts ROS nodes, or touches Gazebo, GUI, serial, or hardware. Each job's log holds the exact result for its commit.
+Both pytest jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. No job runs `catkin_make`, starts ROS nodes, or touches Gazebo, GUI, serial, or hardware. Each job's log holds the exact result for its commit.
 
 ## ROS1 compile/link build
 

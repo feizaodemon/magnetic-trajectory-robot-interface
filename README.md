@@ -157,7 +157,7 @@ The FR3 profiles are intentionally excluded from the quick path. See [Running](d
 
 ## Validation
 
-CI runs pytest on every pull request, once with Python 3.10 without ROS and once in a ROS Noetic container. The suite checks:
+CI runs `ruff check` and pytest on every pull request. pytest runs twice: with Python 3.10 without ROS, and in a ROS Noetic container. The suite checks:
 
 - Python static and unit contracts, and the ROS-free C++ safety helpers;
 - Markdown and image links with case-sensitive paths;
