@@ -20,17 +20,17 @@ from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-SCRIPTS = REPO / "colmag_ros" / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
+PACKAGE_SRC = REPO / "colmag_ros" / "src"
+if str(PACKAGE_SRC) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_SRC))
 
-from dtw_dataset_io import (  # noqa: E402
+from colmag_ros.dtw_dataset_io import (  # noqa: E402
     ensure_output_dir,
     load_runtime_sample,
     write_csv,
     write_json,
 )
-from dtw_template_bank_tools import (  # noqa: E402
+from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
     DEFAULT_EVAL_DIR,
     decide_acceptance,
     is_bad_intended_label,

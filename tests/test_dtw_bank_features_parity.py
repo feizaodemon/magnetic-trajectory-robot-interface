@@ -16,7 +16,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from colmag_ros import dtw_bank_features as features  # noqa: E402
-import dtw_template_bank_tools as bank_tools  # noqa: E402
+from colmag_ros import dtw_template_bank_tools as bank_tools  # noqa: E402
 import trajectory_symbol_top3_recognizer_node as recognizer  # noqa: E402
 
 

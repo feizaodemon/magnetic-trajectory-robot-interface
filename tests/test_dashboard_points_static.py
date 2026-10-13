@@ -13,12 +13,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO / "colmag_ros" / "scripts"
 DASHBOARD = SCRIPTS / "magnetic_trajectory_dashboard_node.py"
-HELPER = SCRIPTS / "dashboard_points.py"
+HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_points.py"
 
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-import dashboard_points as points  # noqa: E402
+from colmag_ros import dashboard_points as points  # noqa: E402
 import magnetic_trajectory_dashboard_node as dash  # noqa: E402
 
 
@@ -72,15 +72,17 @@ class DashboardPointExtractionStaticTests(unittest.TestCase):
         self.assertEqual(dash.clean_stroke_points([(0, 0), None]), [(0, 0)])
         self.assertEqual(dash.build_ocr_stroke_points([(0, 0), None]), [(0, 0)])
 
-        src = DASHBOARD.read_text()
-        for expected in (
-            "return _dashboard_points.extract_xy_points(payload)",
-            "return _dashboard_points.extract_single_point(payload)",
-            "return _dashboard_points.clean_stroke_points(trail)",
-            "return _dashboard_points.build_ocr_stroke_points(trail)",
-            "return _dashboard_points.flatten_strokes(self.all_strokes)",
+        for name in (
+            "extract_xy_points",
+            "extract_single_point",
+            "clean_stroke_points",
+            "build_ocr_stroke_points",
         ):
-            self.assertIn(expected, src)
+            self.assertIs(getattr(dash, name), getattr(points, name))
+        self.assertIn(
+            "return _dashboard_points.flatten_strokes(self.all_strokes)",
+            DASHBOARD.read_text(),
+        )
 
     def test_helper_has_no_ros_tk_or_execution_dependencies(self):
         text = HELPER.read_text()

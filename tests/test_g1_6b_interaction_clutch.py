@@ -3,8 +3,8 @@ import inspect
 from colmag_ros import dashboard_controller_input as controls
 from colmag_ros import dashboard_geometry as geometry
 from colmag_ros import dashboard_sample_lifecycle as lifecycle
-from colmag_ros.scripts import magnetic_trajectory_dashboard_node as dashboard
-from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
+import magnetic_trajectory_dashboard_node as dashboard
+from magnetic_trajectory_dashboard_node import (
     MagneticTrajectoryDashboardNode,
 )
 

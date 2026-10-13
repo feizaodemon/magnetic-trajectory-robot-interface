@@ -2,8 +2,16 @@
 import csv
 import json
 import math
+import sys
 from pathlib import Path
 import time
+
+
+_PACKAGE_SRC = Path(__file__).resolve().parents[1] / "src"
+if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
+    sys.path.insert(0, str(_PACKAGE_SRC))
+
+from colmag_ros.param_utils import bool_param, finite_float
 
 
 CONTROL_ZONES = {
@@ -15,22 +23,6 @@ CONTROL_ZONES = {
 DEFAULT_CONTROLLED_CAPTURE_DATASET_DIR = "outputs/m33e_controlled_capture_dataset"
 DEFAULT_CONTROLLED_CAPTURE_IMAGE_SIZE = 64
 DEFAULT_CONTROLLED_CAPTURE_MARGIN = 4
-
-
-def bool_param(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
-
-
-def finite_float(value, default=0.0):
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return default
-    return parsed if math.isfinite(parsed) else default
 
 
 def compute_point_velocity(prev_point, current_point, dt):
@@ -149,7 +141,7 @@ def build_controlled_capture_payload(
 
 
 def _render_controlled_capture_png(points, output_path, image_size=DEFAULT_CONTROLLED_CAPTURE_IMAGE_SIZE):
-    from trajectory_rasterizer import rasterize_trajectory, write_png_grayscale
+    from colmag_ros.trajectory_rasterizer import rasterize_trajectory, write_png_grayscale
 
     image, _metadata = rasterize_trajectory(
         points,

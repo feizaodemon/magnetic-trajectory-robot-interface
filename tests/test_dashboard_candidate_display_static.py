@@ -14,12 +14,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO / "colmag_ros" / "scripts"
 DASHBOARD = REPO / "colmag_ros" / "scripts" / "magnetic_trajectory_dashboard_node.py"
-HELPER = REPO / "colmag_ros" / "scripts" / "dashboard_candidate_display.py"
+HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_candidate_display.py"
 
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-import dashboard_candidate_display as display  # noqa: E402
+from colmag_ros import dashboard_candidate_display as display  # noqa: E402
 
 
 class CandidateDisplayHelperTests(unittest.TestCase):

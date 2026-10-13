@@ -1,6 +1,5 @@
 """Focused package/install seam checks for M104-PKG-INSTALL1."""
 
-import ast
 import importlib
 import importlib.util
 import sys
@@ -40,10 +39,10 @@ def test_canonical_helpers_import_from_package():
         assert Path(module.__file__).resolve() == (ROS_PACKAGE / (name + ".py")).resolve()
 
 
-def test_legacy_helper_wrappers_have_no_business_logic():
+def test_legacy_helper_wrappers_are_removed():
     for name in CANONICAL_HELPERS:
-        tree = ast.parse((ROS_SCRIPTS / (name + ".py")).read_text())
-        assert not [node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))]
+        assert not (ROS_SCRIPTS / (name + ".py")).exists()
+    assert not (ROS_SCRIPTS / "_colmag_package_compat.py").exists()
 
 
 def test_c4_contract_rejects_missing_attribute_and_empty_mapping():

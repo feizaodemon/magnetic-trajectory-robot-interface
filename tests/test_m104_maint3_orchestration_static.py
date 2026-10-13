@@ -83,13 +83,12 @@ def test_ros_interface_setup_preserves_subscriber_then_publisher_order():
 def test_display_state_and_formatter_live_only_in_canonical_package():
     canonical = DISPLAY.read_text()
     dashboard = DASHBOARD.read_text()
-    wrapper = (REPO / "colmag_ros" / "scripts" / "dashboard_candidate_display.py").read_text()
     assert "class PreviewCandidateDisplayState" in canonical
     assert "def preview_candidate_ui_texts(state):" in canonical
     assert "PreviewCandidateDisplayState(" in dashboard
     assert "preview_candidate_ui_texts(display_state)" in dashboard
-    assert "class PreviewCandidateDisplayState" not in wrapper
-    assert "def preview_candidate_ui_texts" not in wrapper
+    assert "class PreviewCandidateDisplayState" not in dashboard
+    assert not (REPO / "colmag_ros" / "scripts" / "dashboard_candidate_display.py").exists()
 
 
 def test_recognizer_callback_delegates_without_changing_public_helpers():
@@ -107,6 +106,8 @@ def test_recognizer_callback_delegates_without_changing_public_helpers():
     assert {"_parse_capture_message", "_recognize_capture", "_build_recognition_payload"} <= set(methods)
     callback = methods["_handle_capture"]
     assert callback.end_lineno - callback.lineno + 1 < 80
-    source = RECOGNIZER.read_text()
-    for public_helper in ("def dtw_distance", "def normalize_points", "def resample_by_arclength"):
-        assert public_helper in source
+    import trajectory_symbol_top3_recognizer_node as recognizer_module
+    from colmag_ros import dtw_bank_features
+
+    for public_helper in ("dtw_distance", "normalize_points", "resample_by_arclength"):
+        assert getattr(recognizer_module, public_helper) is getattr(dtw_bank_features, public_helper)

@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 def load_rasterizer_module():
-    path = Path(__file__).resolve().parents[1] / "colmag_ros" / "scripts" / "trajectory_rasterizer.py"
+    path = Path(__file__).resolve().parents[1] / "colmag_ros" / "src" / "colmag_ros" / "trajectory_rasterizer.py"
     spec = importlib.util.spec_from_file_location("trajectory_rasterizer", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

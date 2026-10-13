@@ -3,18 +3,12 @@ import json
 import math
 import time
 
-try:
-    from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
-        build_gamepad_button_rects,
-        build_virtual_button_rects,
-        map_canvas_to_world,
-    )
-except ImportError:
-    from magnetic_trajectory_dashboard_node import (
-        build_gamepad_button_rects,
-        build_virtual_button_rects,
-        map_canvas_to_world,
-    )
+from magnetic_trajectory_dashboard_node import (
+    build_gamepad_button_rects,
+    build_virtual_button_rects,
+    map_canvas_to_world,
+)
+from colmag_ros.param_utils import bool_param
 
 
 DEFAULT_BOUNDS = (-0.18, 0.18, -0.18, 0.18)
@@ -29,22 +23,6 @@ SUPPORTED_TEST_SEQUENCES = (
     TEST_SEQUENCE_GAMEPAD_B_THEN_C,
     TEST_SEQUENCE_GAMEPAD_A_BLOCK_THEN_X,
 )
-
-
-def bool_param(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
-
-
-def finite_float(value, default=0.0):
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return default
-    return parsed if math.isfinite(parsed) else default
 
 
 def find_virtual_button_rect(button_rects, target_button_id):

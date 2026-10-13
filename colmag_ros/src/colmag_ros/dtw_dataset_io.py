@@ -7,6 +7,7 @@ import json
 import math
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+from colmag_ros.trajectory_strokes import flatten_strokes
 
 
 Point2D = Tuple[float, float]
@@ -75,10 +76,6 @@ def normalize_strokes(payload: Any) -> List[List[Point2D]]:
     if current:
         result.append(current)
     return result
-
-
-def flatten_strokes(strokes: Sequence[Sequence[Point2D]]) -> List[Point2D]:
-    return [point for stroke in strokes for point in stroke]
 
 
 def parse_json_text(text: Any) -> Dict[str, Any]:

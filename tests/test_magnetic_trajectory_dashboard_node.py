@@ -2,7 +2,7 @@ import pytest
 import json
 import sys
 from pathlib import Path
-from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
+from magnetic_trajectory_dashboard_node import (
     safe_json_loads,
     extract_xy_points,
     extract_single_point,
@@ -190,7 +190,7 @@ def test_get_virtual_button_under_cursor():
     assert get_virtual_button_under_cursor(5, 5, rects) == ""
 
 def test_drawing_zone_is_central_and_separate_from_canvas_controls():
-    from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
+    from magnetic_trajectory_dashboard_node import (
         resolve_preview_button_hit,
     )
 
@@ -227,7 +227,7 @@ def test_preview_hover_cancel_resets_dwell_only_contract():
 def test_preview_pointer_leave_does_not_clear_sample_or_candidate_state():
     src = (
         __import__(
-            "colmag_ros.scripts.magnetic_trajectory_dashboard_node",
+            "magnetic_trajectory_dashboard_node",
             fromlist=["__file__"],
         ).__file__
     )
@@ -251,7 +251,7 @@ def test_preview_pointer_leave_does_not_clear_sample_or_candidate_state():
 
 def test_trajectory_keyboard_c_confirms_and_x_clears():
     from pathlib import Path
-    import colmag_ros.scripts.magnetic_trajectory_dashboard_node as dashboard
+    import magnetic_trajectory_dashboard_node as dashboard
 
     text = Path(dashboard.__file__).read_text()
     key_start = text.index("def _on_key_press(")

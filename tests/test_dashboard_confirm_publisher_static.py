@@ -8,11 +8,11 @@ import json
 import unittest
 from pathlib import Path
 
-from colmag_ros.scripts.dashboard_confirm_publisher import (
+from colmag_ros.dashboard_confirm_publisher import (
     PreviewConfirmPublisher,
     external_payload_is_fresh,
 )
-from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
+from magnetic_trajectory_dashboard_node import (
     build_confirmed_label_payload,
     candidate_payload_key,
     should_suppress_repeated_confirm,
@@ -20,7 +20,7 @@ from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
 
 
 REPO = Path(__file__).resolve().parents[1]
-HELPER = REPO / "colmag_ros" / "scripts" / "dashboard_confirm_publisher.py"
+HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_confirm_publisher.py"
 
 
 class _String:

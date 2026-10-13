@@ -13,25 +13,13 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
 from colmag_ros.recognition_uncertainty import apply_uncertainty_gate
 from colmag_ros.trajectory_strokes import flatten_strokes, normalize_payload_strokes, stroke_metadata
 from colmag_ros.dtw_bank_features import (
-    dtw_distance as _dtw_distance,
-    finite_float as _finite_float,
-    normalize_points as _normalize_points,
-    resample_by_arclength as _resample_by_arclength,
+    dtw_distance,
+    finite_float,
+    normalize_points,
+    resample_by_arclength,
 )
 
 DEFAULT_LABELS = ("1", "2", "3", "V", "O", "X", "A", "C")
-
-def finite_float(value, default=0.0):
-    return _finite_float(value, default)
-
-def resample_by_arclength(points, n=64):
-    return _resample_by_arclength(points, n)
-
-def normalize_points(points, resample_length=64):
-    return _normalize_points(points, resample_length)
-
-def dtw_distance(a, b):
-    return _dtw_distance(a, b)
 
 def _line(points):
     return [(float(x), float(y)) for x, y in points]

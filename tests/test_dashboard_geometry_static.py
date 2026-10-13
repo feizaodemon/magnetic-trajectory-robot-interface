@@ -1,6 +1,6 @@
 import pytest
 
-from colmag_ros.scripts.dashboard_geometry import (
+from colmag_ros.dashboard_geometry import (
     build_canvas_reachable_drawing_zone,
     build_canvas_reachable_preview_hit_zones,
     canvas_zones_to_stage_zones,

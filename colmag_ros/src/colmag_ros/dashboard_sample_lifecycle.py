@@ -8,32 +8,13 @@ ROS, Tk, confirmation, dispatch, Gazebo, or robot-control side effects.
 import math
 import time
 from pathlib import Path
+from colmag_ros.param_utils import optional_float
+from colmag_ros.dashboard_points import clean_stroke_points
 
 
 DEFAULT_REAL_BOARD_SAMPLE_RECORDING_DIR = (
     "outputs/runtime_samples/real_board"
 )
-
-
-def optional_float(value):
-    if value is None:
-        return None
-    if isinstance(value, str):
-        text = value.strip().lower()
-        if text in ("", "none", "nan"):
-            return None
-        try:
-            return float(text)
-        except ValueError:
-            return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def clean_stroke_points(points):
-    return [point for point in points if point is not None]
 
 
 def trajectory_input_inactive_reason(

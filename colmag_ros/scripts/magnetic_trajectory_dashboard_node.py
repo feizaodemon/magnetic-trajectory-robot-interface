@@ -43,6 +43,63 @@ from colmag_ros import dashboard_controller_input as _dashboard_controller_input
 from colmag_ros import dashboard_sample_lifecycle as _dashboard_sample_lifecycle
 from colmag_ros import dashboard_trajectory_processing as _dashboard_trajectory_processing
 from colmag_ros import control_mode
+from colmag_ros.dashboard_controller_input import (
+    _extract_candidate_by_rank,
+    build_confirmed_label_payload,
+    build_controller_button_rects,
+    build_gamepad_button_rects,
+    build_gamepad_confirmed_label_payload,
+    build_virtual_button_rects,
+    cancelled_preview_hover_state,
+    candidate_payload_key,
+    gamepad_button_to_intent,
+    gamepad_button_to_label,
+    normalize_controller_layout,
+    preview_button_availability,
+    should_ignore_gamepad_button,
+    should_suppress_repeated_confirm,
+    update_controller_mode,
+    update_dwell_state,
+)
+from colmag_ros.dashboard_geometry import (
+    build_canvas_reachable_drawing_zone,
+    build_canvas_reachable_preview_hit_zones,
+    canvas_zones_to_stage_zones,
+    clamp,
+    compute_ocr_stage_geometry,
+    dashboard_minimum_window_size,
+    derive_orientation_clutch_mode,
+    drawing_zone_style,
+    get_virtual_button_under_cursor,
+    is_point_inside_rect,
+    map_trajectory_point,
+    preview_button_style,
+    resolve_preview_button_hit,
+    trajectory_point_in_drawing_zone,
+)
+from colmag_ros.dashboard_points import (
+    build_ocr_stroke_points,
+    clean_stroke_points,
+    extract_single_point,
+    extract_xy_points,
+)
+from colmag_ros.dashboard_sample_lifecycle import (
+    build_dashboard_drawing_zone_capture_payload,
+    cleanup_drawing_sample_points,
+    real_board_sample_recording_dir,
+    safe_sample_recording_name,
+    sample_cleanup_metadata,
+    trajectory_input_inactive_reason,
+    trajectory_input_is_active,
+    update_drawing_zone_sample_state,
+)
+from colmag_ros.dashboard_trajectory_processing import (
+    compute_trajectory_bounds,
+    normalize_scale_mode,
+    normalize_stroke_gate_mode,
+    split_trail_segments,
+    stroke_gate_pass,
+)
 from colmag_ros.dashboard_dwell_status import (
     format_interaction_instruction,
     format_integrated_dwell_status_texts,
@@ -51,6 +108,7 @@ from colmag_ros.dashboard_dwell_status import (
     format_trajectory_preview_interaction_text,
     normalize_interaction_profile,
 )
+from colmag_ros.param_utils import bool_param
 
 CONTROLLER_LAYOUT_RANK_CONFIRM = _dashboard_controller_input.CONTROLLER_LAYOUT_RANK_CONFIRM
 CONTROLLER_LAYOUT_GAMEPAD = _dashboard_controller_input.CONTROLLER_LAYOUT_GAMEPAD
@@ -76,12 +134,6 @@ def safe_json_loads(text):
     except (ValueError, TypeError):
         pass
     return None
-
-def extract_xy_points(payload):
-    return _dashboard_points.extract_xy_points(payload)
-
-def extract_single_point(payload):
-    return _dashboard_points.extract_single_point(payload)
 
 def map_world_to_canvas(x, y, bounds, width, height, padding):
     x_min, x_max, y_min, y_max = bounds
@@ -126,60 +178,15 @@ def map_canvas_to_world(canvas_x, canvas_y, bounds, width, height, padding):
 
 TRAJECTORY_MODE = "trajectory"
 
-def map_trajectory_point(x, y, bounds, width, height, padding,
-                         flip_x=False, flip_y=False, swap_xy=False, clamp=True):
-    return _dashboard_geometry.map_trajectory_point(
-        x, y, bounds, width, height, padding,
-        flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy, clamp=clamp,
-    )
-
-def _robust_min_max(values):
-    return _dashboard_trajectory_processing.robust_min_max(values)
+_robust_min_max = _dashboard_trajectory_processing.robust_min_max
 
 
 def _enforce_min_span(lo, hi, min_span):
     return _dashboard_trajectory_processing.enforce_min_span(lo, hi, min_span)
 
 
-def normalize_scale_mode(value):
-    return _dashboard_trajectory_processing.normalize_scale_mode(value)
+opt_float = _dashboard_trajectory_processing.optional_float
 
-
-def normalize_stroke_gate_mode(value):
-    return _dashboard_trajectory_processing.normalize_stroke_gate_mode(value)
-
-
-def opt_float(value):
-    return _dashboard_trajectory_processing.optional_float(value)
-
-
-def stroke_gate_pass(mode, z, speed, z_min=None, z_max=None,
-                     min_speed=0.0, max_speed=0.0):
-    return _dashboard_trajectory_processing.stroke_gate_pass(
-        mode, z, speed, z_min, z_max, min_speed, max_speed,
-    )
-
-
-def compute_trajectory_bounds(points, fixed_bounds, scale_mode="fixed",
-                              auto_center=False, padding_ratio=0.12,
-                              min_span=0.01, window_points=None,
-                              projection_extent=0.06):
-    return _dashboard_trajectory_processing.compute_trajectory_bounds(
-        points,
-        fixed_bounds,
-        scale_mode,
-        auto_center,
-        padding_ratio,
-        min_span,
-        window_points,
-        projection_extent,
-    )
-
-def split_trail_segments(trail):
-    return _dashboard_trajectory_processing.split_trail_segments(trail)
-
-def clean_stroke_points(trail):
-    return _dashboard_points.clean_stroke_points(trail)
 
 def recognize_trajectory_candidates(points, min_points=8, labels=None):
     """Preview-only top-3 recognition over a live stroke point sequence.
@@ -204,9 +211,6 @@ def recognize_trajectory_candidates(points, min_points=8, labels=None):
     if not candidates:
         return "none", []
     return "ready", candidates
-
-def build_ocr_stroke_points(trail):
-    return _dashboard_points.build_ocr_stroke_points(trail)
 
 def _short_exc(exc, limit=160):
     """One-line, length-bounded description of an exception for UI/log display."""
@@ -296,36 +300,6 @@ def coerce_float(value, default=None):
     except (TypeError, ValueError):
         return default
 
-def clamp(value, low, high):
-    return _dashboard_geometry.clamp(value, low, high)
-
-def bool_param(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
-
-def is_point_inside_rect(x, y, rect):
-    return _dashboard_geometry.is_point_inside_rect(x, y, rect)
-
-def get_virtual_button_under_cursor(canvas_x, canvas_y, button_rects):
-    return _dashboard_geometry.get_virtual_button_under_cursor(canvas_x, canvas_y, button_rects)
-
-def resolve_preview_button_hit(x, y, hit_zones):
-    return _dashboard_geometry.resolve_preview_button_hit(x, y, hit_zones)
-
-def derive_orientation_clutch_mode(
-    interaction_engaged,
-    inside_drawing_zone=False,
-    hovered_button="",
-):
-    return _dashboard_geometry.derive_orientation_clutch_mode(
-        interaction_engaged,
-        inside_drawing_zone,
-        hovered_button,
-    )
-
 def normalize_board_control_layout(value):
     return _dashboard_geometry.normalize_board_control_layout(
         value,
@@ -333,74 +307,8 @@ def normalize_board_control_layout(value):
         canvas_reachable_layout=BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE,
     )
 
-def compute_ocr_stage_geometry(
-    available_width, available_height, controls_inside_canvas=False,
-):
-    return _dashboard_geometry.compute_ocr_stage_geometry(
-        available_width,
-        available_height,
-        controls_inside_canvas=controls_inside_canvas,
-    )
-
 def compute_dashboard_panel_widths(total_width):
     return _dashboard_geometry.compute_dashboard_panel_widths(total_width)
-
-def dashboard_minimum_window_size():
-    return _dashboard_geometry.dashboard_minimum_window_size()
-
-def build_canvas_reachable_preview_hit_zones(width, height, padding, button_size, reach_rect=None):
-    return _dashboard_geometry.build_canvas_reachable_preview_hit_zones(
-        width, height, padding, button_size, reach_rect=reach_rect,
-    )
-
-def build_canvas_reachable_drawing_zone(width, height, padding, reach_rect=None):
-    return _dashboard_geometry.build_canvas_reachable_drawing_zone(
-        width, height, padding, reach_rect=reach_rect,
-    )
-
-def preview_button_availability(has_sample, has_candidate, has_clearable_content):
-    return _dashboard_controller_input.preview_button_availability(
-        has_sample, has_candidate, has_clearable_content,
-    )
-
-def preview_button_style(button_id, enabled, active=False):
-    return _dashboard_geometry.preview_button_style(button_id, enabled, active)
-
-def drawing_zone_style():
-    return _dashboard_geometry.drawing_zone_style()
-
-def cancelled_preview_hover_state():
-    return _dashboard_controller_input.cancelled_preview_hover_state()
-
-def trajectory_point_in_drawing_zone(
-    point, bounds, width, height, padding, drawing_zone,
-    flip_x=False, flip_y=False, swap_xy=False,
-):
-    return _dashboard_geometry.trajectory_point_in_drawing_zone(
-        point, bounds, width, height, padding, drawing_zone,
-        flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy,
-    )
-
-def trajectory_input_inactive_reason(valid=True, z=None, z_min=None, z_max=None, gate_enabled=True):
-    return _dashboard_sample_lifecycle.trajectory_input_inactive_reason(
-        valid, z, z_min, z_max, gate_enabled,
-    )
-
-def cleanup_drawing_sample_points(points, min_point_delta=0.0, max_points=0, enabled=True):
-    return _dashboard_sample_lifecycle.cleanup_drawing_sample_points(
-        points, min_point_delta, max_points, enabled,
-    )
-
-def sample_cleanup_metadata(raw_points, cleaned_points, min_point_delta=0.0, max_points=0, enabled=True):
-    return _dashboard_sample_lifecycle.sample_cleanup_metadata(
-        raw_points, cleaned_points, min_point_delta, max_points, enabled,
-    )
-
-def real_board_sample_recording_dir(path):
-    return _dashboard_sample_lifecycle.real_board_sample_recording_dir(path)
-
-def safe_sample_recording_name(sample_id):
-    return _dashboard_sample_lifecycle.safe_sample_recording_name(sample_id)
 
 def build_real_board_sample_record(
     *,
@@ -418,108 +326,9 @@ def build_real_board_sample_record(
         candidate_payload=candidate_payload,
     )
 
-def trajectory_input_is_active(valid=True, z=None, z_min=None, z_max=None, gate_enabled=True):
-    return _dashboard_sample_lifecycle.trajectory_input_is_active(
-        valid, z, z_min, z_max, gate_enabled,
-    )
-
-def update_drawing_zone_sample_state(
-    state, point, inside_drawing_zone, input_active,
-    inside_control_zone=False, append_point=True, force_freeze=False,
-):
-    return _dashboard_sample_lifecycle.update_drawing_zone_sample_state(
-        state,
-        point,
-        inside_drawing_zone,
-        input_active,
-        inside_control_zone,
-        append_point,
-        force_freeze,
-    )
-
-def build_dashboard_drawing_zone_capture_payload(
-    points, sample_id, sequence_id, timestamp, source_topic, drawing_zone=None,
-    raw_points=None, cleanup_metadata=None,
-):
-    return _dashboard_sample_lifecycle.build_dashboard_drawing_zone_capture_payload(
-        points,
-        sample_id,
-        sequence_id,
-        timestamp,
-        source_topic,
-        drawing_zone,
-        raw_points,
-        cleanup_metadata,
-    )
-
-def canvas_zones_to_stage_zones(canvas_zones, canvas_x, canvas_y):
-    return _dashboard_geometry.canvas_zones_to_stage_zones(canvas_zones, canvas_x, canvas_y)
-
-def update_dwell_state(previous_state, current_button_id, now, dwell_sec):
-    return _dashboard_controller_input.update_dwell_state(
-        previous_state, current_button_id, now, dwell_sec,
-    )
-
-def normalize_controller_layout(value):
-    return _dashboard_controller_input.normalize_controller_layout(value)
-
-def build_virtual_button_rects(width, height, padding):
-    return _dashboard_controller_input.build_virtual_button_rects(
-        width, height, padding,
-    )
-
 def _rect_from_center(button_id, label, cx, cy, size, kind="rect"):
     return _dashboard_controller_input._rect_from_center(
         button_id, label, cx, cy, size, kind,
-    )
-
-def build_gamepad_button_rects(width, height, padding):
-    return _dashboard_controller_input.build_gamepad_button_rects(
-        width, height, padding,
-    )
-
-def build_controller_button_rects(layout, width, height, padding):
-    return _dashboard_controller_input.build_controller_button_rects(
-        layout, width, height, padding,
-    )
-
-def gamepad_button_to_label(button_id):
-    return _dashboard_controller_input.gamepad_button_to_label(button_id)
-
-def gamepad_button_to_intent(button_id):
-    return _dashboard_controller_input.gamepad_button_to_intent(button_id)
-
-def update_controller_mode(previous_mode, activated_button, now, digit_mode_sec, has_candidates=False):
-    return _dashboard_controller_input.update_controller_mode(
-        previous_mode, activated_button, now, digit_mode_sec, has_candidates,
-    )
-
-def should_ignore_gamepad_button(mode, button_id, block_arrows_on_stop=True):
-    return _dashboard_controller_input.should_ignore_gamepad_button(
-        mode, button_id, block_arrows_on_stop,
-    )
-
-def build_gamepad_confirmed_label_payload(button_id, mode, candidate_payload=None, now_fn=time.time):
-    return _dashboard_controller_input.build_gamepad_confirmed_label_payload(
-        button_id, mode, candidate_payload, now_fn,
-    )
-
-def _extract_candidate_by_rank(payload, selected_rank):
-    return _dashboard_controller_input._extract_candidate_by_rank(
-        payload, selected_rank,
-    )
-
-def candidate_payload_key(payload):
-    return _dashboard_controller_input.candidate_payload_key(payload)
-
-def should_suppress_repeated_confirm(last_key, payload, selected_rank):
-    return _dashboard_controller_input.should_suppress_repeated_confirm(
-        last_key, payload, selected_rank,
-    )
-
-def build_confirmed_label_payload(candidate_payload, selected_rank, now_fn=time.time):
-    return _dashboard_controller_input.build_confirmed_label_payload(
-        candidate_payload, selected_rank, now_fn,
     )
 
 class MagneticTrajectoryDashboardNode:

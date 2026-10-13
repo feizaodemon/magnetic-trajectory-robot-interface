@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import math
 import sys
 import time
 import uuid
@@ -13,6 +12,7 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
 
 from colmag_ros import control_mode
 from colmag_ros import m104c4_execution_semantics
+from colmag_ros.param_utils import bool_param, finite_float
 
 _C4_CONTRACT = m104c4_execution_semantics.validated_execution_contract()
 C4_MAPPING_NAME = _C4_CONTRACT["mapping_name"]
@@ -40,14 +40,6 @@ CRITICAL_TASKS = {
 }
 
 STOP_CLEAR_TASKS = {"STOP", "CLEAR"}
-
-
-def bool_param(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
 
 
 def normalize_allowed_task_set(value):
@@ -94,14 +86,6 @@ def should_publish_task_command(command, allowed_task_set="all_legacy", allow_cr
         return False, "task_not_in_allowed_set"
 
     return True, ""
-
-
-def finite_float(value, default=0.0):
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return default
-    return parsed if math.isfinite(parsed) else default
 
 
 def parse_mapping(mapping_text):
