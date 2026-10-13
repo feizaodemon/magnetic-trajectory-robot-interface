@@ -109,6 +109,7 @@ class DashboardOcrPanelMixin:
             if (
                 (self.config.demo_input_mode == "ocr_canvas" or (self.config.is_trajectory_mode and self.config.candidate_preview_enabled))
                 and button_id == self.dwell_timer.button
+                and enabled
                 and self.dwell_timer.progress > 0
                 and self.config.hover_progress_enabled
             ):
