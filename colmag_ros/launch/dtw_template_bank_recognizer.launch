@@ -1,6 +1,7 @@
 <launch>
   <!--
-    M104-B2e recognizer-only mouse smoke for the opt-in DTW template bank.
+    Recognizer-only launch for the DTW template bank.
+    Formerly m104b2d_dtw_template_bank_mouse_smoke.launch; the node name is kept.
 
     This launch starts only trajectory_symbol_top3_recognizer_node.py. It does
     not start the dashboard, task dispatcher, Gazebo, FR3, or any robot

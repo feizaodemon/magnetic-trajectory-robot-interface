@@ -20,7 +20,7 @@ TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
 
 C4_LAUNCH = REPO / "colmag_ros" / "launch" / "m104c4_8symbol_dtw_gazebo_robot_body_demo.launch"
 C4_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_gazebo_robot_body_demo.launch"
-C2C3_LAUNCH = REPO / "colmag_ros" / "launch" / "m104c2c3_8symbol_dtw_recognition_display.launch"
+RECOGNIZER_LAUNCH = REPO / "colmag_ros" / "launch" / "dtw_template_bank_recognizer.launch"
 C2C3_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_recognition_display.launch"
 
 
@@ -67,7 +67,7 @@ class CuratedDtwBankTests(unittest.TestCase):
         for launch, arg_name in (
             (C4_LAUNCH, "bank_path"),
             (C4_ALIAS, "bank_path"),
-            (C2C3_LAUNCH, "dtw_template_bank_path"),
+            (RECOGNIZER_LAUNCH, "dtw_template_bank_path"),
             (C2C3_ALIAS, "dtw_template_bank_path"),
         ):
             args = _arg_defaults(launch)

@@ -1,12 +1,22 @@
 <launch>
   <!--
-    Stable COLMAG operator alias for the M104-C2C3 8-symbol recognition display.
+    COLMAG 8-symbol DTW recognition display and display-only semantic
+    mapping plan. Formerly split across this file and
+    m104c2c3_8symbol_dtw_recognition_display.launch; node names are kept.
 
-    Thin wrapper only. Display behavior is owned by:
-      m104c2c3_8symbol_dtw_recognition_display.launch
+    Route:
+      mouse dashboard (ocr_canvas)
+        -> /colmag/symbol_capture
+        -> trajectory_symbol_top3_recognizer_node.py via
+           dtw_template_bank_recognizer.launch
+        -> /colmag/symbol_candidates
+        -> dashboard top-3 display with display-only future intent names
 
-    Recognition/display only. No dispatcher, no Gazebo, no /colmag/task_command,
-    no marker route, no candidate_panel, no auto-confirm, no real FR3.
+    This launch is recognition/display only. It does not start
+    task_dispatcher_node.py, fr3_gazebo_visible_task_bridge_node.py,
+    gazebo_task_executor.py, candidate_panel_node.py, auto-confirm, Gazebo, or
+    any robot / real-FR3 route. The dashboard is started with confirm publishing
+    disabled and publish_task_command=false.
   -->
 
   <arg name="symbol_capture_topic" default="/colmag/symbol_capture" />
@@ -23,10 +33,11 @@
   <arg name="label_set" default="1,2,3,V,O,X,A,C" />
   <arg name="min_confidence" default="0.0" />
 
-  <include file="$(find colmag_ros)/launch/m104c2c3_8symbol_dtw_recognition_display.launch">
+  <include file="$(find colmag_ros)/launch/dtw_template_bank_recognizer.launch">
     <arg name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
     <arg name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
     <arg name="recognized_label_topic" value="$(arg recognized_label_topic)" />
+    <arg name="recognizer_backend" value="dtw_template_bank" />
     <arg name="dtw_template_bank_path" value="$(arg dtw_template_bank_path)" />
     <arg name="dtw_template_allowed_labels" value="$(arg dtw_template_allowed_labels)" />
     <arg name="dtw_template_top_k" value="$(arg dtw_template_top_k)" />
@@ -36,4 +47,20 @@
     <arg name="label_set" value="$(arg label_set)" />
     <arg name="min_confidence" value="$(arg min_confidence)" />
   </include>
+
+  <node pkg="colmag_ros"
+        type="magnetic_trajectory_dashboard_node.py"
+        name="m104c2c3_recognition_display_dashboard"
+        output="screen">
+    <param name="demo_input_mode" value="ocr_canvas" />
+    <param name="symbol_capture_topic" value="$(arg symbol_capture_topic)" />
+    <param name="symbol_candidates_topic" value="$(arg symbol_candidates_topic)" />
+    <param name="integrated_dashboard_confirm_enabled" value="false" />
+    <param name="publish_confirmed_label" value="false" />
+    <param name="publish_task_command" value="false" />
+    <param name="dashboard_gamepad_enabled" value="false" />
+    <param name="dashboard_virtual_buttons_enabled" value="false" />
+    <param name="safety_badge" value="RECOGNITION DISPLAY ONLY / NO ROBOT EXECUTION" />
+    <param name="footer_text" value="M104-C2C3 8-symbol display | dtw_template_bank -> /colmag/symbol_candidates | display-only semantic plan" />
+  </node>
 </launch>
