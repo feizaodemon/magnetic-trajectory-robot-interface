@@ -20,7 +20,7 @@ Tests that import `rospy` or ROS message packages skip themselves when ROS Noeti
 | `pytest` | Python 3.10, no ROS | the suite; ROS-only tests skip |
 | `pytest-noetic` | `ros:noetic-ros-base` container, Python 3.8 | the full suite, including the ROS-only tests |
 
-Both jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. Neither job runs `catkin_make`, starts ROS nodes, or touches Gazebo, GUI, serial, or hardware. The job logs on each commit hold its exact result.
+Both jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. Neither job runs `catkin_make`, starts ROS nodes, or touches Gazebo, GUI, serial, or hardware. Each job's log holds the exact result for its commit.
 
 ## ROS1 compile/link build
 
@@ -39,7 +39,7 @@ hardware runtime.
 
 ## Export-time checks
 
-These checks ran by hand when the public portfolio edition was exported. CI does not repeat them, except the Markdown link check and the `outputs/` check, which are also pytest tests:
+These checks ran by hand when the public portfolio edition was exported. CI repeats only those that are also pytest tests: Markdown links, launch file XML, and the `outputs/` check. The checks were:
 
 - `git diff --check` and staged diff checks;
 - local Markdown links and images using case-sensitive repository paths;
