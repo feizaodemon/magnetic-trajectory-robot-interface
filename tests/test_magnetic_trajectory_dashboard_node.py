@@ -45,6 +45,7 @@ from magnetic_trajectory_dashboard_node import (
     GAMEPAD_MODE_DIGIT,
     GAMEPAD_MODE_MOTION,
 )
+from dashboard_source import dashboard_source
 
 
 def test_catkin_wrapper_exec_adds_package_source_to_import_path():
@@ -225,15 +226,7 @@ def test_preview_hover_cancel_resets_dwell_only_contract():
     }
 
 def test_preview_pointer_leave_does_not_clear_sample_or_candidate_state():
-    src = (
-        __import__(
-            "magnetic_trajectory_dashboard_node",
-            fromlist=["__file__"],
-        ).__file__
-    )
-    from pathlib import Path
-
-    text = Path(src).read_text()
+    text = dashboard_source()
     clear_start = text.index("def _clear_ocr_hover_button(")
     clear_body = text[clear_start:text.index("\n    def _update_ocr_toolbar_visuals", clear_start)]
     forbidden = (
@@ -250,10 +243,7 @@ def test_preview_pointer_leave_does_not_clear_sample_or_candidate_state():
         assert token not in clear_body
 
 def test_trajectory_keyboard_c_confirms_and_x_clears():
-    from pathlib import Path
-    import magnetic_trajectory_dashboard_node as dashboard
-
-    text = Path(dashboard.__file__).read_text()
+    text = dashboard_source()
     key_start = text.index("def _on_key_press(")
     key_body = text[key_start:]
     trajectory_branch = key_body[key_body.index("if self.is_trajectory_mode:"):key_body.index("if self.demo_input_mode != \"ocr_canvas\":")]

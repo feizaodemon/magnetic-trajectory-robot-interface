@@ -17,10 +17,10 @@ from magnetic_trajectory_dashboard_node import (
     should_suppress_repeated_confirm,
 )
 from colmag_ros.dashboard_confirm_publisher import PreviewConfirmPublisher
+from dashboard_source import dashboard_source
 
 
 REPO = Path(__file__).resolve().parents[1]
-DASHBOARD = REPO / "colmag_ros" / "scripts" / "magnetic_trajectory_dashboard_node.py"
 HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_confirm_publisher.py"
 
 
@@ -143,7 +143,7 @@ class PreviewConfirmPublishTests(unittest.TestCase):
 
 class PreviewConfirmWiringTests(unittest.TestCase):
     def setUp(self):
-        self.src = DASHBOARD.read_text()
+        self.src = dashboard_source()
         self.helper_src = HELPER.read_text()
 
     def test_preview_confirm_calls_publisher(self):

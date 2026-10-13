@@ -2,6 +2,7 @@
 
 import ast
 from pathlib import Path
+from dashboard_source import dashboard_source
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -82,7 +83,7 @@ def test_ros_interface_setup_preserves_subscriber_then_publisher_order():
 
 def test_display_state_and_formatter_live_only_in_canonical_package():
     canonical = DISPLAY.read_text()
-    dashboard = DASHBOARD.read_text()
+    dashboard = dashboard_source()
     assert "class PreviewCandidateDisplayState" in canonical
     assert "def preview_candidate_ui_texts(state):" in canonical
     assert "PreviewCandidateDisplayState(" in dashboard

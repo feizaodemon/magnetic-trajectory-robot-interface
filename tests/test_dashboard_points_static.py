@@ -12,7 +12,6 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO / "colmag_ros" / "scripts"
-DASHBOARD = SCRIPTS / "magnetic_trajectory_dashboard_node.py"
 HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_points.py"
 
 if str(SCRIPTS) not in sys.path:
@@ -20,6 +19,7 @@ if str(SCRIPTS) not in sys.path:
 
 from colmag_ros import dashboard_points as points  # noqa: E402
 import magnetic_trajectory_dashboard_node as dash  # noqa: E402
+from dashboard_source import dashboard_source  # noqa: E402
 
 
 class DashboardPointHelperBehaviorTests(unittest.TestCase):
@@ -81,7 +81,7 @@ class DashboardPointExtractionStaticTests(unittest.TestCase):
             self.assertIs(getattr(dash, name), getattr(points, name))
         self.assertIn(
             "return _dashboard_points.flatten_strokes(self.all_strokes)",
-            DASHBOARD.read_text(),
+            dashboard_source(),
         )
 
     def test_helper_has_no_ros_tk_or_execution_dependencies(self):

@@ -7,6 +7,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
+from dashboard_source import dashboard_source
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -119,7 +120,7 @@ def test_mouse_toolbar_stop_uses_existing_c4_cancel_contract():
 
 
 def test_mouse_toolbar_wording_and_legacy_gamepad_mapping_scope():
-    dashboard = (ROS_SCRIPTS / "magnetic_trajectory_dashboard_node.py").read_text()
+    dashboard = dashboard_source()
     controller_input = (ROS_PACKAGE / "dashboard_controller_input.py").read_text()
     assert "OCR toolbar" not in dashboard
     assert '"A": "S"' in controller_input
