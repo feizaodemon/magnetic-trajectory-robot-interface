@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import copy
 import json
-import math
 import sys
 import threading
 import time
@@ -45,6 +44,7 @@ _COLMAG_ROS_SRC = Path(__file__).resolve().parents[2] / "colmag_ros" / "src"
 if _COLMAG_ROS_SRC.is_dir() and str(_COLMAG_ROS_SRC) not in sys.path:
     sys.path.insert(0, str(_COLMAG_ROS_SRC))
 
+from colmag_ros import control_mode
 from colmag_ros import execution_semantics
 from colmag_ros.param_utils import bool_param
 
@@ -52,6 +52,81 @@ _C4_CONTRACT = execution_semantics.validated_execution_contract()
 C4_NO_MOTION_TASKS = set(_C4_CONTRACT["no_motion_tasks"])
 
 HOME_OR_READY_POSITIONS = [0.0, -0.4, 0.0, -2.1, 0.0, 1.6, 0.8]
+
+# Visible placeholder motions: joint-index offsets per waypoint (None returns
+# to the start pose) and the phase names published along the way.
+TASK_WAYPOINT_OFFSETS = {
+    "HEXAGON_TRAJECTORY": (
+        [
+            {0: 0.10, 5: 0.12}, {0: 0.05, 5: 0.20}, {0: -0.05, 5: 0.20}, {0: -0.10, 5: 0.12},
+            {0: -0.05, 5: 0.05}, None,
+        ],
+        [
+            "planning_hexagon_placeholder", "waypoint_1", "waypoint_2", "waypoint_3", "waypoint_4",
+            "waypoint_5", "waypoint_6",
+        ],
+    ),
+    "PICK_PLACE": (
+        [{1: -0.10, 3: 0.10}, {1: 0.00, 3: 0.00}, {1: -0.10, 3: -0.10}, None],
+        [
+            "planning_pick_place_placeholder", "approach_stub", "grasp_stub", "place_stub", "release_stub",
+        ],
+    ),
+    "COMPLIANT_CONTROL": (
+        [{5: 0.05, 6: -0.05}, {5: -0.05, 6: 0.05}, None],
+        [
+            "planning_compliance_placeholder", "small_compliant_motion_stub_1",
+            "small_compliant_motion_stub_2", "small_compliant_motion_stub_3",
+        ],
+    ),
+    "AVOID_OBSTACLE": (
+        [{0: 0.20}, {0: -0.20}, None],
+        [
+            "planning_avoidance_placeholder", "avoidance_left_stub", "avoidance_right_stub",
+            "avoidance_return_stub",
+        ],
+    ),
+    "MOVE_LEFT": (
+        [{0: 0.20}, None],
+        ["planning_directional_placeholder", "waypoint_1", "waypoint_2"],
+    ),
+    "MOVE_RIGHT": (
+        [{0: -0.20}, None],
+        ["planning_directional_placeholder", "waypoint_1", "waypoint_2"],
+    ),
+    "MOVE_UP": (
+        [{1: -0.20, 3: 0.10}, None],
+        ["planning_directional_placeholder", "waypoint_1", "waypoint_2"],
+    ),
+    "MOVE_DOWN": (
+        [{1: 0.10, 3: -0.05}, None],
+        ["planning_directional_placeholder", "waypoint_1", "waypoint_2"],
+    ),
+    "HOVER_APPROACH": (
+        [{1: -0.12, 3: 0.08, 5: 0.05}, {1: -0.06, 3: 0.04, 5: 0.02}, None],
+        [
+            "planning_hover_approach_preview", "hover_lift_preview", "hover_settle_preview",
+            "hover_return_preview",
+        ],
+    ),
+    "ORBIT_SMALL": (
+        [
+            {0: 0.08, 5: 0.08}, {0: 0.00, 5: 0.14, 6: 0.05}, {0: -0.08, 5: 0.08},
+            {0: 0.00, 5: 0.02, 6: -0.05}, None,
+        ],
+        [
+            "planning_orbit_small_preview", "orbit_waypoint_1", "orbit_waypoint_2", "orbit_waypoint_3",
+            "orbit_waypoint_4", "orbit_return_preview",
+        ],
+    ),
+    "SOFT_DESCEND_PREVIEW": (
+        [{1: 0.06, 3: -0.04}, {1: 0.03, 3: -0.02}, None],
+        [
+            "planning_soft_descend_non_contact_preview", "soft_descend_preview", "soft_settle_preview",
+            "soft_return_preview",
+        ],
+    ),
+}
 
 
 def parse_task_command(data):
@@ -207,15 +282,12 @@ class Fr3GazeboVisibleTaskBridgeNode:
             return self._mode_allows_task_unlocked()
 
     def _mode_allows_task_unlocked(self):
-        return not self.required_control_mode or (
-            self.control_mode_observed
-            and self.current_control_mode == self.required_control_mode
+        return control_mode.mode_allows(
+            self.required_control_mode, self.current_control_mode, self.control_mode_observed
         )
 
     def _handle_control_mode(self, message):
-        selected = str(message.data or "").strip().upper()
-        if selected not in ("TASK", "TELEOP"):
-            selected = None
+        selected = control_mode.normalize_mode(message.data)
         with self.mode_lock:
             previously_allowed = self._mode_allows_task_unlocked()
             self.current_control_mode = selected
@@ -268,83 +340,22 @@ class Fr3GazeboVisibleTaskBridgeNode:
     def _get_task_waypoints(self, task, current_positions):
         if current_positions is None:
             return None, []
-
-        if task == "HEXAGON_TRAJECTORY":
-            return [
-                self._offset(current_positions, {0: 0.10, 5: 0.12}),
-                self._offset(current_positions, {0: 0.05, 5: 0.20}),
-                self._offset(current_positions, {0: -0.05, 5: 0.20}),
-                self._offset(current_positions, {0: -0.10, 5: 0.12}),
-                self._offset(current_positions, {0: -0.05, 5: 0.05}),
-                current_positions,
-            ], ["planning_hexagon_placeholder", "waypoint_1", "waypoint_2", "waypoint_3", "waypoint_4", "waypoint_5", "waypoint_6"]
-        elif task == "PICK_PLACE":
-            return [
-                self._offset(current_positions, {1: -0.10, 3: 0.10}),
-                self._offset(current_positions, {1: 0.00, 3: 0.00}),
-                self._offset(current_positions, {1: -0.10, 3: -0.10}),
-                current_positions,
-            ], ["planning_pick_place_placeholder", "approach_stub", "grasp_stub", "place_stub", "release_stub"]
-        elif task == "COMPLIANT_CONTROL":
-            return [
-                self._offset(current_positions, {5: 0.05, 6: -0.05}),
-                self._offset(current_positions, {5: -0.05, 6: 0.05}),
-                current_positions,
-            ], ["planning_compliance_placeholder", "small_compliant_motion_stub_1", "small_compliant_motion_stub_2", "small_compliant_motion_stub_3"]
-        elif task == "AVOID_OBSTACLE":
-            return [
-                self._offset(current_positions, {0: 0.20}),
-                self._offset(current_positions, {0: -0.20}),
-                current_positions,
-            ], ["planning_avoidance_placeholder", "avoidance_left_stub", "avoidance_right_stub", "avoidance_return_stub"]
-        elif task == "MOVE_LEFT":
-            return [
-                self._offset(current_positions, {0: 0.20}),
-                current_positions,
-            ], ["planning_directional_placeholder", "waypoint_1", "waypoint_2"]
-        elif task == "MOVE_RIGHT":
-            return [
-                self._offset(current_positions, {0: -0.20}),
-                current_positions,
-            ], ["planning_directional_placeholder", "waypoint_1", "waypoint_2"]
-        elif task == "MOVE_UP":
-            return [
-                self._offset(current_positions, {1: -0.20, 3: 0.10}),
-                current_positions,
-            ], ["planning_directional_placeholder", "waypoint_1", "waypoint_2"]
-        elif task == "MOVE_DOWN":
-            return [
-                self._offset(current_positions, {1: 0.10, 3: -0.05}),
-                current_positions,
-            ], ["planning_directional_placeholder", "waypoint_1", "waypoint_2"]
-        elif task == "HOVER_APPROACH":
-            return [
-                self._offset(current_positions, {1: -0.12, 3: 0.08, 5: 0.05}),
-                self._offset(current_positions, {1: -0.06, 3: 0.04, 5: 0.02}),
-                current_positions,
-            ], ["planning_hover_approach_preview", "hover_lift_preview", "hover_settle_preview", "hover_return_preview"]
-        elif task == "ORBIT_SMALL":
-            return [
-                self._offset(current_positions, {0: 0.08, 5: 0.08}),
-                self._offset(current_positions, {0: 0.00, 5: 0.14, 6: 0.05}),
-                self._offset(current_positions, {0: -0.08, 5: 0.08}),
-                self._offset(current_positions, {0: 0.00, 5: 0.02, 6: -0.05}),
-                current_positions,
-            ], ["planning_orbit_small_preview", "orbit_waypoint_1", "orbit_waypoint_2", "orbit_waypoint_3", "orbit_waypoint_4", "orbit_return_preview"]
-        elif task == "HOME_OR_READY":
+        if task == "HOME_OR_READY":
             ready = self._clamp_positions(list(HOME_OR_READY_POSITIONS))
             midpoint = self._clamp_positions([(a + b) / 2.0 for a, b in zip(current_positions, ready)])
             return [
                 midpoint,
                 ready,
             ], ["planning_home_or_ready_preview", "ready_midpoint_preview", "ready_pose_preview"]
-        elif task == "SOFT_DESCEND_PREVIEW":
-            return [
-                self._offset(current_positions, {1: 0.06, 3: -0.04}),
-                self._offset(current_positions, {1: 0.03, 3: -0.02}),
-                current_positions,
-            ], ["planning_soft_descend_non_contact_preview", "soft_descend_preview", "soft_settle_preview", "soft_return_preview"]
-        return None, []
+        plan = TASK_WAYPOINT_OFFSETS.get(task)
+        if plan is None:
+            return None, []
+        offsets, phases = plan
+        waypoints = [
+            current_positions if deltas is None else self._offset(current_positions, deltas)
+            for deltas in offsets
+        ]
+        return waypoints, list(phases)
 
     def _build_joint_tolerances(self, tolerance):
         joint_tolerances = []
