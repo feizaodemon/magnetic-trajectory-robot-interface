@@ -62,7 +62,6 @@ class DashboardConfig:
     # payload, falling back to internal when it has no candidates.
     confirm_candidate_source: str
     dwell_confirm_sec: float
-    dwell_reset_margin_sec: float  # read for launch compatibility; unused
 
     # Mode and fixed texts.
     demo_input_mode: str
@@ -214,7 +213,6 @@ class DashboardConfig:
             publish_task_command=flag("publish_task_command", False),
             confirm_candidate_source=str(get("confirm_candidate_source", "internal")),
             dwell_confirm_sec=float(get("dashboard_dwell_confirm_sec", 2.0)),
-            dwell_reset_margin_sec=float(get("dashboard_dwell_reset_margin_sec", 0.3)),
             demo_input_mode=demo_input_mode,
             is_trajectory_mode=is_trajectory_mode,
             interaction_profile=normalize_interaction_profile(

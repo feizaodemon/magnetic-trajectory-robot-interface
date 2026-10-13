@@ -335,10 +335,10 @@ def test_existing_dwell_progress_remains_the_only_hover_ring_owner(monkeypatch):
         # Drawing the ring schedules nothing; only the dwell loop's next tick is queued.
         assert [job[1] for job in harness.root.jobs] == [50], layout
 
-    # Rejecting mid-dwell disables C; the canvas ring disappears before the next tick.
-    harness.press_key("a")
-    assert node.dwell_timer.progress == 0.5
-    assert node.canvas.drawn("arc") == []
+        # Rejecting mid-dwell disables C; its ring disappears before the next tick.
+        harness.press_key("a")
+        assert node.dwell_timer.progress == 0.5
+        assert ring_canvas(node).drawn("arc") == [], layout
 
 
 def test_responsive_operator_shell_enforces_accepted_minimum_and_expands_cards(monkeypatch):
