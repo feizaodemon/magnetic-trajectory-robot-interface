@@ -1,11 +1,10 @@
-import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from cpp_harness import compile_and_run
+
 
 REPO = Path(__file__).resolve().parents[1]
-BUILD_DIR = REPO / "outputs" / "agent_tmp" / "m104_maint5a_policy_test"
-HARNESS = REPO / "tests" / "cpp" / "real_fr3_command_admission_test.cpp"
 IMPLEMENTATION = REPO / "colmag_ros" / "src" / "real_fr3_command_admission.cpp"
 INCLUDE_DIR = REPO / "colmag_ros" / "include"
 HEADER = INCLUDE_DIR / "colmag_ros" / "real_fr3_command_admission.h"
@@ -21,38 +20,8 @@ ADAPTER_ENTRYPOINT = (
 )
 
 
-def test_real_fr3_command_admission_interface_behavior():
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    executable = BUILD_DIR / "real_fr3_command_admission_test"
-    compile_result = subprocess.run(
-        [
-            "g++",
-            "-std=c++11",
-            "-Wall",
-            "-Wextra",
-            "-pedantic",
-            "-I",
-            str(INCLUDE_DIR),
-            str(HARNESS),
-            str(IMPLEMENTATION),
-            "-o",
-            str(executable),
-        ],
-        cwd=str(REPO),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert compile_result.returncode == 0, compile_result.stderr
-
-    run_result = subprocess.run(
-        [str(executable)],
-        cwd=str(REPO),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert run_result.returncode == 0, run_result.stderr
+def test_real_fr3_command_admission_interface_behavior(tmp_path):
+    compile_and_run(tmp_path, "real_fr3_command_admission_test", "real_fr3_command_admission.cpp")
 
 
 def test_strategy_a_delegates_only_common_admission_policy():

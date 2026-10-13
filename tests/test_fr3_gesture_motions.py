@@ -1,4 +1,3 @@
-import subprocess
 import sys
 from pathlib import Path
 
@@ -6,44 +5,23 @@ import pytest
 
 
 REPO = Path(__file__).resolve().parents[1]
-INCLUDE_DIR = REPO / "colmag_ros" / "include"
-BUILD_DIR = REPO / "outputs" / "agent_tmp" / "m104r2_f3f"
 SCRIPTS = REPO / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 import fr3_lab_operator as operator
 import fr3_lab_runtime as runtime
+from cpp_harness import compile_and_run
 
 
-def test_production_joint_excursion_returns_to_full_start_vector():
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    executable = BUILD_DIR / "fr3_joint_excursion_trajectory_test"
-    compile_result = subprocess.run(
-        [
-            "g++",
-            "-std=c++14",
-            "-Wall",
-            "-Wextra",
-            "-pedantic",
-            "-I",
-            str(INCLUDE_DIR),
-            str(REPO / "tests/cpp/fr3_joint_excursion_trajectory_test.cpp"),
-            str(REPO / "colmag_ros/src/fr3_joint_excursion_trajectory.cpp"),
-            str(REPO / "colmag_ros/src/fr3_trajectory_safety.cpp"),
-            "-o",
-            str(executable),
-        ],
-        cwd=REPO,
-        text=True,
-        capture_output=True,
-        check=False,
+def test_production_joint_excursion_returns_to_full_start_vector(tmp_path):
+    compile_and_run(
+        tmp_path,
+        "fr3_joint_excursion_trajectory_test",
+        "fr3_joint_excursion_trajectory.cpp",
+        "fr3_trajectory_safety.cpp",
+        std="c++14",
     )
-    assert compile_result.returncode == 0, compile_result.stderr
-    run_result = subprocess.run(
-        [str(executable)], cwd=REPO, text=True, capture_output=True, check=False
-    )
-    assert run_result.returncode == 0, run_result.stderr
 
 
 def test_strategy_a_wires_three_semantic_motions_to_one_send_path():

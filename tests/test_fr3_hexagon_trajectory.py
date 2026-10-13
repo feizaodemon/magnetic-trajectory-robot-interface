@@ -1,5 +1,4 @@
 import importlib.util
-import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -8,13 +7,12 @@ import pytest
 
 
 REPO = Path(__file__).resolve().parents[1]
-INCLUDE_DIR = REPO / "colmag_ros" / "include"
-BUILD_DIR = REPO / "outputs" / "agent_tmp" / "m104r2_f3d"
 SCRIPTS = REPO / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 import fr3_lab_runtime as runtime
+from cpp_harness import compile_and_run
 
 
 def _load_dispatcher():
@@ -25,30 +23,14 @@ def _load_dispatcher():
     return module
 
 
-def test_production_hexagon_geometry_is_closed_and_bounded():
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    executable = BUILD_DIR / "fr3_hexagon_trajectory_test"
-    compile_result = subprocess.run(
-        [
-            "g++", "-std=c++11", "-Wall", "-Wextra", "-pedantic",
-            "-I", str(INCLUDE_DIR),
-            str(REPO / "tests/cpp/fr3_hexagon_trajectory_test.cpp"),
-            str(REPO / "colmag_ros/src/fr3_hexagon_trajectory.cpp"),
-            str(REPO / "colmag_ros/src/fr3_trajectory_safety.cpp"),
-            str(REPO / "colmag_ros/src/fr3_hardware_safety.cpp"),
-            "-pthread",
-            "-o", str(executable),
-        ],
-        cwd=REPO,
-        text=True,
-        capture_output=True,
-        check=False,
+def test_production_hexagon_geometry_is_closed_and_bounded(tmp_path):
+    compile_and_run(
+        tmp_path,
+        "fr3_hexagon_trajectory_test",
+        "fr3_hexagon_trajectory.cpp",
+        "fr3_trajectory_safety.cpp",
+        "fr3_hardware_safety.cpp",
     )
-    assert compile_result.returncode == 0, compile_result.stderr
-    run_result = subprocess.run(
-        [str(executable)], cwd=REPO, text=True, capture_output=True, check=False
-    )
-    assert run_result.returncode == 0, run_result.stderr
 
 
 def test_strategy_a_wires_hexagon_into_the_existing_single_send_owner():

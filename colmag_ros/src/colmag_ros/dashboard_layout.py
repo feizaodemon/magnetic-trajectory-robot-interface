@@ -107,7 +107,7 @@ class DashboardLayoutMixin:
         tk = self.tk
         stage_host = tk.Frame(parent, bg="#F0F0F0")
         stage_host.pack(fill=tk.BOTH, expand=True, pady=10, padx=10)
-        self.ocr_gamepad_frame = stage_host
+        self.ocr_stage_frame = stage_host
         stage_host.bind("<Configure>", self._layout_ocr_stage)
 
         stage = tk.Frame(stage_host, bg="#EEF2F5", bd=1, relief=tk.SOLID, highlightthickness=1, highlightbackground="#CBD5E1")
@@ -193,8 +193,8 @@ class DashboardLayoutMixin:
 
     def _layout_ocr_stage(self, event=None):
 
-        available_w = self.ocr_gamepad_frame.winfo_width()
-        available_h = self.ocr_gamepad_frame.winfo_height()
+        available_w = self.ocr_stage_frame.winfo_width()
+        available_h = self.ocr_stage_frame.winfo_height()
         use_canvas_controls = self._use_canvas_reachable_preview_controls()
         geometry = compute_ocr_stage_geometry(
             available_w, available_h,
