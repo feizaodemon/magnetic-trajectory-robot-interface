@@ -13,7 +13,7 @@ for _module in ("rospy", "actionlib", "control_msgs.msg", "sensor_msgs.msg",
                 "std_msgs.msg", "trajectory_msgs.msg"):
     pytest.importorskip(_module, reason="needs ROS Noetic %s" % _module)
 
-SCRIPTS =Path(__file__).resolve().parents[1] / "colmag_gazebo_stub" / "scripts"
+SCRIPTS = Path(__file__).resolve().parents[1] / "colmag_gazebo_stub" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from fr3_gazebo_visible_task_bridge_node import (
