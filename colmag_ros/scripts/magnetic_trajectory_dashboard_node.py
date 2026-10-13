@@ -62,6 +62,8 @@ from colmag_ros.dashboard_controller_input import (
     update_dwell_state,
 )
 from colmag_ros.dashboard_geometry import (
+    BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE,
+    BOARD_CONTROL_LAYOUT_EXTERNAL,
     build_canvas_reachable_drawing_zone,
     build_canvas_reachable_preview_hit_zones,
     canvas_zones_to_stage_zones,
@@ -72,7 +74,9 @@ from colmag_ros.dashboard_geometry import (
     drawing_zone_style,
     get_virtual_button_under_cursor,
     is_point_inside_rect,
+    map_canvas_to_world,
     map_trajectory_point,
+    map_world_to_canvas,
     preview_button_style,
     resolve_preview_button_hit,
     trajectory_point_in_drawing_zone,
@@ -108,12 +112,18 @@ from colmag_ros.dashboard_dwell_status import (
     format_trajectory_preview_interaction_text,
     normalize_interaction_profile,
 )
+from colmag_ros.dashboard_texts import (
+    TRAJECTORY_MODE,
+    default_footer_text,
+    default_header_subtitle,
+    default_header_title,
+    default_main_panel_title,
+    default_safety_badge,
+)
 from colmag_ros.param_utils import bool_param
 
 CONTROLLER_LAYOUT_RANK_CONFIRM = _dashboard_controller_input.CONTROLLER_LAYOUT_RANK_CONFIRM
 CONTROLLER_LAYOUT_GAMEPAD = _dashboard_controller_input.CONTROLLER_LAYOUT_GAMEPAD
-BOARD_CONTROL_LAYOUT_EXTERNAL = "external_toolbar"
-BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE = "canvas_reachable"
 
 GAMEPAD_MODE_MOTION = _dashboard_controller_input.GAMEPAD_MODE_MOTION
 GAMEPAD_MODE_BLOCKED = _dashboard_controller_input.GAMEPAD_MODE_BLOCKED
@@ -134,49 +144,6 @@ def safe_json_loads(text):
     except (ValueError, TypeError):
         pass
     return None
-
-def map_world_to_canvas(x, y, bounds, width, height, padding):
-    x_min, x_max, y_min, y_max = bounds
-    if x_max <= x_min or y_max <= y_min:
-        return width / 2.0, height / 2.0
-
-    draw_w = width - 2 * padding
-    draw_h = height - 2 * padding
-
-    # Map X to canvas X (left to right)
-    pct_x = (x - x_min) / (x_max - x_min)
-    cx = padding + pct_x * draw_w
-
-    # Map Y to canvas Y (bottom to top, so invert Y)
-    pct_y = (y - y_min) / (y_max - y_min)
-    cy = height - padding - pct_y * draw_h
-
-    # Clip
-    cx = max(padding, min(width - padding, cx))
-    cy = max(padding, min(height - padding, cy))
-
-    return cx, cy
-
-def map_canvas_to_world(canvas_x, canvas_y, bounds, width, height, padding):
-    x_min, x_max, y_min, y_max = bounds
-    if x_max <= x_min or y_max <= y_min:
-        return (x_min + x_max) / 2.0, (y_min + y_max) / 2.0
-
-    draw_w = width - 2 * padding
-    draw_h = height - 2 * padding
-    if draw_w <= 0 or draw_h <= 0:
-        return (x_min + x_max) / 2.0, (y_min + y_max) / 2.0
-
-    canvas_x = max(padding, min(width - padding, canvas_x))
-    canvas_y = max(padding, min(height - padding, canvas_y))
-
-    pct_x = (canvas_x - padding) / draw_w
-    pct_y = (height - padding - canvas_y) / draw_h
-    x = x_min + pct_x * (x_max - x_min)
-    y = y_min + pct_y * (y_max - y_min)
-    return x, y
-
-TRAJECTORY_MODE = "trajectory"
 
 _robust_min_max = _dashboard_trajectory_processing.robust_min_max
 
@@ -270,29 +237,6 @@ def recognize_stroke(points, backend="dtw", ocr_fallback_dtw=True, min_points=8,
     status, cands = recognize_trajectory_candidates(pts, min_points, labels)
     status = "no_text" if status == "none" else status
     return status, cands, backend_display_name("dtw", recognition_model_path)
-
-def default_header_title(demo_input_mode):
-    return "COLMAG Magnetic Trajectory Dashboard"
-
-def default_header_subtitle(demo_input_mode):
-    if demo_input_mode == "ocr_canvas":
-        return "Draw, review the recognition result, then confirm or clear"
-    if demo_input_mode == TRAJECTORY_MODE:
-        return "Draw, recognize, review the result, then confirm or clear"
-    return "Magnetic trajectory → Symbol recognition → Human confirmation → Gazebo task"
-
-def default_main_panel_title(demo_input_mode):
-    if demo_input_mode == "ocr_canvas":
-        return "Mouse Trajectory Input"
-    if demo_input_mode == TRAJECTORY_MODE:
-        return "Live Magnetic Trajectory"
-    return "Symbol Recognition Preview"
-
-def default_safety_badge(demo_input_mode):
-    return ""
-
-def default_footer_text(demo_input_mode):
-    return ""
 
 def coerce_float(value, default=None):
     try:
@@ -1176,9 +1120,9 @@ class MagneticTrajectoryDashboardNode:
         self.canvas.place(x=int(draw_x), y=int(draw_y), width=self.canvas_width, height=self.canvas_height)
         self._ocr_draw_area = (10, 24, self.canvas_width - 10, self.canvas_height - 10)
 
-        rospy.loginfo_once("M48 geometry: window=%dx%d left_panel=%dx%d draw_canvas=%dx%d draw_w=%d draw_h=%d",
-                           available_w, available_h, stage_w, stage_h,
-                           self.canvas_width, self.canvas_height, draw_w, draw_h)
+        self.rospy.loginfo_once("M48 geometry: window=%dx%d left_panel=%dx%d draw_canvas=%dx%d draw_w=%d draw_h=%d",
+                                available_w, available_h, stage_w, stage_h,
+                                self.canvas_width, self.canvas_height, draw_w, draw_h)
 
         self.ocr_title_label.place(x=pad, y=14)
         self.ocr_hint_label.configure(wraplength=max(180, stage_w - 2 * pad))
