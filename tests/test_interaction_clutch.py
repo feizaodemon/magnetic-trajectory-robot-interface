@@ -6,7 +6,7 @@ import magnetic_trajectory_dashboard_node as dashboard
 from magnetic_trajectory_dashboard_node import (
     MagneticTrajectoryDashboardNode,
 )
-from dashboard_harness import SAMPLE_CAPTURE, DashboardHarness
+from dashboard_harness import SAMPLE_CAPTURE, DashboardHarness, default_config
 
 CONFIRM_PARAMS = {
     "integrated_dashboard_confirm_enabled": True,
@@ -17,7 +17,11 @@ CONFIRM_PARAMS = {
 def _dispatch_probe():
     node = MagneticTrajectoryDashboardNode.__new__(MagneticTrajectoryDashboardNode)
     actions = []
-    node.confirm_candidate_source = "external_symbol_candidates"
+    node.config = default_config(
+        confirm_candidate_source="external_symbol_candidates",
+        candidate_preview_enabled=True,
+        hover_click_enabled=True,
+    )
     node._external_confirm_active = lambda: False
     node._publish_trajectory_symbol_capture_from_drawing_zone = (
         lambda: actions.append("recognize")
@@ -165,8 +169,12 @@ def test_visible_button_dwell_fires_once_and_navigation_resets_it(monkeypatch):
     actions = []
     node.latest_input_active = True
     node.latest_inside_drawing_zone = False
-    node.board_cursor_dwell_enabled = True
-    node.hover_dwell_enabled = False
+    node.config = default_config(
+        board_cursor_dwell_enabled=True,
+        hover_dwell_enabled=False,
+        control_dwell_sec=1.0,
+        hover_progress_enabled=True,
+    )
     node.mouse_hover_button = ""
     node.board_hover_button = ""
     node.hover_source = "none"
@@ -175,8 +183,6 @@ def test_visible_button_dwell_fires_once_and_navigation_resets_it(monkeypatch):
     node.ocr_hover_started_at = None
     node.ocr_dwell_progress = 0.0
     node.ocr_dwell_fired = False
-    node.control_dwell_sec = 1.0
-    node.hover_progress_enabled = True
     node._board_cursor_preview_button = lambda: "B"
     node._preview_button_enabled = lambda button_id: button_id == "B"
     node._handle_preview_button_action = lambda button_id: actions.append(button_id)
@@ -203,8 +209,12 @@ def test_disabled_visible_button_does_not_accumulate_dwell_or_fire(monkeypatch):
     node = MagneticTrajectoryDashboardNode.__new__(MagneticTrajectoryDashboardNode)
     actions = []
     node.latest_input_active = True
-    node.board_cursor_dwell_enabled = True
-    node.hover_dwell_enabled = False
+    node.config = default_config(
+        board_cursor_dwell_enabled=True,
+        hover_dwell_enabled=False,
+        control_dwell_sec=1.0,
+        hover_progress_enabled=True,
+    )
     node.mouse_hover_button = ""
     node.board_hover_button = ""
     node.hover_source = "none"
@@ -213,8 +223,6 @@ def test_disabled_visible_button_does_not_accumulate_dwell_or_fire(monkeypatch):
     node.ocr_hover_started_at = None
     node.ocr_dwell_progress = 0.0
     node.ocr_dwell_fired = False
-    node.control_dwell_sec = 1.0
-    node.hover_progress_enabled = True
     node._board_cursor_preview_button = lambda: "C"
     node._preview_button_enabled = lambda _button_id: False
     node._handle_preview_button_action = lambda button_id: actions.append(button_id)
@@ -238,9 +246,6 @@ def test_disabled_visible_button_does_not_accumulate_dwell_or_fire(monkeypatch):
 def test_navigation_blocks_preview_pointer_and_keyboard_actions():
     node, actions = _dispatch_probe()
     node.latest_input_active = False
-    node.is_trajectory_mode = True
-    node.candidate_preview_enabled = True
-    node.hover_click_enabled = True
     node._preview_pointer_tracking_enabled = lambda: True
     node._preview_button_at_event = lambda _event: "B"
     node._set_ocr_hover_button = lambda button_id: actions.append("hover:" + button_id)
@@ -272,7 +277,7 @@ def test_normal_dashboard_exposes_mode_but_keeps_sample_metrics_debug_only(monke
 
     # The captured-sample canvas label is debug-only too.
     for harness in (normal, debug):
-        harness.send(harness.node.symbol_capture_topic, SAMPLE_CAPTURE)
+        harness.send(harness.node.config.symbol_capture_topic, SAMPLE_CAPTURE)
     assert not any(text.startswith("Captured sample") for text in normal.canvas_texts())
     assert "Captured sample (3 pts)" in debug.canvas_texts()
 
@@ -373,12 +378,12 @@ def test_shared_canvas_uses_source_specific_labels_without_behavior_migration(mo
     mouse.draw_stroke((100, 100), (150, 150))
     assert mouse.run_jobs(node.ocr_auto_recognize_after_ms) == 1
     assert node.ocr_panel_state == "RECOGNIZING"
-    assert len(mouse.published_json(node.symbol_capture_topic)[0]["points"]) == 2
+    assert len(mouse.published_json(node.config.symbol_capture_topic)[0]["points"]) == 2
     modes.append(node.mouse_mode_var.get())
 
     mouse.fire(node.ocr_button_widgets["A"]["canvas"], "<Button-1>")
     assert node.ocr_panel_state == "BLOCKED"
-    assert mouse.published_json(node.confirmed_label_topic) == [
+    assert mouse.published_json(node.config.confirmed_label_topic) == [
         build_mouse_toolbar_stop_payload(mouse.now)]
     modes.append(node.mouse_mode_var.get())
     assert modes == ["Mode: DRAW", "Mode: IDLE", "Mode: IDLE"]

@@ -10,7 +10,6 @@ from magnetic_trajectory_dashboard_node import (
     update_dwell_state,
     build_confirmed_label_payload,
     candidate_payload_key,
-    real_board_sample_recording_dir,
     should_suppress_repeated_confirm,
 )
 from colmag_ros.dashboard_controller_input import cancelled_preview_hover_state
@@ -27,6 +26,7 @@ from colmag_ros.dashboard_sample_lifecycle import (
     build_dashboard_drawing_zone_capture_payload,
     build_real_board_sample_record,
     cleanup_drawing_sample_points,
+    real_board_sample_recording_dir,
     sample_cleanup_metadata,
     safe_sample_recording_name,
     update_drawing_zone_sample_state,
@@ -221,7 +221,7 @@ def test_preview_pointer_leave_does_not_clear_sample_or_candidate_state(monkeypa
 
     assert node.mouse_hover_button == ""
     assert (node.captured_path, node.current_candidate_payload, node.trajectory_candidates) == before
-    assert harness.messages(node.symbol_capture_topic) == []
+    assert harness.messages(node.config.symbol_capture_topic) == []
 
 def test_trajectory_keyboard_c_confirms_and_x_clears(monkeypatch):
     harness = DashboardHarness(
@@ -231,7 +231,7 @@ def test_trajectory_keyboard_c_confirms_and_x_clears(monkeypatch):
     harness.send_sample_and_candidates()
 
     harness.press_key("c")
-    assert [p["label"] for p in harness.published_json(node.confirmed_label_topic)] == ["2"]
+    assert [p["label"] for p in harness.published_json(node.config.confirmed_label_topic)] == ["2"]
     assert node.preview_interaction_state == "preview_confirmed"
     assert node.captured_path, "C confirms without clearing the sample"
 

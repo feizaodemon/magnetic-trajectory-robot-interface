@@ -128,7 +128,7 @@ def test_mouse_toolbar_wording_and_stop_payload_builder(monkeypatch):
 
     harness.fire(node.ocr_button_widgets["A"]["canvas"], "<Button-1>")
 
-    assert harness.published_json(node.confirmed_label_topic) == [
+    assert harness.published_json(node.config.confirmed_label_topic) == [
         confirms.build_mouse_toolbar_stop_payload(harness.now)]
     assert node.confirm_var.get() == "Mouse toolbar: A -> STOP_OR_CANCEL"
     texts = harness.ui_texts() + [text for _level, text in harness.rospy.logs]

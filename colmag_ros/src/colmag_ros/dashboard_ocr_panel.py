@@ -16,7 +16,7 @@ class DashboardOcrPanelMixin:
     """Handles OCR canvas dwell, toolbar hover and actions, and OCR recognition timing."""
 
     def _process_ocr_toolbar_dwell(self):
-        if self.demo_input_mode == "ocr_canvas":
+        if self.config.demo_input_mode == "ocr_canvas":
             self._process_ocr_canvas_dwell()
             self.root.after(50, self._process_ocr_toolbar_dwell)
             return
@@ -29,7 +29,7 @@ class DashboardOcrPanelMixin:
         """OCR-canvas hover-dwell (mouse only). Unchanged legacy behaviour."""
         now = time.time()
         button_id = self.ocr_hover_button
-        dwell_sec = self.dwell_confirm_sec
+        dwell_sec = self.config.dwell_confirm_sec
         enabled = bool(button_id) and (button_id != "C" or self._ocr_confirm_enabled())
         self.hover_source = "mouse" if button_id else "none"
         if not enabled:
@@ -55,7 +55,7 @@ class DashboardOcrPanelMixin:
 
     def _set_ocr_hover_button(self, button_id):
         button_id = str(button_id or "").upper()
-        if self.demo_input_mode != "ocr_canvas":
+        if self.config.demo_input_mode != "ocr_canvas":
             # Preview mode: record the raw MOUSE hover only. The dwell loop decides
             # the effective button (board cursor first, this mouse hover as
             # fallback), so mouse dwell timing is owned by the loop, not here.
@@ -71,7 +71,7 @@ class DashboardOcrPanelMixin:
         self._refresh_dwell_status()
 
     def _clear_ocr_hover_button(self, button_id=None):
-        if self.demo_input_mode != "ocr_canvas":
+        if self.config.demo_input_mode != "ocr_canvas":
             if button_id is not None and str(button_id or "").upper() != self.mouse_hover_button:
                 return
             self.mouse_hover_button = ""
@@ -97,14 +97,14 @@ class DashboardOcrPanelMixin:
             outline = "#94A3B8"
             text_fg = "#1F2937"
 
-            if self.demo_input_mode == "ocr_canvas":
+            if self.config.demo_input_mode == "ocr_canvas":
                 enabled = button_id != "C" or self._ocr_confirm_enabled()
                 active = button_id == self.ocr_hover_button
                 style = preview_button_style(button_id, enabled, active=active)
                 fill = style["fill"]
                 outline = style["outline"]
                 text_fg = style["text"]
-            elif self.is_trajectory_mode and self.candidate_preview_enabled:
+            elif self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
                 enabled = self._preview_button_enabled(button_id)
                 active = button_id == self.ocr_hover_button
                 style = preview_button_style(button_id, enabled, active=active)
@@ -124,10 +124,10 @@ class DashboardOcrPanelMixin:
             canvas.create_text(size/2, size/2, text=base_text, font=("TkDefaultFont", max(8, int(size*0.12)), "bold"), justify=self.tk.CENTER, fill=text_fg)
 
             if (
-                (self.demo_input_mode == "ocr_canvas" or (self.is_trajectory_mode and self.candidate_preview_enabled))
+                (self.config.demo_input_mode == "ocr_canvas" or (self.config.is_trajectory_mode and self.config.candidate_preview_enabled))
                 and button_id == self.ocr_hover_button
                 and self.ocr_dwell_progress > 0
-                and self.hover_progress_enabled
+                and self.config.hover_progress_enabled
             ):
                 pct = self.ocr_dwell_progress
                 arc_extent = -360 * pct
@@ -243,7 +243,7 @@ class DashboardOcrPanelMixin:
         )
         self._cancel_ocr_recognition_timeout()
         self.ocr_recognition_timeout_job = self.root.after(
-            self.ocr_recognition_timeout_ms,
+            self.config.ocr_recognition_timeout_ms,
             self._handle_ocr_recognition_timeout,
         )
         self.root.after(0, lambda: self.ui_state_var.set("State: RECOGNIZING"))
@@ -267,7 +267,7 @@ class DashboardOcrPanelMixin:
         self._publish_dashboard_state()
 
     def _publish_ocr_stop_label(self):
-        if self.confirm_pub is None or not self.integrated_confirm_enabled:
+        if self.confirm_pub is None or not self.config.integrated_confirm_enabled:
             return
         confirmed = build_mouse_toolbar_stop_payload(time.time())
         self.last_confirmed_label = "X"

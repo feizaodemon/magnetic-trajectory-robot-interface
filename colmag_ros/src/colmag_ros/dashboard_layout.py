@@ -62,7 +62,7 @@ class DashboardLayoutMixin:
 
     def _layout_dashboard_status_wrap(self, event=None):
         right_width = getattr(event, "width", self.dashboard_right_frame.winfo_width())
-        for label, base_wraplength in getattr(self, "dashboard_wrapped_labels", []):
+        for label, base_wraplength in self.dashboard_wrapped_labels:
             label.configure(wraplength=max(base_wraplength, int(right_width) - 40))
 
     def _build_header(self, parent):
@@ -74,17 +74,17 @@ class DashboardLayoutMixin:
         left_frame = ttk.Frame(header, style="Header.TFrame")
         left_frame.pack(side=tk.LEFT, padx=15, pady=10)
 
-        title = default_header_title(self.demo_input_mode)
-        if self.subtitle_text:
-            sub = self.subtitle_text
+        title = default_header_title(self.config.demo_input_mode)
+        if self.config.subtitle_text:
+            sub = self.config.subtitle_text
         else:
-            sub = default_header_subtitle(self.demo_input_mode)
+            sub = default_header_subtitle(self.config.demo_input_mode)
         ttk.Label(left_frame, text=title, style="HeaderTitle.TLabel").pack(anchor=tk.W)
         ttk.Label(left_frame, text=sub, style="HeaderSub.TLabel").pack(anchor=tk.W)
 
         right_frame = ttk.Frame(header, style="Header.TFrame")
         right_frame.pack(side=tk.RIGHT, padx=15, pady=10)
-        if self.control_mode_enabled:
+        if self.config.control_mode_enabled:
             mode_frame = ttk.Frame(right_frame, style="Header.TFrame")
             mode_frame.pack(side=tk.LEFT, padx=(0, 10))
             ttk.Label(
@@ -98,9 +98,9 @@ class DashboardLayoutMixin:
                 command=self._request_control_mode_switch,
             )
             self.control_mode_button.pack(anchor=tk.E, pady=(3, 0))
-        if self.safety_badge:
+        if self.config.safety_badge:
             ttk.Label(
-                right_frame, text=self.safety_badge, style="Badge.TLabel"
+                right_frame, text=self.config.safety_badge, style="Badge.TLabel"
             ).pack(anchor=tk.E)
 
     def _build_canvas_area(self, parent):
@@ -113,27 +113,27 @@ class DashboardLayoutMixin:
         stage = tk.Frame(stage_host, bg="#EEF2F5", bd=1, relief=tk.SOLID, highlightthickness=1, highlightbackground="#CBD5E1")
         self.ocr_stage_card = stage
 
-        title_text = default_main_panel_title(self.demo_input_mode)
+        title_text = default_main_panel_title(self.config.demo_input_mode)
         self.ocr_title_label = tk.Label(stage, text=title_text, bg="#EEF2F5", fg="#1F2937", font=("TkDefaultFont", 14, "bold"))
         self.ocr_hint_label = tk.Label(stage, textvariable=self.ocr_hint_var, bg="#EEF2F5", fg="#64748B", font=("TkDefaultFont", 10, "bold"))
 
         self.canvas = tk.Canvas(stage, bg="white", highlightthickness=1, highlightbackground="#CBD5E1")
 
-        if self.demo_input_mode == "ocr_canvas":
+        if self.config.demo_input_mode == "ocr_canvas":
             buttons = [
                 ("X", "X\nClear", lambda e, bid="X": self._handle_ocr_action(bid)),
                 ("A", "A\nStop", lambda e, bid="A": self._handle_ocr_action(bid)),
                 ("C", "C\nConfirm", lambda e, bid="C": self._handle_ocr_action(bid)),
                 ("B", "B\nDraw", lambda e, bid="B": self._handle_ocr_action(bid)),
             ]
-        elif self.is_trajectory_mode and self.candidate_preview_enabled and self.hover_buttons_enabled:
+        elif self.config.is_trajectory_mode and self.config.candidate_preview_enabled and self.config.hover_buttons_enabled:
             buttons = [
                 ("X", "X\nClear", lambda e, bid="X": self._handle_preview_button_action(bid)),
                 ("A", "A\nReject", lambda e, bid="A": self._handle_preview_button_action(bid)),
                 ("C", "C\nConfirm", lambda e, bid="C": self._handle_preview_button_action(bid)),
                 ("B", "B\nRecognize", lambda e, bid="B": self._handle_preview_button_action(bid)),
             ]
-        elif self.is_trajectory_mode:
+        elif self.config.is_trajectory_mode:
             buttons = []
         else:
             buttons = [
@@ -147,11 +147,11 @@ class DashboardLayoutMixin:
         for button_id, label_text, handler in buttons:
             widget = tk.Canvas(stage, bg="#EEF2F5", highlightthickness=0, cursor="hand2")
             preview_button = (
-                self.is_trajectory_mode and self.candidate_preview_enabled
-                and self.hover_buttons_enabled
+                self.config.is_trajectory_mode and self.config.candidate_preview_enabled
+                and self.config.hover_buttons_enabled
             )
-            if self.demo_input_mode == "ocr_canvas" or (
-                preview_button and self.hover_dwell_enabled
+            if self.config.demo_input_mode == "ocr_canvas" or (
+                preview_button and self.config.hover_dwell_enabled
             ):
                 widget.bind("<Enter>", lambda _event, bid=button_id: self._set_ocr_hover_button(bid))
                 widget.bind("<Leave>", lambda _event, bid=button_id: self._clear_ocr_hover_button(bid))
@@ -166,7 +166,7 @@ class DashboardLayoutMixin:
             if preview_button:
                 widget.bind("<Button-1>", self._handle_preview_pointer_click)
                 widget.tag_bind("all", "<Button-1>", self._handle_preview_pointer_click)
-            elif self.hover_click_enabled or self.demo_input_mode != TRAJECTORY_MODE:
+            elif self.config.hover_click_enabled or self.config.demo_input_mode != TRAJECTORY_MODE:
                 widget.bind("<Button-1>", handler)
                 # Support text clicks as well if they miss the circle slightly
                 widget.tag_bind("all", "<Button-1>", handler)
@@ -182,18 +182,16 @@ class DashboardLayoutMixin:
         self.canvas.bind("<B1-Motion>", self._on_canvas_motion)
         self.canvas.bind("<ButtonRelease-1>", self._on_canvas_release)
         self.root.bind("<Key>", self._on_key_press)
-        if self.is_trajectory_mode and self.candidate_preview_enabled and self.hover_buttons_enabled:
+        if self.config.is_trajectory_mode and self.config.candidate_preview_enabled and self.config.hover_buttons_enabled:
             for widget in (stage, stage_host, self.canvas):
                 widget.bind("<Motion>", self._handle_preview_pointer_motion, add="+")
                 widget.bind("<Button-1>", self._handle_preview_pointer_click, add="+")
             self.root.bind("<Motion>", self._handle_preview_pointer_motion, add="+")
             self.root.bind("<Leave>", self._handle_preview_pointer_leave, add="+")
-        if self.demo_input_mode == "ocr_canvas" or self._preview_dwell_active():
+        if self.config.demo_input_mode == "ocr_canvas" or self._preview_dwell_active():
             self.root.after(50, self._process_ocr_toolbar_dwell)
 
     def _layout_ocr_stage(self, event=None):
-        if not hasattr(self, "ocr_stage_card"):
-            return
 
         available_w = self.ocr_gamepad_frame.winfo_width()
         available_h = self.ocr_gamepad_frame.winfo_height()
@@ -235,7 +233,7 @@ class DashboardLayoutMixin:
                 continue
             bx, by = geometry["button_rects"][button_id]
             button.place(x=int(bx), y=int(by), width=button_size, height=button_size)
-            if self.is_trajectory_mode and self.candidate_preview_enabled and button_id in ("X", "A", "B", "C"):
+            if self.config.is_trajectory_mode and self.config.candidate_preview_enabled and button_id in ("X", "A", "B", "C"):
                 hit_zones.append({
                     "id": button_id,
                     "label": widgets["base_text"],
@@ -251,7 +249,7 @@ class DashboardLayoutMixin:
             canvas_control_zones = build_canvas_reachable_preview_hit_zones(
                 self.canvas_width,
                 self.canvas_height,
-                self.padding,
+                self.config.padding,
                 button_size,
                 reach_rect=self._reachable_trajectory_canvas_rect(),
             )
@@ -294,9 +292,9 @@ class DashboardLayoutMixin:
                     self.dashboard_wrapped_labels.append((label, wraplength))
             return card
 
-        if self.is_trajectory_mode:
+        if self.config.is_trajectory_mode:
             self._build_trajectory_status_cards(parent, create_card)
-        elif self.demo_input_mode == "ocr_canvas":
+        elif self.config.demo_input_mode == "ocr_canvas":
             self._build_mouse_status_cards(create_card)
         else:
             create_card("Status", self.ui_state_var, self.capture_var, self.confirm_var)
@@ -312,14 +310,14 @@ class DashboardLayoutMixin:
                 self.rank_vars[2],
             )
             create_card("Safety", static_texts=[
-                self.route_scope_text,
-                self.confirm_policy_text,
+                self.config.route_scope_text,
+                self.config.confirm_policy_text,
             ])
 
     def _build_trajectory_status_cards(self, parent, create_card):
         create_card("Interaction", self.traj_clutch_mode_var, font_size=13,
                     emphasized_vars=(self.traj_clutch_mode_var,))
-        if not self.candidate_preview_enabled:
+        if not self.config.candidate_preview_enabled:
             return
         create_card("Progress", self.traj_workflow_var, font_size=11,
                     emphasized_vars=(self.traj_workflow_var,))
@@ -333,7 +331,7 @@ class DashboardLayoutMixin:
         )
         create_card("Status", self.traj_operator_status_var, font_size=12,
                     emphasized_vars=(self.traj_operator_status_var,))
-        if self.dashboard_debug_sample_panel:
+        if self.config.dashboard_debug_sample_panel:
             create_card(
                 "Trajectory Diagnostics", self.traj_mode_var, self.traj_window_var,
                 self.traj_valid_var, self.traj_xyz_var, self.traj_count_var,
@@ -352,7 +350,7 @@ class DashboardLayoutMixin:
                 self.traj_interaction_var, self.traj_semantic_var,
                 self.traj_confirm_var,
             )
-        if self.trajectory_recording_enabled:
+        if self.config.trajectory_recording_enabled:
             rec_card = self.ttk.Frame(parent, style="Card.TFrame", padding=10)
             rec_card.pack(fill=self.tk.X, pady=(0, 10))
             self.ttk.Label(rec_card, text="Segment recording (preview)",
@@ -375,7 +373,7 @@ class DashboardLayoutMixin:
         )
         create_card("Status", self.mouse_operator_status_var, font_size=12,
                     emphasized_vars=(self.mouse_operator_status_var,))
-        if self.dashboard_debug_sample_panel:
+        if self.config.dashboard_debug_sample_panel:
             create_card(
                 "Mouse Diagnostics", self.ui_state_var, self.capture_var,
                 self.backend_status_var, self.recognizer_mode_var,
@@ -384,12 +382,12 @@ class DashboardLayoutMixin:
             )
 
     def _build_safety_footer(self, parent):
-        if not self.footer_text:
+        if not self.config.footer_text:
             return
         tk = self.tk
         ttk = self.ttk
         footer = tk.Frame(parent, bg="#EAECEE", pady=10, padx=15)
         footer.pack(fill=tk.X, side=tk.BOTTOM)
 
-        text = self.footer_text
+        text = self.config.footer_text
         ttk.Label(footer, text=text, foreground="#7F8C8D", background="#EAECEE", font=("TkDefaultFont", 10, "bold")).pack(anchor=tk.CENTER)
