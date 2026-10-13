@@ -20,8 +20,8 @@ Layout:
 - `test_*.py`: the pytest suite. Tests that need real ROS message packages skip
   themselves without ROS Noetic.
 - `cpp/`: ROS-free C++ tests for the FR3 safety helpers, trajectory
-  generators, and the Cartesian core. The pytest suite compiles them with `g++`
-  and runs them.
+  generators, and the Cartesian core. Tests build them with `g++` through
+  `cpp_harness.py` into a pytest temporary directory and run them.
 - `dashboard_harness.py`: builds a real dashboard node with fake `rospy`,
   `std_msgs`, and `tkinter` modules, so dashboard tests need no display or ROS
   master.

@@ -15,7 +15,6 @@ def backend_display_name(backend, recognition_model_path=""):
         "dtw": "DTW",
         "dtw_template_bank": "DTW template bank",
         "lightweight": "Lightweight (DTW)",
-        "fake": "Fake (offline)",
     }.get(str(backend or "").strip().lower(), "Unknown")
 
 

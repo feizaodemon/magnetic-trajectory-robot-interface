@@ -277,7 +277,7 @@ def test_canvas_reachable_layout_labels_only_the_drawing_zone(monkeypatch):
     harness = DashboardHarness(
         monkeypatch, candidate_preview_enabled=True,
         dashboard_board_control_layout="canvas_reachable")
-    harness.fire(harness.node.ocr_gamepad_frame, "<Configure>")
+    harness.fire(harness.node.ocr_stage_frame, "<Configure>")
 
     canvas_texts = harness.canvas_texts()
     widget_texts = [str(widget.options.get("text", "")) for widget in harness.widgets()]
@@ -319,7 +319,7 @@ def test_existing_dwell_progress_remains_the_only_hover_ring_owner(monkeypatch):
             monkeypatch, candidate_preview_enabled=True, hover_dwell_enabled=True,
             dashboard_board_control_layout=layout)
         node = harness.node
-        harness.fire(node.ocr_gamepad_frame, "<Configure>")
+        harness.fire(node.ocr_stage_frame, "<Configure>")
 
         # B has no drawn sample, so it is disabled: hovering it draws no ring.
         _hover_dwell(harness, "B", 0.5)
