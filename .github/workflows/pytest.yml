@@ -17,6 +17,9 @@ jobs:
         with:
           python-version: "3.10"
           cache: pip
+      - name: Install Boost headers
+        # C++ tests compile fr3_hardware_safety.cpp, which includes Boost.UUID.
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev
       - name: Install dependencies
         # Tests import yaml, which requirements.txt does not list yet.
         run: pip install -r requirements.txt PyYAML
