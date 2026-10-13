@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only M104 code-size and function-length audit helper.
+"""Read-only code-size and function-length audit helper.
 
 Default mode prints a JSON report to stdout and writes nothing. The optional
 --write-json path is restricted to outputs/agent_tmp so generated audit reports
@@ -22,7 +22,7 @@ DEFAULT_FILES = [
     "colmag_ros/src/colmag_ros/execution_semantics.py",
     "colmag_ros/scripts/magnetic_ui_state_node.py",
 ]
-DEFAULT_OUTPUT = REPO / "outputs" / "agent_tmp" / "m104_code_structure_audit.json"
+DEFAULT_OUTPUT = REPO / "outputs" / "agent_tmp" / "code_structure_audit.json"
 
 
 def line_count(path):
