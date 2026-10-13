@@ -1,8 +1,13 @@
 # Magnetic Trajectory Robot Interface
 
-> Public portfolio edition. Attribution, provenance, hardware-validation boundaries, and third-party license notices are retained below.
+> Public portfolio edition. Attribution, provenance, hardware-validation boundaries, and third-party license notices are kept below.
 
-Magnetic Trajectory Robot Interface is a dual-mode ROS1 robot interaction system. `TASK` converts magnetic-board or mouse trajectories into ranked DTW candidates and keeps explicit confirmation between recognition and execution. `TELEOP` provides continuous Cartesian manual control through a shared damped-least-squares inverse-kinematics core.
+Magnetic Trajectory Robot Interface is a ROS1 robot interaction system with two control modes:
+
+- `TASK`: a trajectory drawn on a magnetic board or with a mouse is ranked against a DTW template bank. The operator confirms one candidate. Only then does a task reach the robot.
+- `TELEOP`: continuous Cartesian manual control through a shared C++ core with damped-least-squares inverse kinematics.
+
+Both modes run against a Gazebo Panda simulation or a Franka FR3 controller path.
 
 ## Architecture at a glance
 
@@ -19,7 +24,7 @@ flowchart LR
     Adapter --> FJT["FollowJointTrajectory"]
 ```
 
-Recognition never sends motion directly. Candidate display, confirmation, dispatch, and backend execution remain separate boundaries.
+Recognition never sends motion. Candidate display, confirmation, dispatch, and execution are separate steps. See [Architecture](docs/ARCHITECTURE.md) for components, topics, and backend separation.
 
 ## Control modes
 
@@ -28,52 +33,24 @@ Recognition never sends motion directly. Candidate display, confirmation, dispat
 | Gazebo | Recognition-driven task execution | Keyboard Cartesian control |
 | Real FR3 | Discrete task execution | Magnetic-board Cartesian teleoperation |
 
-`TASK` is the fail-closed startup mode. The dashboard can request `TASK` or
-`TELEOP`, but GUI mode selection is not hardware authorization: it does not
-start Gazebo, open serial, connect an FR3, load a controller, approve
-calibration, or enable physical commands.
+The system starts in `TASK`. The dashboard can request `TASK` or `TELEOP`. A mode request is not a hardware authorization: it does not start Gazebo, open serial, connect an FR3, load a controller, approve calibration, or enable physical commands.
 
-The continuous Gazebo path was runtime validated with keyboard Cartesian input,
-the shared `Fr3CartesianTeleopCore`, the simulated trajectory controller, and a
-moving Gazebo Panda. The Real-FR3 Cartesian and discrete adapters were compiled
-and integrated, but physical Real-FR3 TELEOP runtime was not executed. See
-[Dual-Mode Teleoperation](docs/DUAL_MODE_TELEOPERATION.md).
+Runtime evidence differs by route:
 
-## What the system does
+- Gazebo `TELEOP` ran at runtime: keyboard input, the shared `Fr3CartesianTeleopCore`, the simulated trajectory controller, and a moving Gazebo Panda.
+- The Real-FR3 Cartesian and discrete adapters compile and are part of the launch graph. Physical Real-FR3 `TELEOP` was not run.
 
-- Captures 2D trajectories from a serial magnetic board or a mouse-driven dashboard.
-- Uses a tracked DTW template bank to rank the symbols `1,2,3,V,O,X,A,C`.
-- Presents ranked candidates and requires an explicit `C Confirm` action.
-- Maps confirmed labels to a bounded task vocabulary in the dispatcher.
-- Routes accepted tasks to a Gazebo Panda robot-body bridge or an FR3-compatible `FollowJointTrajectory` adapter.
-- Switches between supervised `TASK` ownership and continuous Cartesian `TELEOP` ownership without treating mode selection as a hardware gate.
-- Packages Gazebo and FR3 environments in separate Docker profiles.
+See [Dual-Mode Teleoperation](docs/DUAL_MODE_TELEOPERATION.md).
 
-## Key technical contributions
+## Features
 
-- Profile-aware Board/Mouse interaction with a magnetic-orientation clutch for transfer suppression.
-- ROS-free DTW feature and template-bank helpers integrated into the recognizer node.
-- A single dashboard for drawing, ranked-candidate review, dwell feedback, and explicit confirmation.
-- A dispatcher boundary that prevents recognition output from becoming motion without confirmation.
-- Separate Gazebo and FR3 execution adapters with conservative defaults and validation gates.
-- A shared C++ Cartesian core for keyboard-driven Gazebo development and magnetic-board Real-FR3 integration.
-- Docker build-time provenance labels plus static, unit, route-isolation, and safety tests.
-
-## System architecture
-
-The data path is:
-
-```text
-Board or Mouse
-  -> trajectory sample
-  -> DTW ranked candidates
-  -> dashboard review
-  -> explicit confirmed label
-  -> dispatcher task command
-  -> Gazebo bridge OR FR3 trajectory adapter
-```
-
-See [Architecture](docs/ARCHITECTURE.md) for component ownership, topics, and backend separation. Internal ROS identifiers retain the original `colmag` namespace for compatibility.
+- **Two input profiles.** A serial magnetic board and a mouse share one dashboard. The Board profile uses a magnetic-orientation clutch, so cursor moves between the drawing area and the buttons are not recorded.
+- **DTW recognition.** A tracked template bank ranks the symbols `1,2,3,V,O,X,A,C`. Confidence and margin gates reject unclear samples. The feature and bank helpers are ROS-free Python.
+- **Explicit confirmation.** The dashboard shows ranked candidates and dwell feedback. A task needs an explicit `C Confirm`.
+- **Dispatcher boundary.** Only the dispatcher maps a confirmed label to a task from a fixed vocabulary.
+- **Separate backends.** A Gazebo robot-body bridge and an FR3 `FollowJointTrajectory` adapter, each with conservative defaults and its own gates.
+- **Shared Cartesian core.** One C++ core serves keyboard control in Gazebo and magnetic-board control on the FR3.
+- **Packaging and tests.** Separate Docker profiles for Gazebo and FR3 with build-time revision labels. Static, unit, route-isolation, and C++ safety tests run in CI.
 
 ## Board and Mouse interaction profiles
 
@@ -85,22 +62,22 @@ See [Architecture](docs/ARCHITECTURE.md) for component ownership, topics, and ba
 | Clear | `X Clear` | `X Clear` |
 | Transfer suppression | Clutch disengagement | Not required |
 
-The Board profile separates cursor navigation from recorded drawing so movement between the drawing area and controls does not contaminate the sample. See [Interaction Profiles](docs/INTERACTION_PROFILES.md).
+See [Interaction Profiles](docs/INTERACTION_PROFILES.md).
 
 ## Recognition and explicit confirmation
 
-The recognizer normalizes a completed trajectory, compares it with the tracked DTW bank, and publishes ranked candidates on `/colmag/symbol_candidates`. The dashboard may publish a selected label on `/colmag/confirmed_label` only after explicit confirmation. The dispatcher is the sole owner of `/colmag/task_command`; candidate display alone cannot execute a task.
+The recognizer normalizes a completed trajectory, compares it with the tracked DTW bank, and publishes ranked candidates on `/colmag/symbol_candidates`. The dashboard publishes the chosen label on `/colmag/confirmed_label` only after explicit confirmation. The dispatcher is the only publisher of `/colmag/task_command`. Showing a candidate cannot run a task.
 
-The tracked bank was generated from user-handwritten mouse seeds and retains per-template provenance fields. It is included in this public portfolio edition with those provenance fields preserved. See [Running](docs/RUNNING.md#dtw-template-bank) for the offline build and evaluation tools.
+The tracked bank was built from user-handwritten mouse seeds. Each template keeps its provenance fields. See [Running](docs/RUNNING.md#dtw-template-bank) for the offline build and evaluation tools.
 
 ## Gazebo and FR3 backends
 
-- **Gazebo TASK:** a simulation-only bridge creates bounded Panda joint trajectories and uses a `FollowJointTrajectory` action interface.
-- **Gazebo TELEOP:** normalized keyboard Cartesian input passes through the shared `Fr3CartesianTeleopCore` and publishes bounded controller `JointTrajectory` commands.
-- **Real FR3 TASK:** a C++ task-to-trajectory adapter validates accepted discrete commands and constructs bounded trajectories for a standard controller path.
-- **Real FR3 TELEOP:** continuous magnetic-board position passes through the same Cartesian core and a separately gated controller adapter.
+- **Gazebo `TASK`:** a simulation-only bridge builds bounded Panda joint trajectories and sends them through a `FollowJointTrajectory` action.
+- **Gazebo `TELEOP`:** normalized keyboard input passes through `Fr3CartesianTeleopCore`, which publishes bounded `JointTrajectory` commands to the controller.
+- **Real FR3 `TASK`:** a C++ adapter checks each accepted discrete command and builds a bounded trajectory for the standard controller.
+- **Real FR3 `TELEOP`:** continuous magnetic-board position passes through the same Cartesian core and a separately gated controller adapter.
 
-Repository tests start none of these runtime surfaces. Real hardware remains disabled until all environment, revision, network, controller, calibration, and physical safety gates pass. See [Hardware Boundaries](docs/HARDWARE_BOUNDARIES.md).
+The tests start none of these. Real-robot motion stays disabled until every environment, revision, network, controller, calibration, and physical safety gate passes. See [Hardware Boundaries](docs/HARDWARE_BOUNDARIES.md).
 
 ## Technology stack
 
@@ -108,38 +85,51 @@ Repository tests start none of these runtime surfaces. Real hardware remains dis
 | --- | --- |
 | Middleware | ROS1 Noetic, catkin, `rospy`, `roscpp` |
 | Recognition | Python, DTW, JSON template bank |
-| Interface | Tk-based dashboard and ROS topics |
+| Interface | Tk dashboard and ROS topics |
 | Simulation | Gazebo, Panda model, `control_msgs/FollowJointTrajectory` |
 | Hardware interface | C++, `franka_ros`, `libfranka`, joint trajectory controller |
 | Packaging | Docker, Docker Compose, OCI revision labels |
-| Validation | pytest, XML/static checks, ROS-free C++ safety tests |
+| Validation | pytest, ruff, GitHub Actions, ROS-free C++ safety tests, catkin build |
 
-## Repository structure
+## Repository layout
 
 ```text
-colmag_ros/          ROS package, dashboard, recognizer, dispatcher, FR3 adapter
-colmag_gazebo_stub/ Gazebo robot-body bridge package
-docker/             Gazebo and FR3 build/runtime profiles
-scripts/            Offline DTW and guarded FR3 operator helpers
-src/serial_mvp/     Serial packet parser and source abstraction
-tests/              Static, unit, route-isolation, and safety checks
-docs/               Portfolio architecture, run, validation, and boundary docs
+colmag_ros/                ROS package
+  scripts/                 ROS node entry points (dashboard, recognizer, dispatcher, ...)
+  src/colmag_ros/          ROS-free Python modules, including the dashboard mixins
+  src/*.cpp, include/      FR3 adapters, Cartesian core, and C++ safety helpers
+  launch/, config/         Launch files, controller settings, DTW bank
+colmag_gazebo_stub/        Gazebo robot-body bridge package
+src/serial_mvp/            Serial packet parser and source abstraction
+scripts/                   Offline DTW tools and guarded FR3 operator helpers
+docker/                    Gazebo and FR3 build and runtime profiles
+tests/                     pytest suite, headless dashboard harness, C++ tests
+docs/                      Architecture, running, validation, and boundary docs
+.github/workflows/         CI: pytest (with and without ROS), ruff, catkin build
 ```
 
-Some runtime identifiers keep their original milestone prefix (`m104…`) because other parts depend on them: the tracked DTW bank file that the launch defaults and Docker image point at, the dispatcher mapping name `m104c4_8symbol_gazebo`, two ROS node names, and the real-board sample record schema. Apart from that bank file, file and module names carry no milestone prefix.
+Internal ROS identifiers keep the original `colmag` namespace for compatibility. A few runtime identifiers keep their original milestone prefix (`m104…`) because other parts depend on them:
 
-## Quick Start
+- the tracked DTW bank file that the launch defaults and the Docker image point at;
+- the dispatcher mapping name `m104c4_8symbol_gazebo`;
+- two ROS node names;
+- the real-board sample record schema;
+- the FR3 operator log directory under `outputs/`.
 
-Install the test dependencies, then run the repository test suite without creating a pytest cache:
+Apart from the bank file, no file or module name carries a milestone prefix.
+
+## Quick start
+
+Install the test dependencies and run the suite without a pytest cache:
 
 ```bash
 python3 -m pip install -r requirements.txt
 python3 -m pytest -p no:cacheprovider -q
 ```
 
-ROS Noetic is not needed: the tests that import ROS packages skip themselves without it.
+ROS Noetic is not needed. Tests that import ROS packages skip themselves without it.
 
-Build the Mouse-to-Gazebo profile from the current revision:
+Build the Mouse-to-Gazebo image from the current revision:
 
 ```bash
 COLMAG_GIT_SHA="$(git rev-parse HEAD)" \
@@ -147,17 +137,24 @@ docker compose -f docker/compose.yaml \
   --profile mouse-gazebo build mouse-gazebo
 ```
 
-Start the simulation profile only when GUI and Gazebo runtime are authorized:
+Start the simulation only when GUI and Gazebo runtime are authorized:
 
 ```bash
 docker/run_gazebo_demo.sh mouse-gazebo
 ```
 
-The FR3 profiles are intentionally excluded from the quick path. See [Running](docs/RUNNING.md) before using any serial, simulation, or hardware surface.
+The FR3 profiles are not part of the quick start. Read [Running](docs/RUNNING.md) before using any serial, simulation, or hardware surface.
 
 ## Validation
 
-CI runs `ruff check`, pytest, and a `catkin_make install` build of both ROS packages on every pull request. pytest runs twice: with Python 3.10 without ROS, and in a ROS Noetic container. The suite checks:
+CI runs on every pull request and every push to `main`:
+
+- `ruff check`;
+- pytest with Python 3.10 without ROS;
+- pytest in a ROS Noetic container;
+- a `catkin_make install` build of both ROS packages.
+
+The suite checks:
 
 - Python static and unit contracts, and the ROS-free C++ safety helpers;
 - Markdown and image links with case-sensitive paths;
@@ -165,23 +162,23 @@ CI runs `ruff check`, pytest, and a `catkin_make install` build of both ROS pack
 - launch file XML, route isolation, and install lists;
 - that generated `outputs/` files are not tracked.
 
-When this portfolio edition was exported, it was also checked by hand for secrets, private network values, personal absolute paths, identity-bearing files, nontechnical process packaging, and misleading sole-authorship wording. CI does not repeat those checks.
+At export, the portfolio edition was also checked by hand for secrets, private network values, personal absolute paths, identity-bearing files, nontechnical process material, and misleading sole-authorship wording. CI does not repeat those checks.
 
 See [Validation](docs/VALIDATION.md) for the commands, the CI jobs, and what each layer does not prove.
 
 ## Known limitations
 
-- This is a research/demo stack, not a certified robot product.
+- This is a research and demo stack, not a certified robot product.
 - DTW quality depends on trajectory quality and template coverage.
 - The Board orientation clutch is an application convention, not a safety-rated sensor mode.
 - Static and unit tests do not prove live ROS timing, rendered GUI behavior, Gazebo motion, or physical FR3 safety.
-- Gazebo Cartesian TELEOP has runtime evidence; physical Real-FR3 Cartesian TELEOP does not.
-- The FR3 route depends on specific upstream versions and must be requalified when the environment changes.
-- Public availability does not change the authorship, attribution, or third-party license boundaries documented in `CREDITS.md` and `NOTICE.md`.
+- Gazebo Cartesian `TELEOP` has runtime evidence. Physical Real-FR3 Cartesian `TELEOP` does not.
+- The FR3 route depends on specific upstream versions. Requalify it when the environment changes.
+- Public availability does not change the authorship, attribution, or third-party license boundaries in [CREDITS.md](CREDITS.md) and [NOTICE.md](NOTICE.md).
 
 ## My contribution
 
-The contribution wording below is supported by the fixed branch history, source ownership map, implementation files, and recorded validation evidence.
+The fixed branch history, source ownership map, implementation files, and recorded validation evidence support the wording below.
 
 | Area | Contribution |
 | --- | --- |
@@ -197,12 +194,12 @@ These claims do not assert sole authorship of the original collaborative project
 
 ## Attribution and provenance
 
-This repository is a public personal portfolio edition derived from a collaborative robotics project. It focuses on the components I designed, integrated, validated, and documented. Collaborative and third-party contributions remain credited in [CREDITS.md](CREDITS.md) and applicable notices in [NOTICE.md](NOTICE.md).
+This repository is a public personal portfolio edition derived from a collaborative robotics project. It focuses on the components I designed, integrated, validated, and documented. Collaborative and third-party contributions remain credited in [CREDITS.md](CREDITS.md), and the applicable notices are in [NOTICE.md](NOTICE.md).
 
-The portfolio baseline was exported as a filtered tracked snapshot from source commit `e3c81fb31f5113c50f197bb11eff183295cf3163`. This revision adds the subsequently developed and validated dual-mode Cartesian teleoperation working-tree changes as a curated file export. The original Git history, branches, tags, internal process records, private evidence, and nontechnical materials were not copied.
+The baseline was exported as a filtered tracked snapshot from source commit `e3c81fb31f5113c50f197bb11eff183295cf3163`. The dual-mode Cartesian teleoperation work, developed and validated after that commit, was added as a curated file export. The original Git history, branches, tags, internal process records, private evidence, and nontechnical materials were not copied. Later changes, such as refactoring, CI, and documentation, are recorded in this repository's own Git history.
 
 ## License and status
 
 **Public portfolio edition.**
 
-This repository does not add a repository-wide license beyond the license information already present in retained source/package metadata. Public availability does not alter third-party ownership or upstream license obligations. See [NOTICE.md](NOTICE.md) for provenance and dependency-license boundaries.
+This repository adds no repository-wide license beyond the license information already in the retained source and package metadata. Public availability does not change third-party ownership or upstream license obligations. See [NOTICE.md](NOTICE.md) for provenance and dependency-license boundaries.

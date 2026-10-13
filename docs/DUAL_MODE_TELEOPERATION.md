@@ -80,7 +80,7 @@ transitions, not an emergency stop or a replacement for controller safety.
 
 ## Validation boundary
 
-The portfolio checkout is validated independently with focused tests, Python
-parsing, launch/XML checks, and a ROS1 Noetic compile/link build. That proves the
-curated export includes the shared core and both adapters. It does not repeat or
-extend physical hardware evidence.
+CI checks every change with focused tests, launch XML checks, and a ROS1 Noetic
+`catkin_make install` build. The build compiles and links the shared core and
+both adapters. None of this repeats or extends physical hardware evidence. See
+[Validation](VALIDATION.md).

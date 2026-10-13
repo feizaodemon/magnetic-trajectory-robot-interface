@@ -2,6 +2,9 @@
 
 | Term | Meaning |
 | --- | --- |
+| `TASK` | Control mode for supervised recognition, confirmation, and dispatch. The startup default. |
+| `TELEOP` | Control mode for continuous Cartesian input. It blocks new task dispatch. |
+| control mode | The latched `/colmag/control_mode` state. Selecting a mode never authorizes hardware. |
 | candidate | A ranked recognition result; it is not confirmation or execution authority. |
 | confirmation | Explicit operator action that publishes the reviewed label. |
 | dispatcher | The sole component that validates confirmed labels and may publish `/colmag/task_command`. |
@@ -12,6 +15,8 @@
 | Gazebo robot-body route | Simulation path that moves the Panda model through a controller-like trajectory interface. |
 | marker route | Visual-only marker movement; not robot-body execution. |
 | FR3 adapter | C++ component that validates accepted tasks and constructs bounded joint trajectories. |
+| Cartesian core | `Fr3CartesianTeleopCore`: the shared C++ core that turns Cartesian input into bounded joint targets with damped-least-squares inverse kinematics. |
+| dashboard mixin | A class that adds one group of window behavior to the dashboard node, such as layout or sample capture. |
 | `FollowJointTrajectory` | ROS action interface used by the simulation and controller paths. |
 | provenance label | OCI image metadata that records the source Git revision used at build time. |
 | public portfolio edition | Public curated repository derived from a collaborative baseline while retaining attribution, provenance, validation boundaries, and third-party license notices. |

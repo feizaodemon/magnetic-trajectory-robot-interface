@@ -22,7 +22,7 @@ Tests that import `rospy` or ROS message packages skip themselves when ROS Noeti
 | `ruff` | Python 3.10 | `ruff check` with the settings in `ruff.toml`: undefined names, unused imports and variables, and annotations that would not run on Python 3.8 |
 | `catkin-build` | `ros:noetic-ros-base` container | `catkin_make install` of `colmag_ros` and `colmag_gazebo_stub` in Release mode, then checks that both FR3 adapter executables and the Python packages are installed |
 
-Both pytest jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. No job starts ROS nodes or launch files, or touches Gazebo, GUI, serial, controllers, or hardware. Each job's log holds the exact result for its commit.
+Both pytest jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. The Cartesian core test there is not wired in yet; see [tests/README.md](../tests/README.md). No job starts ROS nodes or launch files, or touches Gazebo, GUI, serial, controllers, or hardware. Each job's log holds the exact result for its commit.
 
 ## ROS1 compile/link build
 
@@ -64,10 +64,6 @@ These checks ran by hand when the public portfolio edition was exported. CI repe
 | Gazebo evidence | only the exact recorded simulation run | real hardware behavior |
 | FR3 evidence | only an explicitly authorized, bounded run | certification or arbitrary motion |
 
-## Documentation-test consolidation
+## Tests removed at export
 
-The source snapshot included release-gate tests whose only purpose was to assert internal archive, task-ledger, agent-context, or process-document wording. Those process documents are intentionally excluded from the public portfolio edition. Portfolio-irrelevant document-coupled tests were removed only where the underlying technical behavior remains covered by focused implementation tests; Markdown closure was replaced with a repository-wide portfolio link and exact-case check.
-
-Twelve such test files were removed at export. They never existed in this repository.
-
-Retained coverage includes DTW ranking, tracked-bank shape/provenance, dashboard behavior, confirmation, dispatcher semantics, Gazebo bridge behavior, FR3 safety modules and ROS-free C++ tests, FR3 operator logic, Docker configuration, packaging, and route isolation.
+The source snapshot had twelve test files that only checked the wording of internal process documents. Those documents are not part of the public edition, so the tests were removed at export and never existed in this repository. Each one was removed only where focused implementation tests still cover the technical behavior. A repository-wide link and exact-case check replaced the old Markdown closure test.

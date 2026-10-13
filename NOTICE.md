@@ -13,6 +13,7 @@ The source snapshot contains no root `LICENSE`, `LICENSE.md`, `LICENSE.txt`, `CO
 - Baseline source commit: `e3c81fb31f5113c50f197bb11eff183295cf3163`
 - Subsequent source: validated dual-mode working tree based on the baseline, exported 2026-08-19
 - Export form: curated files with a clean portfolio Git history
+- Later changes: recorded in this repository's own Git history
 
 The source repository, its branches, tags, issues, pull requests, releases, settings, and Git history were not modified or mirrored. No claim of sole authorship is introduced by the portfolio curation.
 

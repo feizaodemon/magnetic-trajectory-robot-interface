@@ -49,19 +49,48 @@ transitions, validation evidence, and the physical-runtime boundary.
 | Responsibility | Primary implementation |
 | --- | --- |
 | Board packet conversion | `colmag_ros/scripts/raw_packet_to_trajectory_2d_node.py` |
-| Shared Board/Mouse dashboard | `colmag_ros/scripts/magnetic_trajectory_dashboard_node.py` |
-| Interaction geometry and clutch | `colmag_ros/src/colmag_ros/dashboard_geometry.py` |
-| Candidate presentation | `colmag_ros/src/colmag_ros/dashboard_candidate_display.py` |
-| Confirmation payload | `colmag_ros/src/colmag_ros/dashboard_confirm_publisher.py` |
+| Shared Board/Mouse dashboard | `colmag_ros/scripts/magnetic_trajectory_dashboard_node.py` (see [Dashboard modules](#dashboard-modules)) |
 | DTW ranking | `colmag_ros/scripts/trajectory_symbol_top3_recognizer_node.py` |
+| DTW features, bank helpers, gates | `colmag_ros/src/colmag_ros/dtw_bank_features.py`, `dtw_template_bank_tools.py`, `recognition_uncertainty.py` |
 | Dispatcher | `colmag_ros/scripts/task_dispatcher_node.py` |
 | Control-mode source | `colmag_ros/scripts/control_mode_node.py` |
 | Cartesian input | `colmag_ros/scripts/keyboard_cartesian_teleop_node.py` |
 | Shared Cartesian core | `colmag_ros/src/fr3_cartesian_teleop_core.cpp` |
-| Cartesian adapter | `colmag_ros/src/colmag_fr3_cartesian_teleop_adapter.cpp` |
+| Cartesian adapter (both backends) | `colmag_ros/src/colmag_fr3_cartesian_teleop_adapter.cpp` |
 | Gazebo robot-body bridge | `colmag_gazebo_stub/scripts/fr3_gazebo_visible_task_bridge_node.py` |
-| FR3 adapter | `colmag_ros/src/colmag_fr3_task_trajectory_adapter.cpp` |
+| FR3 task adapter | `colmag_ros/src/colmag_fr3_task_trajectory_adapter.cpp` |
+| FR3 C++ safety helpers | `colmag_ros/src/fr3_*_safety.cpp`, `real_fr3_command_admission.cpp` |
+| Shared parameter coercion | `colmag_ros/src/colmag_ros/param_utils.py` |
 | Runtime packaging | `docker/` |
+
+## Dashboard modules
+
+The dashboard node holds start-up, ROS topic callbacks, and the main loop. Its window
+behavior comes from mixin classes in `colmag_ros/src/colmag_ros/`:
+
+| Mixin module | Concern |
+| --- | --- |
+| `dashboard_layout.py` | Tk window layout |
+| `dashboard_canvas_view.py` | canvas drawing, coordinate mapping, hit tests |
+| `dashboard_sample_capture.py` | trajectory sampling, drawing-sample lifecycle, Board clutch state |
+| `dashboard_preview_controls.py` | preview, confirm, and candidate display controls |
+| `dashboard_ocr_panel.py` | OCR canvas mode |
+
+The mixins call pure, ROS-free helpers that the tests exercise directly:
+
+| Helper module | Concern |
+| --- | --- |
+| `dashboard_config.py` | read-once, immutable node parameters |
+| `dashboard_geometry.py` | geometry, hit tests, Board clutch decision |
+| `dashboard_points.py` | point and stroke helpers |
+| `dashboard_dwell_timer.py`, `dashboard_dwell_status.py` | dwell timing and status text |
+| `dashboard_controller_input.py` | dwell and confirmation decisions |
+| `dashboard_candidate_display.py` | candidate formatting |
+| `dashboard_confirm_publisher.py` | confirmation payload |
+| `dashboard_sample_lifecycle.py`, `dashboard_trajectory_processing.py` | real-board sample lifecycle, display bounds, writing gate |
+| `preview_interaction.py`, `preview_recognition.py` | preview state and preview-only recognition |
+
+`tests/dashboard_harness.py` builds a real node with fake `rospy`, `std_msgs`, and `tkinter` modules, so tests run without a display or a ROS master.
 
 ## Frontend profiles
 
@@ -82,4 +111,4 @@ The same task name does not imply the same safety qualification across simulatio
 
 ## Compatibility
 
-The `colmag` namespace, several launch filenames, configuration paths, and module names are retained because they form implemented API and packaging contracts. Reader-facing branding is neutral; no broad runtime namespace rename was attempted.
+The `colmag` namespace stays in package names, topics, launch files, and configuration paths, because imports, launch includes, install rules, and topic contracts depend on it. Reader-facing branding is neutral. The README lists the few runtime identifiers that keep the `m104` milestone prefix.
