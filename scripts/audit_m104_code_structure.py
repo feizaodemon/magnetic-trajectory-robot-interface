@@ -19,7 +19,7 @@ DEFAULT_FILES = [
     "colmag_gazebo_stub/scripts/fr3_gazebo_visible_task_bridge_node.py",
     "colmag_ros/scripts/trajectory_symbol_top3_recognizer_node.py",
     "colmag_ros/src/colmag_ros/dashboard_confirm_publisher.py",
-    "colmag_ros/src/colmag_ros/m104c4_execution_semantics.py",
+    "colmag_ros/src/colmag_ros/execution_semantics.py",
     "colmag_ros/scripts/magnetic_ui_state_node.py",
 ]
 DEFAULT_OUTPUT = REPO / "outputs" / "agent_tmp" / "m104_code_structure_audit.json"

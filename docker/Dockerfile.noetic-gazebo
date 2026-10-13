@@ -42,7 +42,7 @@ COPY colmag_gazebo_stub src/colmag_gazebo_stub
 RUN source /opt/ros/noetic/setup.bash && \
     catkin_make install && \
     source install/setup.bash && \
-    python3 -c "import colmag_ros.dashboard_geometry, colmag_ros.dtw_template_bank_tools, colmag_ros.m104c4_execution_semantics" && \
+    python3 -c "import colmag_ros.dashboard_geometry, colmag_ros.dtw_template_bank_tools, colmag_ros.execution_semantics" && \
     python3 -m json.tool \
       install/share/colmag_ros/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json \
       >/dev/null
@@ -98,7 +98,7 @@ COPY docker/entrypoint.sh /ros_entrypoint_colmag.sh
 RUN chmod +x /ros_entrypoint_colmag.sh && \
     mkdir -p /workspace/runtime_logs/ros && \
     source /workspace/catkin_ws/install/setup.bash && \
-    python3 -c "import colmag_ros.dashboard_geometry, colmag_ros.dtw_template_bank_tools, colmag_ros.m104c4_execution_semantics" && \
+    python3 -c "import colmag_ros.dashboard_geometry, colmag_ros.dtw_template_bank_tools, colmag_ros.execution_semantics" && \
     test -f /workspace/catkin_ws/install/share/colmag_ros/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json
 
 WORKDIR /workspace

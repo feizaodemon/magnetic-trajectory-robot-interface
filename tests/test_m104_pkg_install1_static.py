@@ -23,8 +23,8 @@ CANONICAL_HELPERS = (
     "dashboard_geometry",
     "dashboard_points",
     "dtw_template_bank_tools",
-    "m104c2c3_display_semantics",
-    "m104c4_execution_semantics",
+    "display_semantics",
+    "execution_semantics",
     "recognition_uncertainty",
     "semantic_library",
     "symbol_semantics",
@@ -46,7 +46,7 @@ def test_legacy_helper_wrappers_are_removed():
 
 
 def test_c4_contract_rejects_missing_attribute_and_empty_mapping():
-    semantics = importlib.import_module("colmag_ros.m104c4_execution_semantics")
+    semantics = importlib.import_module("colmag_ros.execution_semantics")
     valid = semantics.validated_execution_contract()
     assert valid["label_to_task"] == semantics.C4_LABEL_TO_TASK
 
@@ -66,7 +66,7 @@ def test_dispatcher_and_bridge_use_canonical_fail_loud_contract():
     dispatcher = DISPATCHER.read_text()
     bridge = BRIDGE.read_text()
     for text in (dispatcher, bridge):
-        assert "from colmag_ros import m104c4_execution_semantics" in text
+        assert "from colmag_ros import execution_semantics" in text
         assert "validated_execution_contract()" in text
         assert "spec_from_file_location" not in text
         assert "getattr(_C4" not in text
@@ -76,7 +76,7 @@ def test_dispatcher_import_fails_when_canonical_semantics_module_is_missing(monk
     empty_package = ModuleType("colmag_ros")
     empty_package.__path__ = []
     monkeypatch.setitem(sys.modules, "colmag_ros", empty_package)
-    monkeypatch.delitem(sys.modules, "colmag_ros.m104c4_execution_semantics", raising=False)
+    monkeypatch.delitem(sys.modules, "colmag_ros.execution_semantics", raising=False)
     spec = importlib.util.spec_from_file_location("missing_c4_dispatcher", DISPATCHER)
     module = importlib.util.module_from_spec(spec)
     with pytest.raises(ImportError):
@@ -85,7 +85,7 @@ def test_dispatcher_import_fails_when_canonical_semantics_module_is_missing(monk
 
 def test_mouse_toolbar_stop_uses_existing_c4_cancel_contract():
     confirms = importlib.import_module("colmag_ros.dashboard_confirm_publisher")
-    semantics = importlib.import_module("colmag_ros.m104c4_execution_semantics")
+    semantics = importlib.import_module("colmag_ros.execution_semantics")
     payload = confirms.build_mouse_toolbar_stop_payload(123.0)
 
     assert payload == {

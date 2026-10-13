@@ -2,7 +2,7 @@
 
 import time
 
-from colmag_ros import m104c4_execution_semantics
+from colmag_ros import execution_semantics
 
 
 COMMAND_ALIASES = {
@@ -43,7 +43,7 @@ def normalize_command(command):
 def task_for_command(command):
     """Resolve a terminal command through the canonical semantic task contract."""
     label = normalize_command(command)
-    semantics = m104c4_execution_semantics.execution_semantics_for_label(label)
+    semantics = execution_semantics.execution_semantics_for_label(label)
     return semantics["task"] if semantics else None
 
 

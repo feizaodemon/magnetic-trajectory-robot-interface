@@ -11,10 +11,10 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(_PACKAGE_SRC))
 
 from colmag_ros import control_mode
-from colmag_ros import m104c4_execution_semantics
+from colmag_ros import execution_semantics
 from colmag_ros.param_utils import bool_param, finite_float
 
-_C4_CONTRACT = m104c4_execution_semantics.validated_execution_contract()
+_C4_CONTRACT = execution_semantics.validated_execution_contract()
 C4_MAPPING_NAME = _C4_CONTRACT["mapping_name"]
 C4_LABEL_TO_TASK = _C4_CONTRACT["label_to_task"]
 C4_SAFE_GAZEBO_TASKS = set(_C4_CONTRACT["safe_tasks"])

@@ -1,4 +1,4 @@
-"""Display-only semantic labels for M104-C2C3.
+"""Display-only semantic labels for the 8-symbol recognition display.
 
 This module is intentionally small and ROS-free. It does not dispatch tasks,
 publish labels, or touch Gazebo / robot routes. The strings here are future

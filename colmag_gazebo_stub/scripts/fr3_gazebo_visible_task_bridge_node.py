@@ -45,10 +45,10 @@ _COLMAG_ROS_SRC = Path(__file__).resolve().parents[2] / "colmag_ros" / "src"
 if _COLMAG_ROS_SRC.is_dir() and str(_COLMAG_ROS_SRC) not in sys.path:
     sys.path.insert(0, str(_COLMAG_ROS_SRC))
 
-from colmag_ros import m104c4_execution_semantics
+from colmag_ros import execution_semantics
 from colmag_ros.param_utils import bool_param
 
-_C4_CONTRACT = m104c4_execution_semantics.validated_execution_contract()
+_C4_CONTRACT = execution_semantics.validated_execution_contract()
 C4_NO_MOTION_TASKS = set(_C4_CONTRACT["no_motion_tasks"])
 
 HOME_OR_READY_POSITIONS = [0.0, -0.4, 0.0, -2.1, 0.0, 1.6, 0.8]

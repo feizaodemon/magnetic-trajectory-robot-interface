@@ -1,4 +1,4 @@
-"""Gazebo-only execution semantics for M104-C4.
+"""Gazebo-only execution semantics for the 8-symbol task mapping.
 
 This module is intentionally ROS-free. It is the shared C4 metadata seam for
 the dispatcher, Gazebo bridge, tests, and docs.
