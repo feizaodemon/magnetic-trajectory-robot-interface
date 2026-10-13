@@ -72,7 +72,7 @@ def test_dashboard_flattens_strokes_through_helper(monkeypatch):
     harness.draw_stroke((60, 200), (120, 200))
     harness.run_jobs(node.ocr_auto_recognize_after_ms)
 
-    [capture] = harness.published_json(node.symbol_capture_topic)
+    [capture] = harness.published_json(node.config.symbol_capture_topic)
     assert [len(stroke) for stroke in node.all_strokes] == [3, 2]
     assert capture["points"] == [list(p) for p in points.flatten_strokes(node.all_strokes)]
 

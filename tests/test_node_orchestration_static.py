@@ -47,8 +47,6 @@ def test_dashboard_init_is_readable_ordered_orchestration():
     methods = _dashboard_methods()
     assert _self_call_names(methods["__init__"]) == [
         "_initialize_runtime_dependencies",
-        "_read_route_and_trajectory_parameters",
-        "_read_preview_and_recording_parameters",
         "_initialize_dashboard_state",
         "_initialize_window_and_variables",
         "_build_ui",
@@ -63,14 +61,13 @@ def test_setup_methods_remain_cohesive_instead_of_fragmented_wrappers():
     methods = _dashboard_methods()
     setup_names = [
         "_initialize_runtime_dependencies",
-        "_read_route_and_trajectory_parameters",
-        "_read_preview_and_recording_parameters",
         "_initialize_dashboard_state",
         "_initialize_window_and_variables",
         "_initialize_ros_interfaces",
     ]
     assert all(name in methods for name in setup_names)
-    assert len(setup_names) == 6
+    # Params are read once, by DashboardConfig.from_params.
+    assert not [name for name in methods if name.startswith("_read_")]
 
 
 def test_ros_interface_setup_preserves_subscriber_then_publisher_order(monkeypatch):

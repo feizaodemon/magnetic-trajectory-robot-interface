@@ -18,7 +18,7 @@ from magnetic_trajectory_dashboard_node import (
     should_suppress_repeated_confirm,
 )
 from colmag_ros.dashboard_confirm_publisher import PreviewConfirmPublisher
-from dashboard_harness import DashboardHarness
+from dashboard_harness import DashboardHarness, default_config
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -83,7 +83,8 @@ def _preview_node(*, confirm_pub_enabled=True, integrated=True, candidates=None)
         candidate_payload_key=candidate_payload_key,
         logger=node.rospy,
     )
-    node.integrated_confirm_enabled = integrated
+    node.config = default_config(integrated_confirm_enabled=integrated)
+    node.current_candidate_payload = None
     node.trajectory_candidates = candidates if candidates is not None else [
         {"rank": 1, "label": "2", "confidence": 0.88, "distance": 0.1},
         {"rank": 2, "label": "1", "confidence": 0.40, "distance": 0.5},
@@ -160,7 +161,7 @@ def test_preview_c_confirm_publishes_the_shared_helper_payload_once(monkeypatch)
     harness.press_key("c")
     harness.press_key("c")  # same candidates -> suppressed
 
-    published = harness.published_json(harness.node.confirmed_label_topic)
+    published = harness.published_json(harness.node.config.confirmed_label_topic)
     expected_payload = json.loads(expected.published[0].data)
     assert len(published) == 1
     for payload in (published[0], expected_payload):
@@ -177,7 +178,7 @@ def test_dashboard_has_no_task_command_publisher(monkeypatch):
     harness = DashboardHarness(
         monkeypatch, candidate_preview_enabled=True, control_mode_enabled=True,
         publish_task_command=True, **CONFIRM_PARAMS)
-    assert harness.node.task_command_topic not in harness.publisher_topics()
+    assert harness.node.config.task_command_topic not in harness.publisher_topics()
     assert any(
         level == "warn" and "never publishes /colmag/task_command" in text
         for level, text in harness.rospy.logs

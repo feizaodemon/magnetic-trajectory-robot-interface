@@ -469,14 +469,14 @@ def test_external_confirm_publishes_only_candidates_for_the_latest_capture(monke
 
     # A newer capture makes the cap_1 candidates stale: C must not confirm them.
     newer = {"sample_id": "cap_2", "sequence_id": 2}
-    harness.send(node.symbol_capture_topic, dict(SAMPLE_CAPTURE, **newer))
+    harness.send(node.config.symbol_capture_topic, dict(SAMPLE_CAPTURE, **newer))
     harness.press_key("c")
-    assert harness.messages(node.confirmed_label_topic) == []
+    assert harness.messages(node.config.confirmed_label_topic) == []
     assert any("stale" in text for level, text in harness.rospy.logs if level == "warn")
 
-    harness.send(node.symbol_candidates_topic, dict(SAMPLE_CANDIDATES, **newer))
+    harness.send(node.config.symbol_candidates_topic, dict(SAMPLE_CANDIDATES, **newer))
     harness.press_key("c")
-    [payload] = harness.published_json(node.confirmed_label_topic)
+    [payload] = harness.published_json(node.config.confirmed_label_topic)
     assert (payload["label"], payload["sample_id"], payload["sequence_id"]) == ("2", "cap_2", 2)
     assert payload["backend"] == "dtw_template_bank"
     assert payload["confirmed_by"] == "magnetic_dashboard_dwell"
@@ -491,12 +491,12 @@ def test_mouse_toolbar_confirm_publishes_rank_one(monkeypatch):
     harness.run_jobs(node.ocr_auto_recognize_after_ms)
 
     harness.fire(confirm, "<Button-1>")  # no candidates yet: C is inert
-    assert harness.messages(node.confirmed_label_topic) == []
+    assert harness.messages(node.config.confirmed_label_topic) == []
 
-    harness.send(node.symbol_candidates_topic, SAMPLE_CANDIDATES)
+    harness.send(node.config.symbol_candidates_topic, SAMPLE_CANDIDATES)
     assert node.ocr_panel_state == "CONFIRM_PENDING"
     harness.fire(confirm, "<Button-1>")
-    [payload] = harness.published_json(node.confirmed_label_topic)
+    [payload] = harness.published_json(node.config.confirmed_label_topic)
     assert (payload["label"], payload["selected_rank"]) == ("2", 1)
     assert node.ocr_panel_state == "WAITING"
 

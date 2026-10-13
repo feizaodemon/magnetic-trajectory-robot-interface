@@ -21,43 +21,25 @@ from colmag_ros.dashboard_candidate_display import (
     summarize_candidates,
 )
 from colmag_ros import control_mode
+from colmag_ros.dashboard_config import DashboardConfig
 from colmag_ros.dashboard_controller_input import (
     build_confirmed_label_payload,
     candidate_payload_key,
     should_suppress_repeated_confirm,
     update_dwell_state,
 )
-from colmag_ros.dashboard_geometry import (
-    BOARD_CONTROL_LAYOUT_EXTERNAL,
-    dashboard_minimum_window_size,
-    normalize_board_control_layout,
-)
+from colmag_ros.dashboard_geometry import dashboard_minimum_window_size
 from colmag_ros.dashboard_points import (
     extract_single_point,
     extract_xy_points,
-)
-from colmag_ros.dashboard_sample_lifecycle import (
-    DEFAULT_REAL_BOARD_SAMPLE_RECORDING_DIR,
-    real_board_sample_recording_dir,
-)
-from colmag_ros.dashboard_trajectory_processing import (
-    normalize_scale_mode,
-    normalize_stroke_gate_mode,
 )
 from colmag_ros.dashboard_dwell_status import (
     format_interaction_instruction,
     format_integrated_dwell_status_texts,
     format_ocr_canvas_dwell_texts,
     format_trajectory_preview_interaction_text,
-    normalize_interaction_profile,
 )
-from colmag_ros.dashboard_texts import (
-    TRAJECTORY_MODE,
-    default_footer_text,
-    default_safety_badge,
-)
-from colmag_ros.param_utils import bool_param, optional_float
-from colmag_ros.preview_recognition import RECOGNIZER_BACKENDS, recognize_stroke
+from colmag_ros.preview_recognition import recognize_stroke
 from colmag_ros.dashboard_layout import DashboardLayoutMixin
 from colmag_ros.dashboard_canvas_view import DashboardCanvasViewMixin
 from colmag_ros.dashboard_sample_capture import DashboardSampleCaptureMixin
@@ -91,8 +73,7 @@ class MagneticTrajectoryDashboardNode(
 ):
     def __init__(self):
         self._initialize_runtime_dependencies()
-        self._read_route_and_trajectory_parameters()
-        self._read_preview_and_recording_parameters()
+        self.config = DashboardConfig.from_params(self.rospy.get_param)
         self._initialize_dashboard_state()
         self._initialize_window_and_variables()
         self._build_ui()
@@ -118,207 +99,12 @@ class MagneticTrajectoryDashboardNode(
             logger=rospy,
         )
 
-    def _read_route_and_trajectory_parameters(self):
-        rospy = self.rospy
-        self.trajectory_topic = rospy.get_param("~trajectory_topic", "/colmag/trajectory_2d")
-        self.ui_state_topic = rospy.get_param("~ui_state_topic", "/colmag/ui_state")
-        self.symbol_capture_topic = rospy.get_param("~symbol_capture_topic", "/colmag/symbol_capture")
-        self.symbol_candidates_topic = rospy.get_param("~symbol_candidates_topic", "/colmag/symbol_candidates")
-        self.confirmed_label_topic = rospy.get_param("~confirmed_label_topic", "/colmag/confirmed_label")
-        self.dashboard_state_topic = rospy.get_param("~dashboard_state_topic", "/colmag/trajectory_dashboard_state")
-        self.task_command_topic = rospy.get_param("~task_command_topic", "/colmag/task_command")
-        self.demo_task_state_topic = rospy.get_param("~demo_task_state_topic", "/colmag/fr3_demo_task_state")
-        self._read_control_mode_parameters()
-        self.integrated_confirm_enabled = bool_param(rospy.get_param("~integrated_dashboard_confirm_enabled", False))
-        # Explicit publish gates. These were previously declared in the launch
-        # files but never read (dead/misleading safety args). They are now honored:
-        # the confirmed_label publisher additionally requires publish_confirmed_label,
-        # and publish_task_command is read so an operator setting it true is warned
-        # rather than silently ignored (the preview dashboard has no task_command
-        # publisher by design). Preview-only default keeps both False -> no publish.
-        self.publish_confirmed_label = bool_param(rospy.get_param("~publish_confirmed_label", False))
-        self.publish_task_command = bool_param(rospy.get_param("~publish_task_command", False))
-        # Confirm-candidate source for trajectory-mode dwell confirm.
-        #   internal (default): confirm the dashboard's in-process preview
-        #     recognizer top candidate (self.trajectory_candidates) -> keeps the
-        #     behavior unchanged.
-        #   external_symbol_candidates: confirm the external ROS
-        #     /colmag/symbol_candidates payload (e.g. dtw_template_bank), falling
-        #     back to internal only when no external candidates are available.
-        self.confirm_candidate_source = str(
-            rospy.get_param("~confirm_candidate_source", "internal"))
-        self.dwell_confirm_sec = float(rospy.get_param("~dashboard_dwell_confirm_sec", 2.0))
-        self.dwell_reset_margin_sec = float(rospy.get_param("~dashboard_dwell_reset_margin_sec", 0.3))
-        self.demo_input_mode = rospy.get_param("~demo_input_mode", "trajectory")
-        self.is_trajectory_mode = self.demo_input_mode == TRAJECTORY_MODE
-        self.interaction_profile = normalize_interaction_profile(
-            rospy.get_param("~interaction_profile", None),
-            self.demo_input_mode,
-        )
-
-        self.subtitle_text = rospy.get_param("~subtitle_text", None)
-        self.safety_badge = rospy.get_param("~safety_badge", default_safety_badge(self.demo_input_mode))
-        self.footer_text = rospy.get_param("~footer_text", default_footer_text(self.demo_input_mode))
-        self.route_scope_text = rospy.get_param(
-            "~route_scope_text", "Gazebo only. No real robot command.")
-        self.confirm_policy_text = rospy.get_param(
-            "~confirm_policy_text", "Confirm publishes selected label.")
-
-        self.canvas_width = rospy.get_param("~trajectory_dashboard_canvas_width", 560)
-        self.canvas_height = rospy.get_param("~trajectory_dashboard_canvas_height", 520)
-        if self.demo_input_mode == "ocr_canvas":
-            self.canvas_width = 360
-            self.canvas_height = 300
-        self.trail_size = rospy.get_param("~trajectory_dashboard_trail_size", 300)
-        REFERENCE_MAGNETIC_EXTENT_M = 0.05
-        self.x_min = rospy.get_param("~trajectory_dashboard_x_min", -REFERENCE_MAGNETIC_EXTENT_M)
-        self.x_max = rospy.get_param("~trajectory_dashboard_x_max", REFERENCE_MAGNETIC_EXTENT_M)
-        self.y_min = rospy.get_param("~trajectory_dashboard_y_min", -REFERENCE_MAGNETIC_EXTENT_M)
-        self.y_max = rospy.get_param("~trajectory_dashboard_y_max", REFERENCE_MAGNETIC_EXTENT_M)
-        self.padding = 20
-        self.bounds = (self.x_min, self.x_max, self.y_min, self.y_max)
-
-        # Real magnetic board preview scaling / orientation (trajectory mode only).
-        self.traj_flip_x = bool_param(rospy.get_param("~trajectory_flip_x", False))
-        self.traj_flip_y = bool_param(rospy.get_param("~trajectory_flip_y", False))
-        self.traj_swap_xy = bool_param(rospy.get_param("~trajectory_swap_xy", False))
-        # fixed | fixed_symmetric | auto. fixed_symmetric is the recommended demo
-        # mode (stable, no auto breathing); auto stays diagnostic. normalize_scale_mode
-        # keeps the deprecated internal alias parseable without exposing it.
-        self.traj_scale_mode = normalize_scale_mode(rospy.get_param("~trajectory_scale_mode", "fixed"))
-        self.traj_auto_center = bool_param(rospy.get_param("~trajectory_auto_center", False))
-        # Drawn-trail length (recent points). 180 keeps a real-board symbol
-        # visible long enough for a demo while still bounding stale history.
-        self.traj_trace_window_points = int(rospy.get_param("~trajectory_trace_window_points",
-                                            rospy.get_param("~trajectory_auto_window_points", 180)))
-        if self.traj_trace_window_points < 2:
-            self.traj_trace_window_points = 2
-        self.traj_auto_padding_ratio = float(rospy.get_param("~trajectory_auto_padding_ratio", 0.12))
-        self.traj_auto_min_span = float(rospy.get_param("~trajectory_auto_min_span", 0.01))
-        # Fixed symmetric extent for fixed_symmetric mode (+/- this value, both axes).
-        self.traj_projection_extent = float(rospy.get_param("~trajectory_projection_extent", 0.06))
-
-        # Preview-only stroke gate (a display mask; never a robot/task/confirm signal).
-        # off | z_range | speed | legacy_like. Defaults are pass-through so an
-        # untuned gate never hides valid strokes.
-        self.stroke_gate_mode = normalize_stroke_gate_mode(rospy.get_param("~trajectory_stroke_gate_mode", "off"))
-        self.gate_z_min = optional_float(rospy.get_param("~trajectory_z_min", None))
-        self.gate_z_max = optional_float(rospy.get_param("~trajectory_z_max", None))
-        self.input_valid_gate_enabled = bool_param(rospy.get_param("~trajectory_input_valid_gate_enabled", True))
-        raw_input_z_min = rospy.get_param("~trajectory_input_z_min", "inherit")
-        raw_input_z_max = rospy.get_param("~trajectory_input_z_max", "inherit")
-        self.input_z_min = self.gate_z_min if str(raw_input_z_min).strip().lower() == "inherit" else optional_float(raw_input_z_min)
-        self.input_z_max = self.gate_z_max if str(raw_input_z_max).strip().lower() == "inherit" else optional_float(raw_input_z_max)
-        self.input_reactivate_samples = max(1, int(rospy.get_param("~trajectory_input_reactivate_samples", 2)))
-        self._input_active_streak = 0
-        self.board_sample_cleanup_enabled = bool_param(rospy.get_param("~dashboard_board_sample_cleanup_enabled", True))
-        self.board_sample_min_point_delta = max(0.0, float(rospy.get_param("~dashboard_board_sample_min_point_delta", 0.0015)))
-        self.board_sample_max_points = max(0, int(rospy.get_param("~dashboard_board_sample_max_points", 160)))
-        self.dashboard_debug_sample_panel = bool_param(rospy.get_param("~dashboard_debug_sample_panel", False))
-        self.real_board_sample_recording_enabled = bool_param(rospy.get_param("~real_board_sample_recording_enabled", False))
-        self.real_board_sample_recording_dir = real_board_sample_recording_dir(
-            rospy.get_param("~real_board_sample_recording_dir", DEFAULT_REAL_BOARD_SAMPLE_RECORDING_DIR)
-        )
-        self.gate_min_speed = float(rospy.get_param("~trajectory_min_speed", 0.0))
-        self.gate_max_speed = float(rospy.get_param("~trajectory_max_speed", 0.0))  # <=0 -> no upper limit
-        self.gate_invalid_breaks_stroke = bool_param(rospy.get_param("~trajectory_gate_invalid_breaks_stroke", True))
-        self._prev_sample = None  # (x, y, timestamp) for speed gating
-
-    def _read_control_mode_parameters(self):
-        self.control_mode_enabled = bool_param(
-            self.rospy.get_param("~control_mode_enabled", False)
-        )
-        self.control_mode_topic = self.rospy.get_param(
-            "~control_mode_topic", "/colmag/control_mode"
-        )
-        self.control_mode_request_topic = self.rospy.get_param(
-            "~control_mode_request_topic", "/colmag/control_mode/request"
-        )
-
-    def _read_preview_and_recording_parameters(self):
-        rospy = self.rospy
-        # Preview-only DTW candidate display. It NEVER publishes
-        # /colmag/confirmed_label, /colmag/task_command, or any robot/task signal.
-        self.ocr_preview_enabled = bool_param(rospy.get_param("~ocr_preview_enabled", False))
-        self.candidate_preview_enabled = (
-            bool_param(rospy.get_param("~candidate_preview_enabled", False))
-            or self.ocr_preview_enabled)
-        self.recognition_backend = str(rospy.get_param("~recognition_backend", "dtw")).strip().lower()
-        if self.recognition_backend not in RECOGNIZER_BACKENDS:
-            self.recognition_backend = "dtw"
-        self.recognition_model_path = ""
-        self.candidate_min_points = int(rospy.get_param(
-            "~candidate_min_points", rospy.get_param("~ocr_min_points", 8)))
-        labels_param = rospy.get_param("~candidate_labels", None)
-        if isinstance(labels_param, str):
-            labels_param = [t for t in labels_param.replace(",", " ").split() if t]
-        self.candidate_labels = list(labels_param) if labels_param else None
-        self.auto_recognize = (
-            bool_param(rospy.get_param("~candidate_auto_recognize", False))
-            or bool_param(rospy.get_param("~ocr_auto_recognize", False)))
-        self.ocr_debounce_sec = float(rospy.get_param(
-            "~ocr_debounce_sec", rospy.get_param("~candidate_auto_idle_sec", 0.8)))
-        # Four preview-only hover/click buttons.
-        self.hover_buttons_enabled = bool_param(rospy.get_param("~hover_buttons_enabled", True))
-        self.hover_click_enabled = bool_param(rospy.get_param("~hover_click_enabled", True))
-        self.hover_dwell_enabled = bool_param(rospy.get_param("~hover_dwell_enabled", False))
-        self.control_dwell_sec = float(rospy.get_param(
-            "~dashboard_control_dwell_sec",
-            rospy.get_param("~hover_dwell_sec", 1.0),
-        ))
-        self.hover_progress_enabled = bool_param(rospy.get_param("~hover_progress_enabled", True))
-        # The live board's red current point can drive button dwell without
-        # a mouse. Primary demo interaction; mouse hover/click stays as fallback.
-        self.board_cursor_dwell_enabled = bool_param(rospy.get_param("~board_cursor_dwell_enabled", True))
-        self.board_control_layout = normalize_board_control_layout(
-            rospy.get_param("~dashboard_board_control_layout", BOARD_CONTROL_LAYOUT_EXTERNAL)
-        )
-        self.candidate_status = "idle"
-        self.recognition_backend_label = backend_display_name(
-            self.recognition_backend,
-            self.recognition_model_path,
-        )
-        self.trajectory_candidates = []
-        self._candidate_recognize_job = None
-        self._recognizing = False
-        self.preview_interaction_state = "idle"
-        self.preview_confirmed_label = ""
-
-        # Preview-only segment recording. When enabled, Start records ONE
-        # complete trajectory segment (time window, or z-lift when available) and
-        # recognition runs on that completed segment instead of the live stream.
-        # Default OFF so existing continuous live-preview behavior is unchanged.
-        self.trajectory_recording_enabled = bool_param(rospy.get_param("~trajectory_recording_enabled", False))
-        self.record_duration_sec = float(rospy.get_param("~record_duration_sec", 2.5))
-        # z-lift stop is OFF by default: the real board's z reliability is not yet
-        # live-validated. Time-window recording is the primary, always-available
-        # stop. Enable record_stop_on_lift only after z is validated on hardware.
-        self.record_stop_on_lift = bool_param(rospy.get_param("~record_stop_on_lift", False))
-        self.record_lift_z_threshold = float(rospy.get_param("~record_lift_z_threshold", 0.05))
-        self.record_min_points = int(rospy.get_param("~record_min_points", 8))
-        self.record_max_points = int(rospy.get_param("~record_max_points", 600))
-        self.recognize_only_completed_segment = bool_param(
-            rospy.get_param("~recognize_only_completed_segment", True))
-        self.segment_recorder = SegmentRecorder(
-            duration_sec=self.record_duration_sec,
-            stop_on_lift=self.record_stop_on_lift,
-            lift_z_threshold=self.record_lift_z_threshold,
-            min_points=self.record_min_points,
-            max_points=self.record_max_points,
-        )
-        self.recorded_segment = []
-        # Preview-only semantic library (display only; no dispatch).
-        self.semantic_preview_enabled = bool_param(rospy.get_param("~semantic_preview_enabled", True))
-
     def _initialize_dashboard_state(self):
-        rospy = self.rospy
-        if self.is_trajectory_mode:
-            self.x_min = float(rospy.get_param("~trajectory_x_min", -0.07))
-            self.x_max = float(rospy.get_param("~trajectory_x_max", 0.07))
-            self.y_min = float(rospy.get_param("~trajectory_y_min", -0.07))
-            self.y_max = float(rospy.get_param("~trajectory_y_max", 0.09))
-            self.bounds = (self.x_min, self.x_max, self.y_min, self.y_max)
-        self._active_bounds = self.bounds
+        config = self.config
+        # The layout resizes the canvas; it starts at the configured size.
+        self.canvas_width = config.canvas_width
+        self.canvas_height = config.canvas_height
+        self._active_bounds = config.bounds
         self.latest_point = None
         self.latest_valid = True
         self.latest_writing = True
@@ -328,10 +114,12 @@ class MagneticTrajectoryDashboardNode(
         self.latest_inside_control_zone = False
         self.trajectory_sample_count = 0
         self.latest_sample_index = None
+        self._input_active_streak = 0
+        self._prev_sample = None  # (x, y, timestamp) for speed gating
         self.current_control_mode = control_mode.TASK
         self.control_mode_observed = False
 
-        trail_maxlen = self.traj_trace_window_points if self.is_trajectory_mode else self.trail_size
+        trail_maxlen = config.traj_trace_window_points if config.is_trajectory_mode else config.trail_size
         self.trail = deque(maxlen=trail_maxlen)
         self.drawing_zone_trail = deque(maxlen=trail_maxlen)
         self.drawing_sample_state = {
@@ -357,12 +145,31 @@ class MagneticTrajectoryDashboardNode(
         # confirming external /colmag/symbol_candidates.
         self.last_capture_sample_id = None
         self.last_capture_sequence_id = None
-        if self.demo_input_mode == "ocr_canvas":
+        if config.demo_input_mode == "ocr_canvas":
             self._ocr_draw_area = (10, 24, self.canvas_width - 10, self.canvas_height - 10)
         else:
             self._ocr_draw_area = None
 
-        self.dwell_state = update_dwell_state({}, "", time.time(), self.dwell_confirm_sec)
+        self.candidate_status = "idle"
+        self.recognition_backend_label = backend_display_name(
+            config.recognition_backend,
+            config.recognition_model_path,
+        )
+        self.trajectory_candidates = []
+        self._candidate_recognize_job = None
+        self._recognizing = False
+        self.preview_interaction_state = "idle"
+        self.preview_confirmed_label = ""
+        self.segment_recorder = SegmentRecorder(
+            duration_sec=config.record_duration_sec,
+            stop_on_lift=config.record_stop_on_lift,
+            lift_z_threshold=config.record_lift_z_threshold,
+            min_points=config.record_min_points,
+            max_points=config.record_max_points,
+        )
+        self.recorded_segment = []
+
+        self.dwell_state = update_dwell_state({}, "", time.time(), config.dwell_confirm_sec)
         self.ocr_button_widgets = {}
         self.preview_button_hit_zones = []
         self.preview_canvas_button_zones = []
@@ -390,7 +197,6 @@ class MagneticTrajectoryDashboardNode(
         self.all_strokes = []
         self.ocr_auto_recognize_after_ms = 700
         self.ocr_auto_recognize_job = None
-        self.ocr_recognition_timeout_ms = int(rospy.get_param("~ocr_recognition_timeout_ms", 12000))
         self.ocr_recognition_timeout_job = None
         self.ocr_last_stroke_time = None
 
@@ -418,9 +224,9 @@ class MagneticTrajectoryDashboardNode(
         self.rank_vars = [tk.StringVar(value="-") for _ in range(3)]
         self.dwell_var = tk.StringVar(value="Integrated dwell confirm: disabled")
         self.hover_var = tk.StringVar(value="Hover: -")
-        if self.is_trajectory_mode and self.candidate_preview_enabled:
-            initial_hint = format_interaction_instruction(self.interaction_profile)
-        elif self.is_trajectory_mode:
+        if self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
+            initial_hint = format_interaction_instruction(self.config.interaction_profile)
+        elif self.config.is_trajectory_mode:
             initial_hint = "Live preview — not affine-calibrated"
         else:
             initial_hint = "WAITING | Hover B to start drawing"
@@ -430,16 +236,16 @@ class MagneticTrajectoryDashboardNode(
         self.gazebo_var = tk.StringVar(value="-")
 
         # Trajectory-preview status (trajectory mode only).
-        if self.traj_scale_mode == "auto":
+        if self.config.traj_scale_mode == "auto":
             _scale_label = "auto-fit recent (diagnostic)"
-        elif self.traj_scale_mode == "fixed_symmetric":
-            _scale_label = "fixed symmetric, extent %.3g" % self.traj_projection_extent
+        elif self.config.traj_scale_mode == "fixed_symmetric":
+            _scale_label = "fixed symmetric, extent %.3g" % self.config.traj_projection_extent
         else:
             _scale_label = "fixed-range window"
         self.traj_mode_var = tk.StringVar(value="Scale: %s, uniform" % _scale_label)
-        self.traj_window_var = tk.StringVar(value="Trace window: %d points" % self.traj_trace_window_points)
-        self.traj_gate_var = tk.StringVar(value="Stroke gate: %s" % self.stroke_gate_mode)
-        self.traj_topic_var = tk.StringVar(value="Topic: %s" % self.trajectory_topic)
+        self.traj_window_var = tk.StringVar(value="Trace window: %d points" % self.config.traj_trace_window_points)
+        self.traj_gate_var = tk.StringVar(value="Stroke gate: %s" % self.config.stroke_gate_mode)
+        self.traj_topic_var = tk.StringVar(value="Topic: %s" % self.config.trajectory_topic)
         self.traj_valid_var = tk.StringVar(value="Valid: -")
         self.traj_xyz_var = tk.StringVar(value="x/y/z: - / - / -")
         self.traj_count_var = tk.StringVar(value="Samples: 0")
@@ -448,7 +254,7 @@ class MagneticTrajectoryDashboardNode(
             value="Input: active - | drawing - | control - | reason -")
         self.traj_clutch_mode_var = tk.StringVar(value="Mode: NAVIGATE")
         self.traj_workflow_var = tk.StringVar(
-            value=format_operator_workflow("draw", self.interaction_profile))
+            value=format_operator_workflow("draw", self.config.interaction_profile))
         self.traj_operator_status_var = tk.StringVar(
             value="Draw a character in the center")
 
@@ -473,7 +279,7 @@ class MagneticTrajectoryDashboardNode(
         self.traj_interaction_var = tk.StringVar(value="Interaction: idle | Source: none | Active: - | Dwell: 0%")
         self.traj_confirm_var = tk.StringVar(value="Confirm: disabled in preview")
         self.traj_recording_var = tk.StringVar(value="Recording: %s" % (
-            "press S/Start to record a segment" if self.trajectory_recording_enabled else "disabled"))
+            "press S/Start to record a segment" if self.config.trajectory_recording_enabled else "disabled"))
         self.traj_semantic_var = tk.StringVar(value="Meaning: -")
         self.traj_candidate_vars = [tk.StringVar(value="Candidate %d: -" % (i + 1)) for i in range(3)]
         self.traj_operator_candidate_vars = [
@@ -496,47 +302,47 @@ class MagneticTrajectoryDashboardNode(
     def _initialize_ros_interfaces(self):
         rospy = self.rospy
         String = self.String
-        rospy.Subscriber(self.trajectory_topic, String, self._handle_trajectory, queue_size=10)
-        rospy.Subscriber(self.ui_state_topic, String, self._handle_ui_state, queue_size=10)
-        rospy.Subscriber(self.symbol_capture_topic, String, self._handle_capture, queue_size=10)
-        rospy.Subscriber(self.symbol_candidates_topic, String, self._handle_candidates, queue_size=10)
-        rospy.Subscriber(self.confirmed_label_topic, String, self._handle_confirmed, queue_size=10)
-        rospy.Subscriber(self.task_command_topic, String, self._handle_task, queue_size=10)
-        rospy.Subscriber(self.demo_task_state_topic, String, self._handle_gazebo, queue_size=10)
+        rospy.Subscriber(self.config.trajectory_topic, String, self._handle_trajectory, queue_size=10)
+        rospy.Subscriber(self.config.ui_state_topic, String, self._handle_ui_state, queue_size=10)
+        rospy.Subscriber(self.config.symbol_capture_topic, String, self._handle_capture, queue_size=10)
+        rospy.Subscriber(self.config.symbol_candidates_topic, String, self._handle_candidates, queue_size=10)
+        rospy.Subscriber(self.config.confirmed_label_topic, String, self._handle_confirmed, queue_size=10)
+        rospy.Subscriber(self.config.task_command_topic, String, self._handle_task, queue_size=10)
+        rospy.Subscriber(self.config.demo_task_state_topic, String, self._handle_gazebo, queue_size=10)
         self.control_mode_request_pub = None
         self.control_mode_subscriber = None
-        if self.control_mode_enabled:
+        if self.config.control_mode_enabled:
             self.control_mode_request_pub = rospy.Publisher(
-                self.control_mode_request_topic, String, queue_size=1, latch=False
+                self.config.control_mode_request_topic, String, queue_size=1, latch=False
             )
             self.control_mode_subscriber = rospy.Subscriber(
-                self.control_mode_topic,
+                self.config.control_mode_topic,
                 String,
                 self._handle_control_mode,
                 queue_size=1,
             )
         self.confirm_pub = None
         self.dashboard_state_pub = None
-        self.symbol_capture_pub = rospy.Publisher(self.symbol_capture_topic, String, queue_size=10, latch=True)
+        self.symbol_capture_pub = rospy.Publisher(self.config.symbol_capture_topic, String, queue_size=10, latch=True)
         # Confirmed-label publishing needs BOTH the integrated confirm gate AND
         # the explicit publish_confirmed_label gate. Preview launches keep both
         # false, so no confirmed_label publisher is ever created in preview mode.
-        if self.integrated_confirm_enabled:
-            if self.publish_confirmed_label:
-                self.confirm_pub = rospy.Publisher(self.confirmed_label_topic, String, queue_size=10, latch=True)
-                self.dashboard_state_pub = rospy.Publisher(self.dashboard_state_topic, String, queue_size=10, latch=True)
+        if self.config.integrated_confirm_enabled:
+            if self.config.publish_confirmed_label:
+                self.confirm_pub = rospy.Publisher(self.config.confirmed_label_topic, String, queue_size=10, latch=True)
+                self.dashboard_state_pub = rospy.Publisher(self.config.dashboard_state_topic, String, queue_size=10, latch=True)
             else:
                 rospy.logwarn("integrated confirm enabled but publish_confirmed_label=false "
                               "-> confirmed_label publishing stays disabled (preview only)")
-        if self.publish_task_command:
+        if self.config.publish_task_command:
             # No task_command publisher exists in this preview dashboard by design.
             rospy.logwarn("publish_task_command=true has no effect: the preview "
                           "dashboard never publishes /colmag/task_command")
 
         rospy.loginfo("MagneticTrajectoryDashboardNode started")
         rospy.loginfo("integrated_dashboard_confirm_enabled=%s publish_confirmed_label=%s publish_task_command=%s",
-                      self.integrated_confirm_enabled, self.publish_confirmed_label, self.publish_task_command)
-        rospy.loginfo("dashboard_board_control_layout=%s", self.board_control_layout)
+                      self.config.integrated_confirm_enabled, self.config.publish_confirmed_label, self.config.publish_task_command)
+        rospy.loginfo("dashboard_board_control_layout=%s", self.config.board_control_layout)
 
     def _schedule_ui_refresh(self):
         # Samples can arrive faster than Tk draws; one pending redraw covers them all.
@@ -552,7 +358,7 @@ class MagneticTrajectoryDashboardNode(
         pt = extract_single_point(data)
         if pt is None:
             return
-        if self.is_trajectory_mode:
+        if self.config.is_trajectory_mode:
             self._ingest_trajectory_sample(data, pt)
             return
         self.trail.append(pt)
@@ -560,7 +366,7 @@ class MagneticTrajectoryDashboardNode(
 
     def _recognize_current_stroke(self):
         self._candidate_recognize_job = None
-        if not (self.is_trajectory_mode and self.candidate_preview_enabled):
+        if not (self.config.is_trajectory_mode and self.config.candidate_preview_enabled):
             return
         self.candidate_status = "recognizing"
         self.preview_interaction_state = "recognizing"
@@ -568,10 +374,10 @@ class MagneticTrajectoryDashboardNode(
         points = self._active_recognition_points()
         status, candidates, backend_label = recognize_stroke(
             points,
-            backend=getattr(self, "recognition_backend", "dtw"),
-            min_points=getattr(self, "candidate_min_points", 8),
-            labels=getattr(self, "candidate_labels", None),
-            recognition_model_path=getattr(self, "recognition_model_path", ""),
+            backend=self.config.recognition_backend,
+            min_points=self.config.candidate_min_points,
+            labels=self.config.candidate_labels,
+            recognition_model_path=self.config.recognition_model_path,
         )
         self.recognition_backend_label = backend_label
         self.candidate_status = status
@@ -611,7 +417,7 @@ class MagneticTrajectoryDashboardNode(
     def _handle_candidates(self, msg):
         data = safe_json_loads(msg.data)
         if data:
-            if self.demo_input_mode == "ocr_canvas" and self.ocr_panel_state == "RECOGNIZING":
+            if self.config.demo_input_mode == "ocr_canvas" and self.ocr_panel_state == "RECOGNIZING":
                 self._cancel_ocr_recognition_timeout()
                 self.ocr_panel_state = "CONFIRM_PENDING"
                 self.root.after(0, lambda: self.ui_state_var.set("State: CONFIRM_PENDING"))
@@ -620,7 +426,7 @@ class MagneticTrajectoryDashboardNode(
             self._update_real_board_sample_record_candidate(data)
             backend_text = candidate_backend_status_text(data)
             self.root.after(0, lambda t=backend_text: self.backend_status_var.set(t))
-            if self.is_trajectory_mode and self.candidate_preview_enabled:
+            if self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
                 self._sync_external_candidate_display(data, backend_text)
             recognizer_texts = recognizer_status_texts(data)
             self.root.after(0, lambda t=recognizer_texts["mode"]: self.recognizer_mode_var.set(t))
@@ -629,14 +435,14 @@ class MagneticTrajectoryDashboardNode(
             self.root.after(0, lambda t=recognizer_texts["labels"]: self.recognizer_labels_var.set(t))
 
             tops = summarize_candidates(data)
-            if self.demo_input_mode == "ocr_canvas":
+            if self.config.demo_input_mode == "ocr_canvas":
                 summary = ", ".join("%s:%.3f" % (label, confidence) for _rank, label, confidence in tops) or "-"
                 self.rospy.loginfo("ocr candidates received top=%s", summary)
 
             for i, text in enumerate(format_rank_rows(data, count=3)):
                 self.root.after(0, lambda i=i, t=text: self.rank_vars[i].set(t))
             self.root.after(0, self._update_ocr_toolbar_visuals)
-            if self.demo_input_mode == "ocr_canvas":
+            if self.config.demo_input_mode == "ocr_canvas":
                 self._refresh_dwell_status()
             self._schedule_ui_refresh()
 
@@ -651,12 +457,12 @@ class MagneticTrajectoryDashboardNode(
         self.root.after(0, self._update_ocr_toolbar_visuals)
 
     def _refresh_dwell_status(self):
-        if self.demo_input_mode == "ocr_canvas":
+        if self.config.demo_input_mode == "ocr_canvas":
             texts = format_ocr_canvas_dwell_texts(
                 self.ocr_panel_state,
                 self.ocr_hover_button,
                 self.ocr_dwell_progress,
-                self.dwell_confirm_sec,
+                self.config.dwell_confirm_sec,
             )
             self.root.after(0, lambda t=texts["dwell"]: self.dwell_var.set(t))
             self.root.after(0, lambda t=texts["hover"]: self.hover_var.set(t))
@@ -664,34 +470,34 @@ class MagneticTrajectoryDashboardNode(
             self._refresh_mouse_operator_presentation()
             return
 
-        if self.is_trajectory_mode and self.candidate_preview_enabled:
+        if self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
             text = format_trajectory_preview_interaction_text(
                 self.preview_interaction_state,
-                getattr(self, "hover_source", "none"),
+                self.hover_source,
                 self.ocr_hover_button,
                 self.ocr_dwell_progress,
-                hover_progress_enabled=self.hover_progress_enabled,
+                hover_progress_enabled=self.config.hover_progress_enabled,
             )
             self.root.after(0, lambda t=text: self.traj_interaction_var.set(t))
-            if self.hover_buttons_enabled:
-                hint = format_interaction_instruction(self.interaction_profile)
+            if self.config.hover_buttons_enabled:
+                hint = format_interaction_instruction(self.config.interaction_profile)
                 self.root.after(0, lambda t=hint: self.ocr_hint_var.set(t))
             return
 
         texts = format_integrated_dwell_status_texts(
-            self.integrated_confirm_enabled,
+            self.config.integrated_confirm_enabled,
             self.dwell_state.get("current_button_id", ""),
             self.dwell_state.get("dwell_progress", 0.0),
-            self.dwell_confirm_sec,
+            self.config.dwell_confirm_sec,
             self.last_command_intent,
         )
         self.root.after(0, lambda t=texts["dwell"]: self.dwell_var.set(t))
         self.root.after(0, lambda t=texts["hover"]: self.hover_var.set(t))
 
     def _publish_dashboard_state(self):
-        if not self.integrated_confirm_enabled or self.dashboard_state_pub is None:
+        if not self.config.integrated_confirm_enabled or self.dashboard_state_pub is None:
             return
-        if self.demo_input_mode == "ocr_canvas":
+        if self.config.demo_input_mode == "ocr_canvas":
             current_button = self.ocr_hover_button if self.ocr_hover_button != "C" or self._ocr_confirm_enabled() else ""
             payload = {
                 "timestamp": time.time(),
@@ -802,15 +608,15 @@ class MagneticTrajectoryDashboardNode(
     def _on_key_press(self, event):
         key = getattr(event, "char", "").lower()
         keysym = getattr(event, "keysym", "").lower()
-        if self.is_trajectory_mode:
+        if self.config.is_trajectory_mode:
             # Preview-only Start: record one complete segment (never publishes).
-            if getattr(self, "trajectory_recording_enabled", False) and key == "s":
+            if self.config.trajectory_recording_enabled and key == "s":
                 self._start_recording()
                 return
             # Recognition triggers. External DTW route publishes the captured
             # trajectory sample to the existing /colmag/symbol_capture seam.
-            if self.candidate_preview_enabled:
-                if not getattr(self, "latest_input_active", False):
+            if self.config.candidate_preview_enabled:
+                if not self.latest_input_active:
                     return
                 if key in ("r", "b"):
                     self._handle_preview_button_action("B")
@@ -821,7 +627,7 @@ class MagneticTrajectoryDashboardNode(
                 elif keysym in ("return", "kp_enter"):
                     self._handle_preview_button_action("C")
             return
-        if self.demo_input_mode != "ocr_canvas":
+        if self.config.demo_input_mode != "ocr_canvas":
             return
         if key in ("b", "c", "x", "a"):
             self._handle_ocr_action(key)

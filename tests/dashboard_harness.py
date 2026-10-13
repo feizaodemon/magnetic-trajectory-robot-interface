@@ -11,11 +11,24 @@ ones (variable updates and the coalesced redraw); timed jobs such as the 50 ms
 dwell loop stay queued until a test runs them explicitly.
 """
 
+import dataclasses
 import itertools
 import json
 import sys
 import time
 import types
+
+from colmag_ros.dashboard_config import DashboardConfig
+
+
+def default_config(**fields):
+    """A DashboardConfig with every param at its default, then ``fields`` replaced.
+
+    For white-box tests that build a node with ``__new__`` and set only the
+    state a method needs.
+    """
+    defaults = DashboardConfig.from_params(lambda _name, default=None: default)
+    return dataclasses.replace(defaults, **fields)
 
 
 SAMPLE_CAPTURE = {
@@ -336,8 +349,8 @@ class DashboardHarness:
 
     def send_sample_and_candidates(self):
         """Publish a captured sample and its recognizer candidates, as the DTW route does."""
-        self.send(self.node.symbol_capture_topic, SAMPLE_CAPTURE)
-        self.send(self.node.symbol_candidates_topic, SAMPLE_CANDIDATES)
+        self.send(self.node.config.symbol_capture_topic, SAMPLE_CAPTURE)
+        self.send(self.node.config.symbol_candidates_topic, SAMPLE_CANDIDATES)
 
     def fire(self, widget, sequence, **event_fields):
         """Invoke the callbacks bound to ``sequence`` on ``widget``."""

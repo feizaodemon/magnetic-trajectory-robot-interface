@@ -30,7 +30,7 @@ class DashboardPreviewControlsMixin:
     """Handles preview buttons, pointer dwell, confirm/reject, and the candidate panel."""
 
     def _on_clear_button(self):
-        if self.demo_input_mode == "ocr_canvas":
+        if self.config.demo_input_mode == "ocr_canvas":
             self._handle_ocr_action("X")
         else:
             self._clear_trajectory_trace()
@@ -43,7 +43,7 @@ class DashboardPreviewControlsMixin:
         self._confirm_rank_by_dwell(1)
 
     def _confirm_rank_by_dwell(self, selected_rank):
-        if self.confirm_pub is None or not self.integrated_confirm_enabled:
+        if self.confirm_pub is None or not self.config.integrated_confirm_enabled:
             return
         payload = self.current_candidate_payload
         if should_suppress_repeated_confirm(self.last_confirm_key, payload, selected_rank):
@@ -65,14 +65,14 @@ class DashboardPreviewControlsMixin:
         self.rospy.loginfo("dashboard dwell confirmed_label=%s", msg.data)
 
     def _on_reject_button(self):
-        if self.demo_input_mode == "ocr_canvas":
+        if self.config.demo_input_mode == "ocr_canvas":
             self._handle_ocr_action("A")
         else:
             self._clear_candidates("Rejected by REJECT button")
             self.root.after(0, lambda: self.ui_state_var.set("State: BLOCKED (Rejected)"))
 
     def _on_resample_button(self):
-        if self.demo_input_mode == "ocr_canvas":
+        if self.config.demo_input_mode == "ocr_canvas":
             self._handle_ocr_action("B")
         else:
             self._clear_trajectory_trace()
@@ -80,9 +80,9 @@ class DashboardPreviewControlsMixin:
 
     def _semantic_preview_text(self):
         """Preview-only meaning of the top candidate (display only, no dispatch)."""
-        if not getattr(self, "semantic_preview_enabled", True):
+        if not self.config.semantic_preview_enabled:
             return "Meaning: -"
-        cands = getattr(self, "trajectory_candidates", None)
+        cands = self.trajectory_candidates
         if not cands:
             return "Meaning: -"
         try:
@@ -105,10 +105,10 @@ class DashboardPreviewControlsMixin:
         self._candidate_recognize_job = None
 
     def _schedule_auto_recognize(self):
-        if not (self.candidate_preview_enabled and self.auto_recognize):
+        if not (self.config.candidate_preview_enabled and self.config.auto_recognize):
             return
         self._cancel_candidate_recognize_job()
-        idle_ms = max(50, int(self.ocr_debounce_sec * 1000))
+        idle_ms = max(50, int(self.config.ocr_debounce_sec * 1000))
         self._candidate_recognize_job = self.root.after(idle_ms, self._recognize_current_stroke)
 
     def _clear_trajectory_trace(self):
@@ -130,14 +130,12 @@ class DashboardPreviewControlsMixin:
         self.candidate_status = "idle"
         self.preview_interaction_state = "cleared"
         self.preview_confirmed_label = ""
-        if getattr(self, "segment_recorder", None) is not None:
+        if self.segment_recorder is not None:
             self.segment_recorder.clear()
             self.recorded_segment = []
         self._update_candidate_ui()
-        if hasattr(self, "traj_captured_sample_var"):
-            self.root.after(0, lambda: self.traj_captured_sample_var.set("Captured sample: none"))
-        if hasattr(self, "capture_var"):
-            self.root.after(0, lambda: self.capture_var.set("Cleared trajectory and captured sample"))
+        self.root.after(0, lambda: self.traj_captured_sample_var.set("Captured sample: none"))
+        self.root.after(0, lambda: self.capture_var.set("Cleared trajectory and captured sample"))
         self._schedule_ui_refresh()
 
     def _reject_preview_candidate(self):
@@ -156,10 +154,8 @@ class DashboardPreviewControlsMixin:
         self.preview_interaction_state = "rejected"
         self.preview_confirmed_label = ""
         self._update_candidate_ui()
-        if hasattr(self, "traj_captured_sample_var"):
-            self.root.after(0, lambda: self.traj_captured_sample_var.set("Captured sample: none"))
-        if hasattr(self, "capture_var"):
-            self.root.after(0, lambda: self.capture_var.set("Rejected candidate and captured sample"))
+        self.root.after(0, lambda: self.traj_captured_sample_var.set("Captured sample: none"))
+        self.root.after(0, lambda: self.capture_var.set("Rejected candidate and captured sample"))
         self._schedule_ui_refresh()
 
     def _preview_confirm_candidate(self):
@@ -184,25 +180,25 @@ class DashboardPreviewControlsMixin:
         (returns False) when the source is not selected or no external candidates
         are available."""
         return (
-            getattr(self, "is_trajectory_mode", False)
-            and getattr(self, "confirm_candidate_source", "internal") == "external_symbol_candidates"
-            and bool((getattr(self, "current_candidate_payload", None) or {}).get("candidates"))
+            self.config.is_trajectory_mode
+            and self.config.confirm_candidate_source == "external_symbol_candidates"
+            and bool((self.current_candidate_payload or {}).get("candidates"))
         )
 
     def _publish_preview_confirmed_label(self):
         if self._external_confirm_active():
             result = self.preview_confirm_publisher.publish_external_payload(
-                confirm_pub=getattr(self, "confirm_pub", None),
-                integrated_confirm_enabled=getattr(self, "integrated_confirm_enabled", False),
+                confirm_pub=self.confirm_pub,
+                integrated_confirm_enabled=self.config.integrated_confirm_enabled,
                 candidate_payload=self.current_candidate_payload,
                 last_confirm_key=self.last_confirm_key,
-                expected_sample_id=getattr(self, "last_capture_sample_id", None),
-                expected_sequence_id=getattr(self, "last_capture_sequence_id", None),
+                expected_sample_id=self.last_capture_sample_id,
+                expected_sequence_id=self.last_capture_sequence_id,
             )
         else:
             result = self.preview_confirm_publisher.publish_rank_one(
-                confirm_pub=getattr(self, "confirm_pub", None),
-                integrated_confirm_enabled=getattr(self, "integrated_confirm_enabled", False),
+                confirm_pub=self.confirm_pub,
+                integrated_confirm_enabled=self.config.integrated_confirm_enabled,
                 trajectory_candidates=self.trajectory_candidates,
                 last_confirm_key=self.last_confirm_key,
             )
@@ -229,23 +225,23 @@ class DashboardPreviewControlsMixin:
         raw_points = clean_stroke_points(self._active_recognition_points())
         points = cleanup_drawing_sample_points(
             raw_points,
-            min_point_delta=getattr(self, "board_sample_min_point_delta", 0.0),
-            max_points=getattr(self, "board_sample_max_points", 0),
-            enabled=getattr(self, "board_sample_cleanup_enabled", True),
+            min_point_delta=self.config.board_sample_min_point_delta,
+            max_points=self.config.board_sample_max_points,
+            enabled=self.config.board_sample_cleanup_enabled,
         )
-        return len(points) >= int(getattr(self, "candidate_min_points", 8))
+        return len(points) >= int(self.config.candidate_min_points)
 
     def _preview_button_states(self):
         has_sample = self._drawing_sample_ready()
         has_candidate = bool(self._top_preview_candidate_label())
         has_clearable_content = bool(
-            clean_stroke_points(getattr(self, "trail", []))
-            or clean_stroke_points(getattr(self, "active_drawing_buffer", []))
-            or clean_stroke_points(getattr(self, "frozen_drawing_sample", []))
-            or getattr(self, "captured_path", [])
-            or getattr(self, "current_candidate_payload", None)
-            or getattr(self, "trajectory_candidates", [])
-            or getattr(self, "recorded_segment", [])
+            clean_stroke_points(self.trail)
+            or clean_stroke_points(self.active_drawing_buffer)
+            or clean_stroke_points(self.frozen_drawing_sample)
+            or self.captured_path
+            or self.current_candidate_payload
+            or self.trajectory_candidates
+            or self.recorded_segment
         )
         return preview_button_availability(
             has_sample, has_candidate, has_clearable_content,
@@ -261,7 +257,7 @@ class DashboardPreviewControlsMixin:
         elif button_id == "A":
             self._reject_preview_candidate()
         elif button_id == "B":
-            if self._external_confirm_active() or self.confirm_candidate_source == "external_symbol_candidates":
+            if self._external_confirm_active() or self.config.confirm_candidate_source == "external_symbol_candidates":
                 self._publish_trajectory_symbol_capture_from_drawing_zone()
             else:
                 self._recognize_current_stroke()
@@ -285,14 +281,12 @@ class DashboardPreviewControlsMixin:
             self.root.after(0, lambda i=index, t=text: row_vars[i].set(t))
 
     def _refresh_operator_status(self, candidate_rows=None):
-        if not hasattr(self, "traj_operator_status_var"):
-            return
         sample_ready = self._drawing_sample_ready()
         top_candidate = self._top_preview_candidate_label()
-        interaction_state = getattr(self, "preview_interaction_state", "")
+        interaction_state = self.preview_interaction_state
         text = format_operator_action_status(
             interaction_state=interaction_state,
-            confirmed_label=getattr(self, "preview_confirmed_label", ""),
+            confirmed_label=self.preview_confirmed_label,
             top_candidate_label=top_candidate,
             sample_ready=sample_ready,
         )
@@ -302,10 +296,10 @@ class DashboardPreviewControlsMixin:
             has_sample=sample_ready,
             has_candidate=bool(top_candidate),
         )
-        workflow = format_operator_workflow(stage, self.interaction_profile)
+        workflow = format_operator_workflow(stage, self.config.interaction_profile)
         self.root.after(0, lambda t=workflow: self.traj_workflow_var.set(t))
         self._set_operator_recognition_view(
-            getattr(self, "current_candidate_payload", None),
+            self.current_candidate_payload,
             interaction_state,
             sample_ready,
             self.traj_operator_result_var,
@@ -316,15 +310,15 @@ class DashboardPreviewControlsMixin:
     def _update_candidate_ui(self):
         status = self.candidate_status
         live_points = len(build_ocr_stroke_points(self.trail))
-        raw_points = len(clean_stroke_points(getattr(self, "active_drawing_buffer", [])))
-        frozen_points = len(clean_stroke_points(getattr(self, "frozen_drawing_sample", [])))
-        published_points = int(getattr(self, "published_sample_point_count", 0))
-        backend = getattr(self, "recognition_backend_label", "DTW")
+        raw_points = len(clean_stroke_points(self.active_drawing_buffer))
+        frozen_points = len(clean_stroke_points(self.frozen_drawing_sample))
+        published_points = int(self.published_sample_point_count)
+        backend = self.recognition_backend_label
         external_payload = (
-            getattr(self, "current_candidate_payload", None)
+            self.current_candidate_payload
             if (
-                getattr(self, "is_trajectory_mode", False)
-                and getattr(self, "confirm_candidate_source", "") == "external_symbol_candidates"
+                self.config.is_trajectory_mode
+                and self.config.confirm_candidate_source == "external_symbol_candidates"
             )
             else None
         )
@@ -335,20 +329,17 @@ class DashboardPreviewControlsMixin:
             raw_point_count=raw_points,
             frozen_point_count=frozen_points,
             published_point_count=published_points,
-            sample_lifecycle_phase=(
-                self._sample_lifecycle_phase()
-                if hasattr(self, "_sample_lifecycle_phase") else "idle"
-            ),
-            published_sample_raw_point_count=int(getattr(self, "published_sample_raw_point_count", 0)),
-            board_sample_cleanup_enabled=getattr(self, "board_sample_cleanup_enabled", True),
-            result_payload=getattr(self, "current_candidate_payload", None),
+            sample_lifecycle_phase=self._sample_lifecycle_phase(),
+            published_sample_raw_point_count=int(self.published_sample_raw_point_count),
+            board_sample_cleanup_enabled=self.config.board_sample_cleanup_enabled,
+            result_payload=self.current_candidate_payload,
             external_candidate_payload=external_payload,
-            hover_button=getattr(self, "ocr_hover_button", ""),
-            hover_source=getattr(self, "hover_source", "none"),
-            dwell_progress=getattr(self, "ocr_dwell_progress", 0.0),
-            hover_progress_enabled=getattr(self, "hover_progress_enabled", True),
-            preview_interaction_state=getattr(self, "preview_interaction_state", status),
-            preview_confirmed_label=getattr(self, "preview_confirmed_label", ""),
+            hover_button=self.ocr_hover_button,
+            hover_source=self.hover_source,
+            dwell_progress=self.ocr_dwell_progress,
+            hover_progress_enabled=self.config.hover_progress_enabled,
+            preview_interaction_state=self.preview_interaction_state,
+            preview_confirmed_label=self.preview_confirmed_label,
             trajectory_candidates=self.trajectory_candidates,
             sample_ready=self._drawing_sample_ready(),
         )
@@ -356,40 +347,26 @@ class DashboardPreviewControlsMixin:
         recording_txt = self._recording_status_text()
         semantic_txt = self._semantic_preview_text()
         self.root.after(0, lambda t=texts["status"]: self.traj_candidate_status_var.set(t))
-        if hasattr(self, "traj_recording_var"):
-            self.root.after(0, lambda t=recording_txt: self.traj_recording_var.set(t))
-        if hasattr(self, "traj_semantic_var"):
-            self.root.after(0, lambda t=semantic_txt: self.traj_semantic_var.set(t))
-        if hasattr(self, "traj_backend_var"):
-            self.root.after(0, lambda t=texts["backend"]: self.traj_backend_var.set(t))
-        if hasattr(self, "traj_recognizer_detail_var"):
-            self.root.after(0, lambda t=texts["recognizer_detail"]: self.traj_recognizer_detail_var.set(t))
-        if hasattr(self, "traj_candidate_points_var"):
-            self.root.after(0, lambda t=texts["points"]: self.traj_candidate_points_var.set(t))
-        if hasattr(self, "traj_sample_state_var"):
-            self.root.after(0, lambda t=texts["sample"]: self.traj_sample_state_var.set(t))
-        if hasattr(self, "traj_sample_cleanup_var"):
-            self.root.after(0, lambda t=texts["cleanup"]: self.traj_sample_cleanup_var.set(t))
-        if hasattr(self, "traj_result_var"):
-            self.root.after(0, lambda t=texts["result"]: self.traj_result_var.set(t))
-        if hasattr(self, "traj_candidate_debug_var"):
-            debug_text = format_candidate_debug_details(
-                getattr(self, "current_candidate_payload", None))
-            self.root.after(
-                0, lambda t=debug_text: self.traj_candidate_debug_var.set(t))
-        if hasattr(self, "traj_operator_result_var"):
-            self.root.after(
-                0,
-                lambda t=texts["operator_result"]: self.traj_operator_result_var.set(t),
-            )
-        if hasattr(self, "traj_recognition_progress_var"):
-            self.root.after(0, lambda t=texts["progress"]: self.traj_recognition_progress_var.set(t))
-        if hasattr(self, "traj_interaction_var"):
-            self.root.after(0, lambda t=texts["interaction"]: self.traj_interaction_var.set(t))
-        if hasattr(self, "traj_confirm_var"):
-            self.root.after(0, lambda t=texts["confirm"]: self.traj_confirm_var.set(t))
-        if hasattr(self, "traj_operator_status_var"):
-            self.root.after(0, lambda t=texts["operator_status"]: self.traj_operator_status_var.set(t))
+        self.root.after(0, lambda t=recording_txt: self.traj_recording_var.set(t))
+        self.root.after(0, lambda t=semantic_txt: self.traj_semantic_var.set(t))
+        self.root.after(0, lambda t=texts["backend"]: self.traj_backend_var.set(t))
+        self.root.after(0, lambda t=texts["recognizer_detail"]: self.traj_recognizer_detail_var.set(t))
+        self.root.after(0, lambda t=texts["points"]: self.traj_candidate_points_var.set(t))
+        self.root.after(0, lambda t=texts["sample"]: self.traj_sample_state_var.set(t))
+        self.root.after(0, lambda t=texts["cleanup"]: self.traj_sample_cleanup_var.set(t))
+        self.root.after(0, lambda t=texts["result"]: self.traj_result_var.set(t))
+        debug_text = format_candidate_debug_details(
+            self.current_candidate_payload)
+        self.root.after(
+            0, lambda t=debug_text: self.traj_candidate_debug_var.set(t))
+        self.root.after(
+            0,
+            lambda t=texts["operator_result"]: self.traj_operator_result_var.set(t),
+        )
+        self.root.after(0, lambda t=texts["progress"]: self.traj_recognition_progress_var.set(t))
+        self.root.after(0, lambda t=texts["interaction"]: self.traj_interaction_var.set(t))
+        self.root.after(0, lambda t=texts["confirm"]: self.traj_confirm_var.set(t))
+        self.root.after(0, lambda t=texts["operator_status"]: self.traj_operator_status_var.set(t))
         for i, txt in enumerate(texts["candidate_rows"]):
             self.root.after(0, lambda i=i, t=txt: self.traj_candidate_vars[i].set(t))
         self._refresh_operator_status(texts["candidate_rows"])
@@ -442,20 +419,18 @@ class DashboardPreviewControlsMixin:
         return self.ocr_panel_state == "CONFIRM_PENDING" and bool(summarize_candidates(self.current_candidate_payload))
 
     def _ocr_state_hint_text(self):
-        return format_interaction_instruction(self.interaction_profile)
+        return format_interaction_instruction(self.config.interaction_profile)
 
     def _refresh_mouse_operator_presentation(self):
-        if not hasattr(self, "mouse_mode_var"):
-            return
-        hover_button = str(getattr(self, "ocr_hover_button", "") or "").upper()
+        hover_button = str(self.ocr_hover_button or "").upper()
         if hover_button in ("B", "C", "A", "X"):
             mode = "HOVER — %s" % hover_button
         elif self.ocr_panel_state == "DRAWING":
             mode = "DRAW"
         else:
             mode = "IDLE"
-        tops = summarize_candidates(getattr(self, "current_candidate_payload", None))
-        if getattr(self, "last_confirmed_label", ""):
+        tops = summarize_candidates(self.current_candidate_payload)
+        if self.last_confirmed_label:
             stage = "act"
         elif self.ocr_panel_state == "WAITING":
             stage = "start"
@@ -473,7 +448,7 @@ class DashboardPreviewControlsMixin:
             status = "Wait for recognition"
         elif self.ocr_panel_state == "DRAWING":
             status = "Draw a character in the center."
-        elif getattr(self, "last_confirmed_label", ""):
+        elif self.last_confirmed_label:
             status = "Confirmed: %s" % self.last_confirmed_label
         else:
             status = "Hover B to start drawing"
@@ -484,7 +459,7 @@ class DashboardPreviewControlsMixin:
         )
         self.root.after(0, lambda t=status: self.mouse_operator_status_var.set(t))
         self._set_operator_recognition_view(
-            getattr(self, "current_candidate_payload", None),
+            self.current_candidate_payload,
             self.ocr_panel_state,
             False,
             self.mouse_operator_result_var,
@@ -492,15 +467,15 @@ class DashboardPreviewControlsMixin:
             self.mouse_operator_candidate_vars,
         )
         debug_text = format_candidate_debug_details(
-            getattr(self, "current_candidate_payload", None))
+            self.current_candidate_payload)
         self.root.after(
             0, lambda t=debug_text: self.mouse_candidate_debug_var.set(t))
 
     def _preview_pointer_tracking_enabled(self):
         return (
-            self.is_trajectory_mode
-            and self.candidate_preview_enabled
-            and self.hover_buttons_enabled
+            self.config.is_trajectory_mode
+            and self.config.candidate_preview_enabled
+            and self.config.hover_buttons_enabled
         )
 
     def _preview_dwell_active(self):
@@ -508,7 +483,7 @@ class DashboardPreviewControlsMixin:
         mouse can drive dwell activation."""
         return (
             self._preview_pointer_tracking_enabled()
-            and (self.hover_dwell_enabled or self.board_cursor_dwell_enabled)
+            and (self.config.hover_dwell_enabled or self.config.board_cursor_dwell_enabled)
         )
 
     def _preview_button_at_event(self, event):
@@ -536,9 +511,9 @@ class DashboardPreviewControlsMixin:
             self._clear_ocr_hover_button()
 
     def _handle_preview_pointer_click(self, event):
-        if not (self._preview_pointer_tracking_enabled() and self.hover_click_enabled):
+        if not (self._preview_pointer_tracking_enabled() and self.config.hover_click_enabled):
             return None
-        if not getattr(self, "latest_input_active", False):
+        if not self.latest_input_active:
             return None
         button_id = self._preview_button_at_event(event)
         if not button_id or not self._preview_button_enabled(button_id):
@@ -557,7 +532,7 @@ class DashboardPreviewControlsMixin:
         reset when the effective button changes (i.e. after leaving the zone).
         """
         now = time.time()
-        if not getattr(self, "latest_input_active", True):
+        if not self.latest_input_active:
             self.board_hover_button = ""
             self.hover_source = "none"
             self.ocr_hover_button = ""
@@ -577,8 +552,8 @@ class DashboardPreviewControlsMixin:
             self._schedule_ui_refresh()
             self._publish_dashboard_state()
             return
-        board_button = self._board_cursor_preview_button() if self.board_cursor_dwell_enabled else ""
-        mouse_button = self.mouse_hover_button if self.hover_dwell_enabled else ""
+        board_button = self._board_cursor_preview_button() if self.config.board_cursor_dwell_enabled else ""
+        mouse_button = self.mouse_hover_button if self.config.hover_dwell_enabled else ""
         self.board_hover_button = board_button
         # Deterministic: board cursor is primary in the demo, mouse is the fallback.
         if board_button:
@@ -609,7 +584,7 @@ class DashboardPreviewControlsMixin:
             if self.ocr_hover_started_at is None:
                 self.ocr_hover_started_at = now
             self.ocr_dwell_progress = max(0.0, min(
-                1.0, (now - self.ocr_hover_started_at) / max(self.control_dwell_sec, 1e-9)))
+                1.0, (now - self.ocr_hover_started_at) / max(self.config.control_dwell_sec, 1e-9)))
             if self.ocr_dwell_progress >= 1.0 and not self.ocr_dwell_fired:
                 self.ocr_dwell_fired = True
                 self._handle_preview_button_action(button_id)

@@ -46,8 +46,7 @@ class DashboardSampleCaptureMixin:
         }
         self.active_drawing_buffer = []
         self.frozen_drawing_sample = []
-        if hasattr(self, "drawing_zone_trail"):
-            self.drawing_zone_trail.clear()
+        self.drawing_zone_trail.clear()
 
     def _clear_published_sample_state(self):
         self.published_sample_points = []
@@ -60,10 +59,10 @@ class DashboardSampleCaptureMixin:
         self.last_sample_record_data = None
 
     def _write_real_board_sample_record(self, record):
-        if not getattr(self, "real_board_sample_recording_enabled", False):
+        if not self.config.real_board_sample_recording_enabled:
             return None
         try:
-            directory = real_board_sample_recording_dir(getattr(self, "real_board_sample_recording_dir", ""))
+            directory = real_board_sample_recording_dir(self.config.real_board_sample_recording_dir)
             directory.mkdir(parents=True, exist_ok=True)
             sample_id = safe_sample_recording_name(record.get("sample_id", "unknown"))
             output_path = directory / ("%s.json" % sample_id)
@@ -81,15 +80,15 @@ class DashboardSampleCaptureMixin:
             raw_points=raw_points,
             cleaned_points=cleaned_points,
             cleanup_metadata=metadata,
-            candidate_payload=getattr(self, "current_candidate_payload", None),
+            candidate_payload=self.current_candidate_payload,
         )
         return self._write_real_board_sample_record(record)
 
     def _update_real_board_sample_record_candidate(self, candidate_payload):
-        if not getattr(self, "real_board_sample_recording_enabled", False):
+        if not self.config.real_board_sample_recording_enabled:
             return
-        record = getattr(self, "last_sample_record_data", None)
-        path = getattr(self, "last_sample_record_path", None)
+        record = self.last_sample_record_data
+        path = self.last_sample_record_path
         if not record or path is None:
             return
         sample_id = record.get("sample_id")
@@ -105,10 +104,10 @@ class DashboardSampleCaptureMixin:
         self.frozen_drawing_sample = list(self.drawing_sample_state.get("frozen_points") or [])
 
     def _sample_lifecycle_phase(self):
-        if getattr(self, "captured_sample_point_count", 0):
+        if self.captured_sample_point_count:
             return "RECOGNIZED"
-        phase = str((getattr(self, "drawing_sample_state", {}) or {}).get("phase") or "IDLE")
-        if phase == "PEN_UP_PENDING" and not getattr(self, "active_drawing_buffer", []):
+        phase = str((self.drawing_sample_state or {}).get("phase") or "IDLE")
+        if phase == "PEN_UP_PENDING" and not self.active_drawing_buffer:
             return "IDLE"
         return phase
 
@@ -131,9 +130,9 @@ class DashboardSampleCaptureMixin:
     def _start_new_drawing_after_recognized_if_needed(self, inside_drawing_zone, writing):
         if not (inside_drawing_zone and writing):
             return
-        if not getattr(self, "captured_sample_point_count", 0):
+        if not self.captured_sample_point_count:
             return
-        if not getattr(self, "frozen_drawing_sample", []):
+        if not self.frozen_drawing_sample:
             return
         self._reset_drawing_sample_state()
         self.captured_path = []
@@ -170,7 +169,7 @@ class DashboardSampleCaptureMixin:
             inside_control_zone,
         )
 
-        if getattr(self, "trajectory_recording_enabled", False):
+        if self.config.trajectory_recording_enabled:
             self._feed_recorder(
                 pt,
                 decision["z"],
@@ -180,8 +179,8 @@ class DashboardSampleCaptureMixin:
             )
 
         if (
-            self.candidate_preview_enabled
-            and self.auto_recognize
+            self.config.candidate_preview_enabled
+            and self.config.auto_recognize
             and decision["writing"]
             and inside_drawing_zone
         ):
@@ -193,16 +192,16 @@ class DashboardSampleCaptureMixin:
         input_inactive_reason = trajectory_input_inactive_reason(
             valid,
             z_val,
-            z_min=getattr(self, "input_z_min", None),
-            z_max=getattr(self, "input_z_max", None),
-            gate_enabled=getattr(self, "input_valid_gate_enabled", True),
+            z_min=self.config.input_z_min,
+            z_max=self.config.input_z_max,
+            gate_enabled=self.config.input_valid_gate_enabled,
         )
         raw_input_active = input_inactive_reason == ""
         if raw_input_active:
             self._input_active_streak += 1
         else:
             self._input_active_streak = 0
-        input_active = raw_input_active and self._input_active_streak >= self.input_reactivate_samples
+        input_active = raw_input_active and self._input_active_streak >= self.config.input_reactivate_samples
 
         # Instantaneous XY speed from the previous sample (for speed gating).
         ts = data.get("timestamp", data.get("stamp"))
@@ -216,9 +215,9 @@ class DashboardSampleCaptureMixin:
         self._prev_sample = (pt[0], pt[1], ts if isinstance(ts, (int, float)) else None)
 
         writing_gate = stroke_gate_pass(
-            self.stroke_gate_mode, z_val, speed,
-            z_min=self.gate_z_min, z_max=self.gate_z_max,
-            min_speed=self.gate_min_speed, max_speed=self.gate_max_speed,
+            self.config.stroke_gate_mode, z_val, speed,
+            z_min=self.config.gate_z_min, z_max=self.config.gate_z_max,
+            min_speed=self.config.gate_min_speed, max_speed=self.config.gate_max_speed,
         )
         writing = input_active and writing_gate
         return {
@@ -281,7 +280,7 @@ class DashboardSampleCaptureMixin:
 
         if writing:
             self.trail.append(pt)
-        elif self.gate_invalid_breaks_stroke or not input_active:
+        elif self.config.gate_invalid_breaks_stroke or not input_active:
             # Break the drawn stroke (don't append the point, don't clear history).
             if self.trail and self.trail[-1] is not None:
                 self.trail.append(None)
@@ -333,22 +332,21 @@ class DashboardSampleCaptureMixin:
         if hovered_button is None:
             hovered_button = ""
             if (
-                getattr(self, "latest_input_active", False)
-                and getattr(self, "latest_inside_control_zone", False)
-                and getattr(self, "is_trajectory_mode", False)
-                and getattr(self, "candidate_preview_enabled", False)
+                self.latest_input_active
+                and self.latest_inside_control_zone
+                and self.config.is_trajectory_mode
+                and self.config.candidate_preview_enabled
             ):
                 hovered_button = self._board_cursor_preview_button()
         mode = derive_orientation_clutch_mode(
-            getattr(self, "latest_input_active", False),
-            getattr(self, "latest_inside_drawing_zone", False),
+            self.latest_input_active,
+            self.latest_inside_drawing_zone,
             hovered_button,
         )
-        if hasattr(self, "traj_clutch_mode_var"):
-            self.root.after(
-                0,
-                lambda t=mode: self.traj_clutch_mode_var.set("Mode: %s" % t),
-            )
+        self.root.after(
+            0,
+            lambda t=mode: self.traj_clutch_mode_var.set("Mode: %s" % t),
+        )
         return mode
 
     # --- Preview-only segment recording: display only, no publish ---
@@ -360,7 +358,7 @@ class DashboardSampleCaptureMixin:
         and stops after ``record_duration_sec`` (or z-lift when enabled). Never
         publishes anything.
         """
-        if not self.trajectory_recording_enabled:
+        if not self.config.trajectory_recording_enabled:
             return
         # Reuse the clear path so trail/candidates/confirm reset consistently.
         self._clear_trajectory_trace()
@@ -392,7 +390,7 @@ class DashboardSampleCaptureMixin:
         self.preview_interaction_state = "recording_done"
         self._update_candidate_ui()
         self._schedule_ui_refresh()
-        if self.candidate_preview_enabled and self.auto_recognize:
+        if self.config.candidate_preview_enabled and self.config.auto_recognize:
             self._recognize_current_stroke()
 
     def _active_recognition_points(self):
@@ -407,24 +405,24 @@ class DashboardSampleCaptureMixin:
         Finalizes an in-progress recording first so Recognize always works on a
         complete segment.
         """
-        if self.is_trajectory_mode and self._use_canvas_reachable_preview_controls():
-            frozen = getattr(self, "frozen_drawing_sample", [])
+        if self.config.is_trajectory_mode and self._use_canvas_reachable_preview_controls():
+            frozen = self.frozen_drawing_sample
             if frozen:
                 return list(frozen)
-            return list(getattr(self, "active_drawing_buffer", []))
-        rec = getattr(self, "segment_recorder", None)
-        if (getattr(self, "trajectory_recording_enabled", False)
-                and getattr(self, "recognize_only_completed_segment", True)
+            return list(self.active_drawing_buffer)
+        rec = self.segment_recorder
+        if (self.config.trajectory_recording_enabled
+                and self.config.recognize_only_completed_segment
                 and rec is not None):
             if rec.is_recording:
                 rec.finish_now(time.time(), reason="recognize")
                 self.recorded_segment = rec.segment()
-            return list(getattr(self, "recorded_segment", []) or [])
+            return list(self.recorded_segment or [])
         return self.trail
 
     def _recording_status_text(self):
-        rec = getattr(self, "segment_recorder", None)
-        if not getattr(self, "trajectory_recording_enabled", False) or rec is None:
+        rec = self.segment_recorder
+        if not self.config.trajectory_recording_enabled or rec is None:
             return "Recording: disabled"
         state_map = {
             STATE_IDLE: "idle (press S/Start)",
@@ -452,29 +450,25 @@ class DashboardSampleCaptureMixin:
             self.captured_sample_id,
             int(self.published_sample_raw_point_count),
             self.captured_sample_point_count)
-        if hasattr(self, "traj_captured_sample_var"):
-            self.root.after(0, lambda t=text: self.traj_captured_sample_var.set(t))
-        if hasattr(self, "capture_var"):
-            self.root.after(0, lambda t=text: self.capture_var.set(t))
+        self.root.after(0, lambda t=text: self.traj_captured_sample_var.set(t))
+        self.root.after(0, lambda t=text: self.capture_var.set(t))
 
     def _publish_trajectory_symbol_capture_from_drawing_zone(self):
         self._freeze_current_drawing_sample()
         raw_points = clean_stroke_points(self._active_recognition_points())
         points = cleanup_drawing_sample_points(
             raw_points,
-            min_point_delta=getattr(self, "board_sample_min_point_delta", 0.0),
-            max_points=getattr(self, "board_sample_max_points", 0),
-            enabled=getattr(self, "board_sample_cleanup_enabled", True),
+            min_point_delta=self.config.board_sample_min_point_delta,
+            max_points=self.config.board_sample_max_points,
+            enabled=self.config.board_sample_cleanup_enabled,
         )
-        if len(points) < int(getattr(self, "candidate_min_points", 8)):
+        if len(points) < int(self.config.candidate_min_points):
             self.candidate_status = "collecting"
             self.preview_interaction_state = "too_few_drawing_points"
             text = "Too few published drawing points: %d / %d (raw %d)" % (
-                len(points), int(getattr(self, "candidate_min_points", 8)), len(raw_points))
-            if hasattr(self, "traj_captured_sample_var"):
-                self.root.after(0, lambda t=text: self.traj_captured_sample_var.set(t))
-            if hasattr(self, "capture_var"):
-                self.root.after(0, lambda t=text: self.capture_var.set(t))
+                len(points), int(self.config.candidate_min_points), len(raw_points))
+            self.root.after(0, lambda t=text: self.traj_captured_sample_var.set(t))
+            self.root.after(0, lambda t=text: self.capture_var.set(t))
             self._update_candidate_ui()
             return False
         now = time.time()
@@ -483,21 +477,21 @@ class DashboardSampleCaptureMixin:
         cleanup_meta = sample_cleanup_metadata(
             raw_points,
             points,
-            min_point_delta=getattr(self, "board_sample_min_point_delta", 0.0),
-            max_points=getattr(self, "board_sample_max_points", 0),
-            enabled=getattr(self, "board_sample_cleanup_enabled", True),
+            min_point_delta=self.config.board_sample_min_point_delta,
+            max_points=self.config.board_sample_max_points,
+            enabled=self.config.board_sample_cleanup_enabled,
         )
         payload = build_dashboard_drawing_zone_capture_payload(
             points,
             sample_id,
             sequence_id,
             now,
-            self.trajectory_topic,
+            self.config.trajectory_topic,
             drawing_zone=self._drawing_zone_canvas_rect(),
             raw_points=raw_points,
             cleanup_metadata=cleanup_meta,
         )
-        payload["drawing_zone_sample_frozen"] = bool(getattr(self, "frozen_drawing_sample", []))
+        payload["drawing_zone_sample_frozen"] = bool(self.frozen_drawing_sample)
         self.last_capture_sample_id = sample_id
         self.last_capture_sequence_id = sequence_id
         self._set_captured_sample_display(sample_id, points, raw_point_count=len(raw_points))
