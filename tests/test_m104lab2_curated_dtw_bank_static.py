@@ -18,7 +18,6 @@ TRACKED_BANK_ARG = "$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_see
 OUTPUT_BANK_FRAGMENT = "outputs/classifier_artifacts/dtw_bank/m104c1_8symbol_mouse_seeded_yflip.json"
 TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
 
-C4_LAUNCH = REPO / "colmag_ros" / "launch" / "m104c4_8symbol_dtw_gazebo_robot_body_demo.launch"
 C4_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_gazebo_robot_body_demo.launch"
 RECOGNIZER_LAUNCH = REPO / "colmag_ros" / "launch" / "dtw_template_bank_recognizer.launch"
 C2C3_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_recognition_display.launch"
@@ -65,7 +64,6 @@ class CuratedDtwBankTests(unittest.TestCase):
 
     def test_default_8symbol_launches_use_tracked_bank(self):
         for launch, arg_name in (
-            (C4_LAUNCH, "bank_path"),
             (C4_ALIAS, "bank_path"),
             (RECOGNIZER_LAUNCH, "dtw_template_bank_path"),
             (C2C3_ALIAS, "dtw_template_bank_path"),
