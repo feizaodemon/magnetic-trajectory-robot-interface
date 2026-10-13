@@ -41,6 +41,7 @@ from fr3_lab_runtime import (
     _enabled_value,
     _goal_count_value,
     _int_value,
+    _string_tuple,
     _yes_no,
     active_goal_present,
     build_gate_b_evidence,

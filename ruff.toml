@@ -10,8 +10,6 @@ ignore = ["E402"]
 
 [lint.per-file-ignores]
 # FR3 operator tooling is hardware scope; changes there need separate review.
-# Known findings, not fixed yet:
-# - fr3_lab_runtime.py imports argparse, getpass and sys without using them.
-# - fr3_lab_operator.py calls _string_tuple without importing it.
+# Known finding, not fixed yet: fr3_lab_runtime.py imports argparse, getpass
+# and sys without using them.
 "scripts/fr3_lab_runtime.py" = ["F401"]
-"scripts/fr3_lab_operator.py" = ["F821"]
