@@ -5,8 +5,6 @@ publish labels, or touch Gazebo / robot routes. The strings here are future
 intent names for recognition display only.
 """
 
-C2C3_TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
-
 C2C3_DISPLAY_SEMANTICS = {
     "1": {
         "future_intent": "MOVE_LEFT",

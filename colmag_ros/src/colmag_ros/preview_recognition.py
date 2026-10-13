@@ -2,8 +2,8 @@
 
 Production routes recognize symbols in the DTW template-bank recognizer node.
 These helpers run the built-in DTW templates in-process for the dashboard
-preview, plus the deterministic ``fake`` backend used by offline tests. They
-never publish anything and never touch a robot, task, or confirm path.
+preview. They never publish anything and never touch a robot, task, or
+confirm path.
 """
 
 import math
@@ -14,7 +14,7 @@ from colmag_ros.dtw_bank_features import dtw_distance, normalize_points
 
 DEFAULT_LABELS = ("1", "2", "3", "V", "O", "X", "A", "C")
 
-RECOGNIZER_BACKENDS = ("lightweight", "dtw", "fake")
+RECOGNIZER_BACKENDS = ("dtw",)
 
 
 def _line(points):
@@ -99,42 +99,11 @@ def recognize_trajectory_candidates(points, min_points=8, labels=None):
     return "ready", candidates
 
 
-def recognize_fake(points, min_points=8, labels=None):
-    """Deterministic offline recognizer for tests / no-dependency preview.
-
-    Uses pure trajectory DTW and picks a top-3 from a small
-    label set using only the cleaned point count, so results are stable and
-    reproducible offline. Returns ``(status, candidates)`` matching
-    ``recognize_trajectory_candidates``. Preview-only; publishes nothing.
-    """
-    pts = clean_stroke_points(points)
-    if len(pts) < int(min_points):
-        return "collecting", []
-    pool = list(labels) if labels else ["1", "2", "3", "A", "C", "X"]
-    if not pool:
-        return "none", []
-    n = len(pts)
-    ranked = []
-    for rank in range(min(3, len(pool))):
-        label = pool[(n + rank) % len(pool)]
-        confidence = round(max(0.1, 0.9 - 0.25 * rank), 2)
-        ranked.append({
-            "rank": rank + 1,
-            "label": label,
-            "confidence": confidence,
-            "distance": float(rank),
-        })
-    return "ready", ranked
-
-
-def recognize_stroke(points, backend="dtw", ocr_fallback_dtw=True, min_points=8,
-                     canvas_size=256, line_width=8, padding_ratio=0.15, labels=None,
-                     status_out=None, recognition_model_path=""):
-    """Backend-selecting preview recognition.
+def recognize_stroke(points, backend="dtw", min_points=8, labels=None, recognition_model_path=""):
+    """Preview recognition with the built-in DTW templates.
 
     Returns ``(status, candidates, backend_label)``. Production routes use the
-    external DTW template-bank node; this preview helper keeps only the local DTW
-    implementation and the deterministic fake used by offline tests.
+    external DTW template-bank node instead.
     """
     pts = clean_stroke_points(points)
     backend = str(backend or "dtw").strip().lower()
@@ -142,10 +111,6 @@ def recognize_stroke(points, backend="dtw", ocr_fallback_dtw=True, min_points=8,
     if len(pts) < int(min_points):
         return "collecting", [], backend_display_name(backend, recognition_model_path)
 
-    if backend == "fake":
-        status, cands = recognize_fake(pts, min_points, labels)
-        status = "no_text" if status == "none" else status
-        return status, cands, "Fake (offline)"
     status, cands = recognize_trajectory_candidates(pts, min_points, labels)
     status = "no_text" if status == "none" else status
     return status, cands, backend_display_name("dtw", recognition_model_path)

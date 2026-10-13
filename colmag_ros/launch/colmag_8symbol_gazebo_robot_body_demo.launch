@@ -42,15 +42,10 @@
   <arg name="publish_task_command" default="false" />
   <arg name="require_manual_confirm" default="true" />
   <arg name="min_confidence" default="0.25" />
-  <arg name="demo_input_mode" default="ocr_canvas" />
   <arg name="dispatcher_mapping_name" default="m104c4_8symbol_gazebo" />
   <arg name="integrated_dashboard_confirm_enabled" default="true" />
   <arg name="publish_confirmed_label" default="true" />
-  <arg name="dashboard_controller_layout" default="rank_confirm" />
-  <arg name="dashboard_gamepad_enabled" default="false" />
-  <arg name="dashboard_virtual_buttons_enabled" default="true" />
   <arg name="dashboard_dwell_confirm_sec" default="2.0" />
-  <arg name="dashboard_recognition_backend" default="dtw" />
   <arg name="dashboard_candidate_labels" default="1,2,3,V,O,X,A,C" />
   <arg name="dashboard_debug_sample_panel" default="false" />
   <arg name="visible_bridge_goal_tolerance_rad" default="0.01" />
@@ -81,15 +76,10 @@
     <arg name="publish_task_command" value="$(arg publish_task_command)" />
     <arg name="require_manual_confirm" value="$(arg require_manual_confirm)" />
     <arg name="min_confidence" value="$(arg min_confidence)" />
-    <arg name="demo_input_mode" value="$(arg demo_input_mode)" />
     <arg name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
     <arg name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
     <arg name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
-    <arg name="dashboard_controller_layout" value="$(arg dashboard_controller_layout)" />
-    <arg name="dashboard_gamepad_enabled" value="$(arg dashboard_gamepad_enabled)" />
-    <arg name="dashboard_virtual_buttons_enabled" value="$(arg dashboard_virtual_buttons_enabled)" />
     <arg name="dashboard_dwell_confirm_sec" value="$(arg dashboard_dwell_confirm_sec)" />
-    <arg name="dashboard_recognition_backend" value="$(arg dashboard_recognition_backend)" />
     <arg name="dashboard_candidate_labels" value="$(arg dashboard_candidate_labels)" />
     <arg name="dashboard_debug_sample_panel" value="$(arg dashboard_debug_sample_panel)" />
     <arg name="visible_bridge_goal_tolerance_rad" value="$(arg visible_bridge_goal_tolerance_rad)" />

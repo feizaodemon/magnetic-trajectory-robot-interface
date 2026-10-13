@@ -29,9 +29,6 @@
   <arg name="integrated_dashboard_confirm_enabled" default="true" />
   <arg name="publish_confirmed_label" default="true" />
   <arg name="publish_task_command" default="false" />
-  <arg name="dashboard_controller_layout" default="rank_confirm" />
-  <arg name="dashboard_gamepad_enabled" default="false" />
-  <arg name="dashboard_virtual_buttons_enabled" default="true" />
   <arg name="dashboard_dwell_confirm_sec" default="2.0" />
   <arg name="dashboard_candidate_labels" default="$(arg label_set)" />
   <arg name="dashboard_debug_sample_panel" default="false" />
@@ -67,9 +64,6 @@
     <param name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
     <param name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
     <param name="publish_task_command" value="$(arg publish_task_command)" />
-    <param name="dashboard_controller_layout" value="$(arg dashboard_controller_layout)" />
-    <param name="dashboard_gamepad_enabled" value="$(arg dashboard_gamepad_enabled)" />
-    <param name="dashboard_virtual_buttons_enabled" value="$(arg dashboard_virtual_buttons_enabled)" />
     <param name="dashboard_dwell_confirm_sec" value="$(arg dashboard_dwell_confirm_sec)" />
     <param name="recognition_backend" value="dtw" />
     <param name="candidate_labels" value="$(arg dashboard_candidate_labels)" />

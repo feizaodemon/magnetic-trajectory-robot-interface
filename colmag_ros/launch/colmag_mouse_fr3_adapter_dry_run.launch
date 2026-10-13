@@ -31,8 +31,6 @@
     <arg name="dispatcher_mapping_name" value="$(arg dispatcher_mapping_name)" />
     <arg name="min_confidence" value="$(arg min_confidence)" />
     <arg name="publish_task_command" value="false" />
-    <arg name="dashboard_controller_layout" value="rank_confirm" />
-    <arg name="dashboard_gamepad_enabled" value="false" />
     <arg name="dashboard_candidate_labels" value="$(arg label_set)" />
     <arg name="safety_badge" value="$(arg safety_badge)" />
     <arg name="footer_text" value="$(arg footer_text)" />

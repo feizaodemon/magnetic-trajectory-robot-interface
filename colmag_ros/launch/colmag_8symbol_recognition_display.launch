@@ -58,8 +58,6 @@
     <param name="integrated_dashboard_confirm_enabled" value="false" />
     <param name="publish_confirmed_label" value="false" />
     <param name="publish_task_command" value="false" />
-    <param name="dashboard_gamepad_enabled" value="false" />
-    <param name="dashboard_virtual_buttons_enabled" value="false" />
     <param name="safety_badge" value="RECOGNITION DISPLAY ONLY / NO ROBOT EXECUTION" />
     <param name="footer_text" value="M104-C2C3 8-symbol display | dtw_template_bank -> /colmag/symbol_candidates | display-only semantic plan" />
   </node>

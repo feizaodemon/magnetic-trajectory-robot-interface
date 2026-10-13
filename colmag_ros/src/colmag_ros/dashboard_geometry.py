@@ -52,13 +52,6 @@ def is_point_inside_rect(x, y, rect):
     )
 
 
-def get_virtual_button_under_cursor(canvas_x, canvas_y, button_rects):
-    for rect in button_rects:
-        if is_point_inside_rect(canvas_x, canvas_y, rect):
-            return rect["id"]
-    return ""
-
-
 def resolve_preview_button_hit(x, y, hit_zones):
     """Return the preview button id under a stage-local pointer position."""
     for zone in hit_zones or []:

@@ -62,6 +62,17 @@ VISIBLE_TASKS = {
     "HOME_PREVIEW": _task(
         "Home (preview)", "Preview returning to the home pose.", "预览回到初始位姿。",
         SAFE),
+    "HOVER_APPROACH": _task(
+        "Hover Approach", "Non-contact hover/approach preview.", "非接触的悬停接近预览。",
+        SAFE),
+    "ORBIT_SMALL": _task(
+        "Small Orbit", "Small non-contact orbit preview.", "小范围非接触环绕预览。", SAFE),
+    "SOFT_DESCEND_PREVIEW": _task(
+        "Soft Descend (preview)", "Non-contact soft-descend preview; no contact control.",
+        "非接触的缓降预览；不做接触控制。", SAFE),
+    "STOP_OR_CANCEL": _task(
+        "Stop or Cancel", "Cancel the current task without moving.", "取消当前任务，不产生运动。",
+        SAFE),
     "PICK_PLACE": _task(
         "Pick & Place", "Pick an object and place it at the target.",
         "抓取物体并放置到目标处。", REVIEW),
@@ -105,6 +116,11 @@ _SEMANTIC_TASK_TO_VISIBLE = {
     "MOVE_UP": "FOLLOW_PATH",
     "MOVE_DOWN": "FOLLOW_PATH",
     "NEUTRAL": "UNKNOWN",
+    "HOVER_APPROACH": "HOVER_APPROACH",
+    "ORBIT_SMALL": "ORBIT_SMALL",
+    "STOP_OR_CANCEL": "STOP_OR_CANCEL",
+    "HOME_OR_READY": "HOME_PREVIEW",
+    "SOFT_DESCEND_PREVIEW": "SOFT_DESCEND_PREVIEW",
 }
 
 # Direct label -> visible task, for symbols not covered by symbol_semantics.

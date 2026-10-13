@@ -1,12 +1,12 @@
-import pytest
+from colmag_ros.execution_semantics import C4_LABEL_TO_TASK
 from colmag_ros.symbol_semantics import get_symbol_semantics, enrich_candidate_with_semantics
 
 def test_symbol_semantics_known_labels():
     for label, expected_task in [
         ("1", "MOVE_LEFT"),
         ("2", "HEXAGON_TRAJECTORY"),
-        ("A", "PICK_PLACE"),
-        ("X", "AVOID_OBSTACLE"),
+        ("A", "HOME_OR_READY"),
+        ("X", "STOP_OR_CANCEL"),
         ("S", "STOP"),
     ]:
         sem = get_symbol_semantics(label)
@@ -14,6 +14,10 @@ def test_symbol_semantics_known_labels():
         assert sem["task"] == expected_task
         assert "display_name" in sem
         assert "command_intent" in sem
+
+def test_c4_labels_use_the_c4_dispatcher_task():
+    for label, task in C4_LABEL_TO_TASK.items():
+        assert get_symbol_semantics(label)["task"] == task
 
 def test_symbol_semantics_unknown_label():
     assert get_symbol_semantics("UNKNOWN") is None
