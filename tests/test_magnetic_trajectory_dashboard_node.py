@@ -232,23 +232,23 @@ def test_trajectory_keyboard_c_confirms_and_x_clears(monkeypatch):
 
     harness.press_key("c")
     assert [p["label"] for p in harness.published_json(node.config.confirmed_label_topic)] == ["2"]
-    assert node.preview_interaction_state == "preview_confirmed"
+    assert node.preview_interaction.state == "preview_confirmed"
     assert node.captured_path, "C confirms without clearing the sample"
 
     harness.press_key("a")
-    assert node.preview_interaction_state == "rejected"
+    assert node.preview_interaction.state == "rejected"
     assert node.current_candidate_payload is None
     assert node.captured_path == []
 
     harness.send_sample_and_candidates()
     harness.press_key("x")
-    assert node.preview_interaction_state == "cleared"
+    assert node.preview_interaction.state == "cleared"
     assert node.current_candidate_payload is None
     assert node.captured_path == []
 
     harness.send_sample_and_candidates()
     harness.press_key("", keysym="Return")
-    assert node.preview_interaction_state == "preview_confirmed"
+    assert node.preview_interaction.state == "preview_confirmed"
 
 def test_control_zone_points_are_ignored_by_drawing_zone_filter():
     bounds = (-1.0, 1.0, -1.0, 1.0)

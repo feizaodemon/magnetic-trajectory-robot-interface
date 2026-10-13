@@ -127,9 +127,7 @@ class DashboardPreviewControlsMixin:
         self.last_capture_sample_id = None
         self.last_capture_sequence_id = None
         self.trajectory_candidates = []
-        self.candidate_status = "idle"
-        self.preview_interaction_state = "cleared"
-        self.preview_confirmed_label = ""
+        self.preview_interaction.clear()
         if self.segment_recorder is not None:
             self.segment_recorder.clear()
             self.recorded_segment = []
@@ -150,9 +148,7 @@ class DashboardPreviewControlsMixin:
         self._clear_sample_record_reference()
         self.last_capture_sample_id = None
         self.last_capture_sequence_id = None
-        self.candidate_status = "rejected"
-        self.preview_interaction_state = "rejected"
-        self.preview_confirmed_label = ""
+        self.preview_interaction.reject()
         self._update_candidate_ui()
         self.root.after(0, lambda: self.traj_captured_sample_var.set("Captured sample: none"))
         self.root.after(0, lambda: self.capture_var.set("Rejected candidate and captured sample"))
@@ -160,12 +156,9 @@ class DashboardPreviewControlsMixin:
 
     def _preview_confirm_candidate(self):
         label = self._top_preview_candidate_label()
-        if not label:
-            self.preview_interaction_state = "ready" if self.trajectory_candidates else "idle"
+        if not self.preview_interaction.confirm(label, bool(self.trajectory_candidates)):
             self._update_candidate_ui()
             return
-        self.preview_confirmed_label = label
-        self.preview_interaction_state = "preview_confirmed"
         # The trajectory-preview C confirm also publishes the confirmed
         # label (board red cursor / mouse preview), not just the preview UI. The
         # publish itself is gated inside the helper (double gate + de-dup).
@@ -283,10 +276,10 @@ class DashboardPreviewControlsMixin:
     def _refresh_operator_status(self, candidate_rows=None):
         sample_ready = self._drawing_sample_ready()
         top_candidate = self._top_preview_candidate_label()
-        interaction_state = self.preview_interaction_state
+        interaction_state = self.preview_interaction.state
         text = format_operator_action_status(
             interaction_state=interaction_state,
-            confirmed_label=self.preview_confirmed_label,
+            confirmed_label=self.preview_interaction.confirmed_label,
             top_candidate_label=top_candidate,
             sample_ready=sample_ready,
         )
@@ -308,7 +301,7 @@ class DashboardPreviewControlsMixin:
         )
 
     def _update_candidate_ui(self):
-        status = self.candidate_status
+        status = self.preview_interaction.candidate_status
         live_points = len(build_ocr_stroke_points(self.trail))
         raw_points = len(clean_stroke_points(self.active_drawing_buffer))
         frozen_points = len(clean_stroke_points(self.frozen_drawing_sample))
@@ -334,12 +327,12 @@ class DashboardPreviewControlsMixin:
             board_sample_cleanup_enabled=self.config.board_sample_cleanup_enabled,
             result_payload=self.current_candidate_payload,
             external_candidate_payload=external_payload,
-            hover_button=self.ocr_hover_button,
+            hover_button=self.dwell_timer.button,
             hover_source=self.hover_source,
-            dwell_progress=self.ocr_dwell_progress,
+            dwell_progress=self.dwell_timer.progress,
             hover_progress_enabled=self.config.hover_progress_enabled,
-            preview_interaction_state=self.preview_interaction_state,
-            preview_confirmed_label=self.preview_confirmed_label,
+            preview_interaction_state=self.preview_interaction.state,
+            preview_confirmed_label=self.preview_interaction.confirmed_label,
             trajectory_candidates=self.trajectory_candidates,
             sample_ready=self._drawing_sample_ready(),
         )
@@ -379,28 +372,22 @@ class DashboardPreviewControlsMixin:
         ]
         display_rows = format_candidate_rows_for_display(data, count=3)
         has_display_candidates = any(not row.endswith("-") for row in display_rows)
-        accepted = data.get("accepted")
-        if tops:
-            self.candidate_status = "ready"
-            self.preview_interaction_state = "external_candidates_ready"
-        elif data.get("uncertain") or accepted is False:
-            self.candidate_status = "uncertain"
-            self.preview_interaction_state = "external_candidate_uncertain"
-        else:
-            self.candidate_status = "none"
-            self.preview_interaction_state = "external_no_candidate"
+        self.preview_interaction.external_candidates(
+            has_candidates=bool(tops),
+            uncertain=bool(data.get("uncertain") or data.get("accepted") is False),
+        )
         self.root.after(0, lambda: self.traj_preview_mode_var.set(
             "Mode: external DTW trajectory recognition"))
         self.root.after(0, lambda t=backend_text: self.traj_backend_var.set(t))
         self.root.after(0, lambda: self.traj_recognizer_detail_var.set(
             "Feature: trajectory_dtw | Source: /colmag/symbol_candidates"))
         status_text = "Candidate status: external candidates ready"
-        if self.candidate_status == "uncertain":
+        if self.preview_interaction.candidate_status == "uncertain":
             status_text = "Candidate status: uncertain / redraw"
         elif not tops:
             status_text = "Candidate status: no accepted candidate"
         progress_text = "Progress: external candidates received"
-        if self.candidate_status == "uncertain":
+        if self.preview_interaction.candidate_status == "uncertain":
             progress_text = "Progress: rejected by DTW gate"
         elif not has_display_candidates:
             progress_text = "Progress: no candidate"
@@ -422,7 +409,7 @@ class DashboardPreviewControlsMixin:
         return format_interaction_instruction(self.config.interaction_profile)
 
     def _refresh_mouse_operator_presentation(self):
-        hover_button = str(self.ocr_hover_button or "").upper()
+        hover_button = str(self.dwell_timer.button or "").upper()
         if hover_button in ("B", "C", "A", "X"):
             mode = "HOVER — %s" % hover_button
         elif self.ocr_panel_state == "DRAWING":
@@ -501,9 +488,9 @@ class DashboardPreviewControlsMixin:
     def _handle_preview_pointer_motion(self, event):
         button_id = self._preview_button_at_event(event)
         if button_id:
-            if button_id != self.ocr_hover_button:
+            if button_id != self.dwell_timer.button:
                 self._set_ocr_hover_button(button_id)
-        elif self.ocr_hover_button:
+        elif self.dwell_timer.button:
             self._clear_ocr_hover_button()
 
     def _handle_preview_pointer_leave(self, event):
@@ -528,24 +515,15 @@ class DashboardPreviewControlsMixin:
         button hit zone dwell starts, and after ``control_dwell_sec`` the same safe
         preview handler that a click uses is fired. Board hover is preferred over
         mouse hover so the demo works without a mouse; the choice is deterministic
-        (board wins ties). One trigger per dwell entry: ``ocr_dwell_fired`` is only
-        reset when the effective button changes (i.e. after leaving the zone).
+        (board wins ties). One trigger per dwell entry: the timer re-arms only
+        when the effective button changes (i.e. after leaving the zone).
         """
         now = time.time()
+        timer = self.dwell_timer
         if not self.latest_input_active:
-            self.board_hover_button = ""
             self.hover_source = "none"
-            self.ocr_hover_button = ""
-            self._dwell_active_button = ""
-            self.ocr_hover_started_at = None
-            self.ocr_dwell_progress = 0.0
-            self.ocr_dwell_fired = False
-            self.dwell_state = {
-                "current_button_id": "",
-                "started_at": None,
-                "dwell_progress": 0.0,
-                "activated_button_id": "",
-            }
+            timer.reset()
+            self.dwell_state = timer.dwell_state(enabled=False)
             self._refresh_dwell_status()
             self._update_ocr_toolbar_visuals()
             self._update_orientation_clutch_mode("")
@@ -554,7 +532,6 @@ class DashboardPreviewControlsMixin:
             return
         board_button = self._board_cursor_preview_button() if self.config.board_cursor_dwell_enabled else ""
         mouse_button = self.mouse_hover_button if self.config.hover_dwell_enabled else ""
-        self.board_hover_button = board_button
         # Deterministic: board cursor is primary in the demo, mouse is the fallback.
         if board_button:
             button_id, source = board_button, "board"
@@ -563,37 +540,18 @@ class DashboardPreviewControlsMixin:
         else:
             button_id, source = "", "none"
         self.hover_source = source
-        self.ocr_hover_button = button_id  # effective button drives visuals/status
+        # Restart dwell only when the effective button changes, so staying on
+        # one button does not re-trigger and leaving/re-entering re-arms it.
+        if button_id != timer.button:
+            timer.start(button_id, now)
         self._update_orientation_clutch_mode(button_id)
 
         enabled = bool(button_id) and self._preview_button_enabled(button_id)
-
-        # Reset dwell timing only when the effective button changes, so staying on
-        # one button does not re-trigger and leaving/re-entering re-arms it.
-        if button_id != self._dwell_active_button:
-            self._dwell_active_button = button_id
-            self.ocr_hover_started_at = now if button_id else None
-            self.ocr_dwell_progress = 0.0
-            self.ocr_dwell_fired = False
-
         if not enabled:
-            self.ocr_dwell_progress = 0.0
-            if not button_id:
-                self.ocr_hover_started_at = None
-        else:
-            if self.ocr_hover_started_at is None:
-                self.ocr_hover_started_at = now
-            self.ocr_dwell_progress = max(0.0, min(
-                1.0, (now - self.ocr_hover_started_at) / max(self.config.control_dwell_sec, 1e-9)))
-            if self.ocr_dwell_progress >= 1.0 and not self.ocr_dwell_fired:
-                self.ocr_dwell_fired = True
-                self._handle_preview_button_action(button_id)
-        self.dwell_state = {
-            "current_button_id": button_id if enabled else "",
-            "started_at": self.ocr_hover_started_at,
-            "dwell_progress": self.ocr_dwell_progress if enabled else 0.0,
-            "activated_button_id": button_id if (enabled and self.ocr_dwell_fired) else "",
-        }
+            timer.hold()
+        elif timer.advance(now, self.config.control_dwell_sec):
+            self._handle_preview_button_action(button_id)
+        self.dwell_state = timer.dwell_state(enabled)
         self._refresh_dwell_status()
         self._update_ocr_toolbar_visuals()
         self._schedule_ui_refresh()

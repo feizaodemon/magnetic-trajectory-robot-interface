@@ -22,6 +22,7 @@ from colmag_ros.dashboard_candidate_display import (
 )
 from colmag_ros import control_mode
 from colmag_ros.dashboard_config import DashboardConfig
+from colmag_ros.dashboard_dwell_timer import DwellTimer
 from colmag_ros.dashboard_controller_input import (
     build_confirmed_label_payload,
     candidate_payload_key,
@@ -39,6 +40,7 @@ from colmag_ros.dashboard_dwell_status import (
     format_ocr_canvas_dwell_texts,
     format_trajectory_preview_interaction_text,
 )
+from colmag_ros.preview_interaction import PreviewInteraction
 from colmag_ros.preview_recognition import recognize_stroke
 from colmag_ros.dashboard_layout import DashboardLayoutMixin
 from colmag_ros.dashboard_canvas_view import DashboardCanvasViewMixin
@@ -150,7 +152,7 @@ class MagneticTrajectoryDashboardNode(
         else:
             self._ocr_draw_area = None
 
-        self.candidate_status = "idle"
+        self.preview_interaction = PreviewInteraction()
         self.recognition_backend_label = backend_display_name(
             config.recognition_backend,
             config.recognition_model_path,
@@ -158,8 +160,6 @@ class MagneticTrajectoryDashboardNode(
         self.trajectory_candidates = []
         self._candidate_recognize_job = None
         self._recognizing = False
-        self.preview_interaction_state = "idle"
-        self.preview_confirmed_label = ""
         self.segment_recorder = SegmentRecorder(
             duration_sec=config.record_duration_sec,
             stop_on_lift=config.record_stop_on_lift,
@@ -174,19 +174,14 @@ class MagneticTrajectoryDashboardNode(
         self.preview_button_hit_zones = []
         self.preview_canvas_button_zones = []
         self.preview_canvas_drawing_zone = None
-        # ``ocr_hover_button`` is the EFFECTIVE hovered button that drives visuals,
-        # status and dwell. In ocr_canvas mode it is the mouse hover directly. In
-        # trajectory preview mode it is recomputed each dwell tick as board-cursor
-        # first, then mouse fallback (``mouse_hover_button``). ``hover_source`` names
-        # which one is active.
-        self.ocr_hover_button = ""
+        # ``dwell_timer.button`` is the EFFECTIVE hovered button that drives
+        # visuals, status and dwell. In ocr_canvas mode it is the mouse hover
+        # directly. In trajectory preview mode it is recomputed each dwell tick as
+        # board-cursor first, then mouse fallback (``mouse_hover_button``).
+        # ``hover_source`` names which one is active.
+        self.dwell_timer = DwellTimer()
         self.mouse_hover_button = ""
-        self.board_hover_button = ""
         self.hover_source = "none"
-        self._dwell_active_button = ""
-        self.ocr_hover_started_at = None
-        self.ocr_dwell_progress = 0.0
-        self.ocr_dwell_fired = False
         self.last_confirm_key = ""
         self.last_confirmed_label = ""
         self.last_selected_rank = None
@@ -368,8 +363,7 @@ class MagneticTrajectoryDashboardNode(
         self._candidate_recognize_job = None
         if not (self.config.is_trajectory_mode and self.config.candidate_preview_enabled):
             return
-        self.candidate_status = "recognizing"
-        self.preview_interaction_state = "recognizing"
+        self.preview_interaction.recognizing()
         self._update_candidate_ui()
         points = self._active_recognition_points()
         status, candidates, backend_label = recognize_stroke(
@@ -380,16 +374,8 @@ class MagneticTrajectoryDashboardNode(
             recognition_model_path=self.config.recognition_model_path,
         )
         self.recognition_backend_label = backend_label
-        self.candidate_status = status
         self.trajectory_candidates = candidates
-        if status == "ready":
-            self.preview_interaction_state = "candidates_ready"
-        elif status == "collecting":
-            self.preview_interaction_state = "collecting"
-        elif status in ("unavailable", "error"):
-            self.preview_interaction_state = "error"
-        else:
-            self.preview_interaction_state = status
+        self.preview_interaction.recognized(status)
         self._update_candidate_ui()
 
     def _handle_ui_state(self, msg):
@@ -460,8 +446,8 @@ class MagneticTrajectoryDashboardNode(
         if self.config.demo_input_mode == "ocr_canvas":
             texts = format_ocr_canvas_dwell_texts(
                 self.ocr_panel_state,
-                self.ocr_hover_button,
-                self.ocr_dwell_progress,
+                self.dwell_timer.button,
+                self.dwell_timer.progress,
                 self.config.dwell_confirm_sec,
             )
             self.root.after(0, lambda t=texts["dwell"]: self.dwell_var.set(t))
@@ -472,10 +458,10 @@ class MagneticTrajectoryDashboardNode(
 
         if self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
             text = format_trajectory_preview_interaction_text(
-                self.preview_interaction_state,
+                self.preview_interaction.state,
                 self.hover_source,
-                self.ocr_hover_button,
-                self.ocr_dwell_progress,
+                self.dwell_timer.button,
+                self.dwell_timer.progress,
                 hover_progress_enabled=self.config.hover_progress_enabled,
             )
             self.root.after(0, lambda t=text: self.traj_interaction_var.set(t))
@@ -498,13 +484,13 @@ class MagneticTrajectoryDashboardNode(
         if not self.config.integrated_confirm_enabled or self.dashboard_state_pub is None:
             return
         if self.config.demo_input_mode == "ocr_canvas":
-            current_button = self.ocr_hover_button if self.ocr_hover_button != "C" or self._ocr_confirm_enabled() else ""
+            current_button = self.dwell_timer.button if self.dwell_timer.button != "C" or self._ocr_confirm_enabled() else ""
             payload = {
                 "timestamp": time.time(),
                 "mode": "ocr_canvas_dashboard",
                 "ocr_panel_state": self.ocr_panel_state,
                 "current_virtual_button": current_button,
-                "dwell_progress": self.ocr_dwell_progress if current_button else 0.0,
+                "dwell_progress": self.dwell_timer.progress if current_button else 0.0,
                 "integrated_confirm_enabled": True,
                 "last_confirmed_label": self.last_confirmed_label,
                 "last_selected_rank": self.last_selected_rank,

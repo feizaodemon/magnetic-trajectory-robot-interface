@@ -198,8 +198,8 @@ class DashboardCanvasViewMixin:
     def _draw_canvas_reachable_preview_buttons(self):
         if not self._use_canvas_reachable_preview_controls():
             return
-        current_button = self.ocr_hover_button
-        progress = self.ocr_dwell_progress
+        current_button = self.dwell_timer.button
+        progress = self.dwell_timer.progress
         for zone in self.preview_canvas_button_zones or []:
             button_id = str(zone.get("id", "")).upper()
             enabled = self._preview_button_enabled(button_id)

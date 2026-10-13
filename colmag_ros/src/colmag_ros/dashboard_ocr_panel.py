@@ -28,27 +28,16 @@ class DashboardOcrPanelMixin:
     def _process_ocr_canvas_dwell(self):
         """OCR-canvas hover-dwell (mouse only). Unchanged legacy behaviour."""
         now = time.time()
-        button_id = self.ocr_hover_button
-        dwell_sec = self.config.dwell_confirm_sec
+        timer = self.dwell_timer
+        button_id = timer.button
         enabled = bool(button_id) and (button_id != "C" or self._ocr_confirm_enabled())
         self.hover_source = "mouse" if button_id else "none"
         if not enabled:
-            self.ocr_hover_started_at = now if button_id else None
-            self.ocr_dwell_progress = 0.0
-            self.ocr_dwell_fired = False
-        else:
-            if self.ocr_hover_started_at is None:
-                self.ocr_hover_started_at = now
-            self.ocr_dwell_progress = max(0.0, min(1.0, (now - self.ocr_hover_started_at) / max(dwell_sec, 1e-9)))
-            if self.ocr_dwell_progress >= 1.0 and not self.ocr_dwell_fired:
-                self.ocr_dwell_fired = True
-                self._handle_ocr_action(button_id)
-        self.dwell_state = {
-            "current_button_id": button_id if enabled else "",
-            "started_at": self.ocr_hover_started_at,
-            "dwell_progress": self.ocr_dwell_progress if enabled else 0.0,
-            "activated_button_id": "",
-        }
+            # Unlike the preview loop, a disabled button restarts its dwell.
+            timer.start(button_id, now)
+        elif timer.advance(now, self.config.dwell_confirm_sec):
+            self._handle_ocr_action(button_id)
+        self.dwell_state = timer.dwell_state(enabled, report_activation=False)
         self._refresh_dwell_status()
         self._update_ocr_toolbar_visuals()
         self._publish_dashboard_state()
@@ -61,12 +50,9 @@ class DashboardOcrPanelMixin:
             # fallback), so mouse dwell timing is owned by the loop, not here.
             self.mouse_hover_button = button_id
             return
-        if button_id == self.ocr_hover_button:
+        if button_id == self.dwell_timer.button:
             return
-        self.ocr_hover_button = button_id
-        self.ocr_hover_started_at = time.time()
-        self.ocr_dwell_progress = 0.0
-        self.ocr_dwell_fired = False
+        self.dwell_timer.start(button_id, time.time())
         self._update_ocr_toolbar_visuals()
         self._refresh_dwell_status()
 
@@ -76,12 +62,9 @@ class DashboardOcrPanelMixin:
                 return
             self.mouse_hover_button = ""
             return
-        if button_id is not None and str(button_id or "").upper() != self.ocr_hover_button:
+        if button_id is not None and str(button_id or "").upper() != self.dwell_timer.button:
             return
-        self.ocr_hover_button = ""
-        self.ocr_hover_started_at = None
-        self.ocr_dwell_progress = 0.0
-        self.ocr_dwell_fired = False
+        self.dwell_timer.reset()
         self.dwell_state = cancelled_preview_hover_state()
         self._update_ocr_toolbar_visuals()
         self._refresh_dwell_status()
@@ -99,14 +82,14 @@ class DashboardOcrPanelMixin:
 
             if self.config.demo_input_mode == "ocr_canvas":
                 enabled = button_id != "C" or self._ocr_confirm_enabled()
-                active = button_id == self.ocr_hover_button
+                active = button_id == self.dwell_timer.button
                 style = preview_button_style(button_id, enabled, active=active)
                 fill = style["fill"]
                 outline = style["outline"]
                 text_fg = style["text"]
             elif self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
                 enabled = self._preview_button_enabled(button_id)
-                active = button_id == self.ocr_hover_button
+                active = button_id == self.dwell_timer.button
                 style = preview_button_style(button_id, enabled, active=active)
                 fill = style["fill"]
                 outline = style["outline"]
@@ -125,11 +108,11 @@ class DashboardOcrPanelMixin:
 
             if (
                 (self.config.demo_input_mode == "ocr_canvas" or (self.config.is_trajectory_mode and self.config.candidate_preview_enabled))
-                and button_id == self.ocr_hover_button
-                and self.ocr_dwell_progress > 0
+                and button_id == self.dwell_timer.button
+                and self.dwell_timer.progress > 0
                 and self.config.hover_progress_enabled
             ):
-                pct = self.ocr_dwell_progress
+                pct = self.dwell_timer.progress
                 arc_extent = -360 * pct
                 canvas.create_arc(
                     pad+2, pad+2, size-pad-2, size-pad-2,
