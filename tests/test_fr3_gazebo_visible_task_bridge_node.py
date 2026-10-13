@@ -5,6 +5,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+# The node imports rospy, actionlib and ROS message packages, which only exist
+# in ROS Noetic.
+for _module in ("rospy", "actionlib", "control_msgs.msg", "sensor_msgs.msg",
+                "std_msgs.msg", "trajectory_msgs.msg"):
+    pytest.importorskip(_module, reason="needs ROS Noetic %s" % _module)
+
 SCRIPTS = Path(__file__).resolve().parents[1] / "colmag_gazebo_stub" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
