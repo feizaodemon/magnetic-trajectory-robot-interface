@@ -464,7 +464,6 @@ class DashboardExtractionStaticTests(unittest.TestCase):
             "publish_external_payload(",
             "publish_rank_one(",
             "def _confirm_rank_by_dwell(",
-            "def _confirm_rank_by_gamepad_c(",
         ):
             self.assertIn(expected, text)
 

@@ -37,22 +37,6 @@ def trajectory_input_inactive_reason(
     return ""
 
 
-def trajectory_input_is_active(
-    valid=True,
-    z=None,
-    z_min=None,
-    z_max=None,
-    gate_enabled=True,
-):
-    return not trajectory_input_inactive_reason(
-        valid,
-        z,
-        z_min,
-        z_max,
-        gate_enabled,
-    )
-
-
 def cleanup_drawing_sample_points(
     points,
     min_point_delta=0.0,

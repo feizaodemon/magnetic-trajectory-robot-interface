@@ -1,5 +1,6 @@
 """Preview, confirm, and candidate display controls for the trajectory dashboard."""
 
+import json
 import time
 
 from colmag_ros.dashboard_candidate_display import (
@@ -14,7 +15,12 @@ from colmag_ros.dashboard_candidate_display import (
     preview_candidate_ui_texts,
     summarize_candidates,
 )
-from colmag_ros.dashboard_controller_input import preview_button_availability
+from colmag_ros.dashboard_controller_input import (
+    build_confirmed_label_payload,
+    candidate_payload_key,
+    preview_button_availability,
+    should_suppress_repeated_confirm,
+)
 from colmag_ros.dashboard_dwell_status import format_interaction_instruction
 from colmag_ros.dashboard_points import build_ocr_stroke_points, clean_stroke_points
 from colmag_ros.dashboard_sample_lifecycle import cleanup_drawing_sample_points
@@ -35,6 +41,28 @@ class DashboardPreviewControlsMixin:
 
     def _on_confirm_publish_button(self):
         self._confirm_rank_by_dwell(1)
+
+    def _confirm_rank_by_dwell(self, selected_rank):
+        if self.confirm_pub is None or not self.integrated_confirm_enabled:
+            return
+        payload = self.current_candidate_payload
+        if should_suppress_repeated_confirm(self.last_confirm_key, payload, selected_rank):
+            return
+
+        confirmed, reason = build_confirmed_label_payload(payload, selected_rank)
+        if confirmed is None:
+            self.rospy.logwarn("dashboard dwell confirm skipped: %s", reason)
+            return
+
+        self.last_confirm_key = "%s:rank_%d" % (candidate_payload_key(payload), int(selected_rank))
+        self.last_confirmed_label = str(confirmed.get("label", ""))
+        self.last_selected_rank = int(selected_rank)
+        self.last_command_intent = "CONFIRM_RANK_%d" % int(selected_rank)
+        msg = self.String(data=json.dumps(confirmed, sort_keys=True))
+        self.confirm_pub.publish(msg)
+        self.root.after(0, lambda: self.confirm_var.set("Confirmed: '%s' by dashboard dwell" % self.last_confirmed_label))
+        self._publish_dashboard_state()
+        self.rospy.loginfo("dashboard dwell confirmed_label=%s", msg.data)
 
     def _on_reject_button(self):
         if self.demo_input_mode == "ocr_canvas":

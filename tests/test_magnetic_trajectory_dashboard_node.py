@@ -8,34 +8,16 @@ from magnetic_trajectory_dashboard_node import (
     summarize_candidates,
     coerce_float,
     update_dwell_state,
-    build_controller_button_rects,
     build_confirmed_label_payload,
     candidate_payload_key,
-    normalize_controller_layout,
     real_board_sample_recording_dir,
     should_suppress_repeated_confirm,
-    CONTROLLER_LAYOUT_GAMEPAD,
-    CONTROLLER_LAYOUT_RANK_CONFIRM,
-    GAMEPAD_MODE_MOTION,
 )
-from colmag_ros.dashboard_controller_input import (
-    build_virtual_button_rects,
-    build_gamepad_button_rects,
-    build_gamepad_confirmed_label_payload,
-    cancelled_preview_hover_state,
-    gamepad_button_to_intent,
-    gamepad_button_to_label,
-    should_ignore_gamepad_button,
-    update_controller_mode,
-    GAMEPAD_MODE_BLOCKED,
-    GAMEPAD_MODE_CONFIRM_PENDING,
-    GAMEPAD_MODE_DIGIT,
-)
+from colmag_ros.dashboard_controller_input import cancelled_preview_hover_state
 from colmag_ros.dashboard_geometry import (
     map_world_to_canvas,
     map_canvas_to_world,
     is_point_inside_rect,
-    get_virtual_button_under_cursor,
     build_canvas_reachable_drawing_zone,
     build_canvas_reachable_preview_hit_zones,
     trajectory_point_in_drawing_zone,
@@ -47,7 +29,6 @@ from colmag_ros.dashboard_sample_lifecycle import (
     cleanup_drawing_sample_points,
     sample_cleanup_metadata,
     safe_sample_recording_name,
-    trajectory_input_is_active,
     update_drawing_zone_sample_state,
 )
 from dashboard_source import dashboard_source
@@ -187,12 +168,6 @@ def test_point_outside_virtual_button_rect():
     rect = {"id": "rank_1", "x1": 10, "y1": 20, "x2": 50, "y2": 80}
     assert not is_point_inside_rect(9, 40, rect)
     assert not is_point_inside_rect(30, 81, rect)
-
-def test_get_virtual_button_under_cursor():
-    rects = build_virtual_button_rects(560, 520, 20)
-    first = rects[0]
-    assert get_virtual_button_under_cursor(first["x1"] + 1, first["y1"] + 1, rects) == "rank_1"
-    assert get_virtual_button_under_cursor(5, 5, rects) == ""
 
 def test_drawing_zone_is_central_and_separate_from_canvas_controls():
     from colmag_ros.dashboard_geometry import resolve_preview_button_hit
@@ -478,110 +453,6 @@ def test_b_recognize_can_force_freeze_current_drawing_buffer():
         inside_control_zone=True, append_point=False, force_freeze=True
     )
     assert clean_stroke_points(state["frozen_points"]) == drawn
-
-def test_input_valid_gate_rejects_invalid_and_z_out_of_range_samples():
-    assert trajectory_input_is_active(True, 0.05, z_min=0.0, z_max=0.10)
-    assert not trajectory_input_is_active(False, 0.05, z_min=0.0, z_max=0.10)
-    assert not trajectory_input_is_active(True, -0.01, z_min=0.0, z_max=0.10)
-    assert not trajectory_input_is_active(True, 0.20, z_min=0.0, z_max=0.10)
-    assert trajectory_input_is_active(True, "0.05", z_min="0.0", z_max="0.10")
-
-def test_controller_layout_defaults_to_rank_confirm():
-    assert normalize_controller_layout(None) == CONTROLLER_LAYOUT_RANK_CONFIRM
-    assert normalize_controller_layout("unknown") == CONTROLLER_LAYOUT_RANK_CONFIRM
-    assert normalize_controller_layout("gamepad") == CONTROLLER_LAYOUT_GAMEPAD
-    assert build_controller_button_rects("rank_confirm", 560, 520, 20)[0]["id"] == "rank_1"
-
-def test_gamepad_layout_contains_dpad_and_face_buttons():
-    rects = build_gamepad_button_rects(560, 520, 20)
-    ids = [rect["id"] for rect in rects]
-    assert ids == ["U", "D", "L", "R", "X", "B", "A", "C"]
-    assert {rect["kind"] for rect in rects if rect["id"] in ("U", "D", "L", "R")} == {"dpad"}
-    assert {rect["kind"] for rect in rects if rect["id"] in ("A", "B", "X", "C")} == {"face"}
-
-def test_gamepad_hit_test_identifies_each_button_center():
-    rects = build_gamepad_button_rects(560, 520, 20)
-    for rect in rects:
-        cx = (rect["x1"] + rect["x2"]) / 2.0
-        cy = (rect["y1"] + rect["y2"]) / 2.0
-        assert get_virtual_button_under_cursor(cx, cy, rects) == rect["id"]
-
-def test_gamepad_button_mapping_to_dispatcher_labels():
-    assert gamepad_button_to_label("U") == "V"
-    assert gamepad_button_to_intent("U") == "MOVE_UP"
-    assert gamepad_button_to_label("D") == "6"
-    assert gamepad_button_to_intent("D") == "MOVE_DOWN"
-    assert gamepad_button_to_label("L") == "1"
-    assert gamepad_button_to_intent("L") == "MOVE_LEFT"
-    assert gamepad_button_to_label("R") == "3"
-    assert gamepad_button_to_intent("R") == "MOVE_RIGHT"
-    assert gamepad_button_to_label("A") == "S"
-    assert gamepad_button_to_intent("A") == "STOP"
-
-def test_gamepad_b_enters_digit_mode_without_confirmed_label():
-    transition = update_controller_mode(GAMEPAD_MODE_MOTION, "B", 10.0, 3.0)
-    assert transition["mode"] == GAMEPAD_MODE_DIGIT
-    assert transition["digit_expires_at"] == 13.0
-    out, reason = build_gamepad_confirmed_label_payload("B", GAMEPAD_MODE_MOTION)
-    assert out is None
-    assert reason == "button_has_no_confirmed_label"
-
-def test_gamepad_x_clears_back_to_motion_without_confirmed_label():
-    transition = update_controller_mode(GAMEPAD_MODE_BLOCKED, "X", 10.0, 3.0)
-    assert transition["mode"] == GAMEPAD_MODE_MOTION
-    out, reason = build_gamepad_confirmed_label_payload("X", GAMEPAD_MODE_BLOCKED)
-    assert out is None
-    assert reason == "button_has_no_confirmed_label"
-
-def test_gamepad_a_builds_stop_payload_only_as_confirmed_label():
-    out, reason = build_gamepad_confirmed_label_payload("A", GAMEPAD_MODE_MOTION, now_fn=lambda: 123.0)
-    assert reason == ""
-    assert out["timestamp"] == 123.0
-    assert out["label"] == "S"
-    assert out["command_intent"] == "STOP"
-    assert out["confirmed_by"] == "magnetic_gamepad_dwell"
-    assert out["selected_button"] == "A"
-    assert out["controls_real_robot"] is False
-    assert out["gazebo_only"] is True
-    assert out["source_topic"] == "/colmag/trajectory_2d"
-
-def test_gamepad_arrows_are_ignored_in_blocked_mode():
-    assert should_ignore_gamepad_button(GAMEPAD_MODE_BLOCKED, "U")
-    assert should_ignore_gamepad_button(GAMEPAD_MODE_BLOCKED, "D")
-    out, reason = build_gamepad_confirmed_label_payload("U", GAMEPAD_MODE_BLOCKED)
-    assert out is None
-    assert reason == "button_ignored"
-
-def test_gamepad_c_confirms_rank_1_only_in_confirm_pending_mode():
-    payload = {
-        "sample_id": "sample_1",
-        "sequence_id": 7,
-        "candidates": [
-            {"rank": 1, "label": "2", "confidence": 0.9},
-            {"rank": 2, "label": "1", "confidence": 0.7},
-        ],
-    }
-    out, reason = build_gamepad_confirmed_label_payload(
-        "C",
-        GAMEPAD_MODE_CONFIRM_PENDING,
-        payload,
-        now_fn=lambda: 123.0,
-    )
-    assert reason == ""
-    assert out["timestamp"] == 123.0
-    assert out["label"] == "2"
-    assert out["selected_rank"] == 1
-    assert out["selected_button"] == "C"
-    assert out["confirmed_by"] == "magnetic_gamepad_dwell"
-    assert out["command_intent"] == "CONFIRM_RANK_1"
-
-def test_gamepad_c_does_not_confirm_without_pending_mode_or_candidates():
-    out, reason = build_gamepad_confirmed_label_payload("C", GAMEPAD_MODE_MOTION, {})
-    assert out is None
-    assert reason == "button_has_no_confirmed_label"
-    out, reason = build_gamepad_confirmed_label_payload("C", GAMEPAD_MODE_CONFIRM_PENDING, {})
-    assert out is None
-    assert reason == "rank_not_available"
 
 def test_dwell_does_not_activate_before_threshold():
     state = update_dwell_state({}, "rank_1", 10.0, 2.0)

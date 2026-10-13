@@ -1,17 +1,7 @@
 """Canvas drawing, coordinate mapping, and canvas hit tests for the trajectory dashboard."""
 
 import math
-import time
 
-from colmag_ros.dashboard_candidate_display import summarize_candidates
-from colmag_ros.dashboard_controller_input import (
-    CONTROLLER_LAYOUT_GAMEPAD,
-    GAMEPAD_MODE_BLOCKED,
-    GAMEPAD_MODE_CONFIRM_PENDING,
-    GAMEPAD_MODE_DIGIT,
-    _extract_candidate_by_rank,
-    should_ignore_gamepad_button,
-)
 from colmag_ros.dashboard_geometry import (
     BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE,
     build_canvas_reachable_drawing_zone,
@@ -204,11 +194,6 @@ class DashboardCanvasViewMixin:
             self.canvas.create_oval(cx-r, cy-r, cx+r, cy+r, fill="#E74C3C", outline="#C0392B")
 
         self._draw_canvas_reachable_preview_buttons()
-        self._draw_virtual_buttons()
-        self._draw_controller_mode_indicator()
-
-    def _draw_virtual_buttons(self):
-        pass
 
     def _draw_canvas_reachable_preview_buttons(self):
         if not self._use_canvas_reachable_preview_controls():
@@ -233,82 +218,6 @@ class DashboardCanvasViewMixin:
                                        cx + radius - 3, cy + radius - 3,
                                        start=90, extent=-360 * progress,
                                        style=self.tk.ARC, outline=style["ring"], width=4)
-
-    def _draw_rank_confirm_buttons(self):
-        current_button = self.dwell_state.get("current_button_id", "")
-        progress = self.dwell_state.get("dwell_progress", 0.0)
-        has_candidates = bool(summarize_candidates(self.current_candidate_payload))
-        for rect in self.virtual_button_rects:
-            button_id = rect["id"]
-            enabled = button_id == "clear" or has_candidates
-            active = button_id == current_button
-            fill = "#EAF2F8" if enabled else "#F4F6F7"
-            outline = "#3498DB" if active else "#95A5A6"
-            width = 3 if active else 1
-            if self.last_confirmed_label and button_id == "rank_%s" % self.last_selected_rank:
-                outline = "#27AE60"
-
-            self.canvas.create_rectangle(rect["x1"], rect["y1"], rect["x2"], rect["y2"], fill=fill, outline=outline, width=width)
-            if active and progress > 0.0:
-                self.canvas.create_arc(rect["x1"] + 3, rect["y1"] + 3,
-                                       rect["x2"] - 3, rect["y2"] - 3,
-                                       start=90, extent=-360 * progress,
-                                       style=self.tk.ARC, outline="#DC2626", width=4)
-            label = rect["label"]
-            if button_id.startswith("rank_"):
-                rank = int(button_id.split("_")[1])
-                candidate = _extract_candidate_by_rank(self.current_candidate_payload, rank)
-                if candidate:
-                    label = "%s: %s" % (label, candidate["label"])
-            self.canvas.create_text((rect["x1"] + rect["x2"]) / 2, (rect["y1"] + rect["y2"]) / 2, text=label, fill="#2C3E50", font=("TkDefaultFont", 9, "bold"))
-
-    def _draw_gamepad_buttons(self):
-        current_button = self.dwell_state.get("current_button_id", "")
-        progress = self.dwell_state.get("dwell_progress", 0.0)
-        has_candidates = bool(summarize_candidates(self.current_candidate_payload))
-        for rect in self.virtual_button_rects:
-            button_id = rect["id"]
-            ignored = should_ignore_gamepad_button(
-                self.controller_mode,
-                button_id,
-                block_arrows_on_stop=self.gamepad_block_arrows_on_stop,
-            )
-            if button_id == "C" and self.controller_mode == GAMEPAD_MODE_CONFIRM_PENDING and not has_candidates:
-                ignored = True
-            active = button_id == current_button
-            fill = "#F4F6F7" if ignored else "#EAF2F8"
-            outline = "#3498DB" if active else "#95A5A6"
-            text_fill = "#95A5A6" if ignored else "#2C3E50"
-            width = 3 if active else 1
-            if button_id == "A" and self.controller_mode == GAMEPAD_MODE_BLOCKED:
-                outline = "#C0392B"
-                text_fill = "#C0392B"
-
-            if rect.get("kind") == "face":
-                self.canvas.create_oval(rect["x1"], rect["y1"], rect["x2"], rect["y2"], fill=fill, outline=outline, width=width)
-            else:
-                self.canvas.create_rectangle(rect["x1"], rect["y1"], rect["x2"], rect["y2"], fill=fill, outline=outline, width=width)
-            if active and progress > 0.0:
-                progress_x = rect["x1"] + (rect["x2"] - rect["x1"]) * progress
-                self.canvas.create_rectangle(rect["x1"], rect["y2"] - 6, progress_x, rect["y2"], fill="#2ECC71", outline="")
-            self.canvas.create_text((rect["x1"] + rect["x2"]) / 2, (rect["y1"] + rect["y2"]) / 2, text=rect["label"], fill=text_fill, font=("TkDefaultFont", 12, "bold"))
-
-    def _draw_controller_mode_indicator(self):
-        if self.demo_input_mode == "ocr_canvas":
-            return
-        if self.controller_layout != CONTROLLER_LAYOUT_GAMEPAD:
-            return
-        text = "Mode: %s" % self.controller_mode
-        if self.controller_mode == GAMEPAD_MODE_BLOCKED:
-            text += " | A/STOP active: arrows blocked"
-        elif self.controller_mode == GAMEPAD_MODE_DIGIT:
-            remaining = 0.0
-            if self.digit_mode_expires_at is not None:
-                remaining = max(0.0, self.digit_mode_expires_at - time.time())
-            text += " | write digit %.1fs" % remaining
-        elif self.controller_mode == GAMEPAD_MODE_CONFIRM_PENDING:
-            text += " | C confirms rank 1, X cancels"
-        self.canvas.create_text(self.canvas_width / 2, self.padding + 14, text=text, fill="#2C3E50", font=("TkDefaultFont", 10, "bold"))
 
     def _active_trajectory_bounds(self):
         if self.is_trajectory_mode and self.traj_scale_mode in ("auto", "fixed_symmetric"):

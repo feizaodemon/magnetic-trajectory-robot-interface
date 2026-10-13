@@ -17,28 +17,6 @@ def test_dwell_state_preserves_activation_and_reset_contract():
     assert controls.cancelled_preview_hover_state()["current_button_id"] == ""
 
 
-def test_controller_mode_and_gamepad_confirmation_preserve_safety_flags():
-    transition = controls.update_controller_mode(
-        controls.GAMEPAD_MODE_MOTION,
-        "B",
-        10.0,
-        3.0,
-    )
-    assert transition["mode"] == controls.GAMEPAD_MODE_DIGIT
-    assert transition["digit_expires_at"] == 13.0
-
-    payload, reason = controls.build_gamepad_confirmed_label_payload(
-        "A",
-        controls.GAMEPAD_MODE_MOTION,
-        now_fn=lambda: 123.0,
-    )
-    assert reason == ""
-    assert payload["label"] == "S"
-    assert payload["command_intent"] == "STOP"
-    assert payload["controls_real_robot"] is False
-    assert payload["gazebo_only"] is True
-
-
 def test_rank_confirmation_preserves_candidate_identity_and_schema():
     candidate_payload = {
         "backend": "dtw_template_bank",

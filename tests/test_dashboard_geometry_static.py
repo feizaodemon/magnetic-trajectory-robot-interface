@@ -9,7 +9,6 @@ from colmag_ros.dashboard_geometry import (
     dashboard_minimum_window_size,
     derive_orientation_clutch_mode,
     drawing_zone_style,
-    get_virtual_button_under_cursor,
     is_point_inside_rect,
     map_trajectory_point,
     normalize_board_control_layout,
@@ -98,16 +97,6 @@ def test_rect_hit_test_includes_edges_and_excludes_outside():
     assert not is_point_inside_rect(50.01, 80, rect)
 
 
-def test_virtual_button_hit_uses_first_matching_rect():
-    rects = [
-        {"id": "first", "x1": 0, "y1": 0, "x2": 20, "y2": 20},
-        {"id": "second", "x1": 10, "y1": 10, "x2": 30, "y2": 30},
-    ]
-    assert get_virtual_button_under_cursor(15, 15, rects) == "first"
-    assert get_virtual_button_under_cursor(25, 25, rects) == "second"
-    assert get_virtual_button_under_cursor(40, 40, rects) == ""
-
-
 def test_preview_button_hit_uses_first_matching_zone_and_uppercases_id():
     zones = [
         {"id": "x", "cx": 20.0, "cy": 20.0, "radius": 20.0},
@@ -139,6 +128,39 @@ def test_canvas_reachable_controls_keep_order_and_stay_outside_drawing_zone():
     for zone in zones:
         assert resolve_preview_button_hit(zone["cx"], zone["cy"], zones) == zone["id"]
         assert not is_point_inside_rect(zone["cx"], zone["cy"], drawing_zone)
+
+
+def test_canvas_reachable_preview_controls_are_inside_board_cursor_domain_and_off_center():
+    width, height, padding, button_size = 560, 407, 20, 58
+    bounds = (-0.07, 0.07, -0.07, 0.09)
+    corners = [
+        map_trajectory_point(x, y, bounds, width, height, padding, clamp=True)
+        for x in (bounds[0], bounds[1])
+        for y in (bounds[2], bounds[3])
+    ]
+    reach_rect = (
+        min(p[0] for p in corners),
+        min(p[1] for p in corners),
+        max(p[0] for p in corners),
+        max(p[1] for p in corners),
+    )
+    zones = build_canvas_reachable_preview_hit_zones(
+        width, height, padding, button_size, reach_rect=reach_rect
+    )
+    zone_by_id = {zone["id"]: zone for zone in zones}
+    assert set(zone_by_id) == {"X", "A", "B", "C"}
+    center_x, center_y = width / 2.0, height / 2.0
+    for zone in zones:
+        radius = zone["radius"]
+        assert padding <= zone["cx"] - radius
+        assert zone["cx"] + radius <= width - padding
+        assert padding <= zone["cy"] - radius
+        assert zone["cy"] + radius <= height - padding
+        assert abs(zone["cx"] - center_x) > radius
+        assert abs(zone["cy"] - center_y) > radius
+        assert reach_rect[0] <= zone["cx"] <= reach_rect[2]
+        assert reach_rect[1] <= zone["cy"] <= reach_rect[3]
+        assert resolve_preview_button_hit(zone["cx"], zone["cy"], zones) == zone["id"]
 
 
 @pytest.mark.parametrize(

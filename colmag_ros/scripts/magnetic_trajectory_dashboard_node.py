@@ -22,13 +22,8 @@ from colmag_ros.dashboard_candidate_display import (
 )
 from colmag_ros import control_mode
 from colmag_ros.dashboard_controller_input import (
-    CONTROLLER_LAYOUT_GAMEPAD,
-    CONTROLLER_LAYOUT_RANK_CONFIRM,
-    GAMEPAD_MODE_MOTION,
     build_confirmed_label_payload,
-    build_controller_button_rects,
     candidate_payload_key,
-    normalize_controller_layout,
     should_suppress_repeated_confirm,
     update_dwell_state,
 )
@@ -68,7 +63,6 @@ from colmag_ros.dashboard_canvas_view import DashboardCanvasViewMixin
 from colmag_ros.dashboard_sample_capture import DashboardSampleCaptureMixin
 from colmag_ros.dashboard_preview_controls import DashboardPreviewControlsMixin
 from colmag_ros.dashboard_ocr_panel import DashboardOcrPanelMixin
-from colmag_ros.dashboard_gamepad import DashboardGamepadMixin
 
 
 def safe_json_loads(text):
@@ -94,7 +88,6 @@ class MagneticTrajectoryDashboardNode(
     DashboardSampleCaptureMixin,
     DashboardPreviewControlsMixin,
     DashboardOcrPanelMixin,
-    DashboardGamepadMixin,
 ):
     def __init__(self):
         self._initialize_runtime_dependencies()
@@ -154,19 +147,8 @@ class MagneticTrajectoryDashboardNode(
         #     back to internal only when no external candidates are available.
         self.confirm_candidate_source = str(
             rospy.get_param("~confirm_candidate_source", "internal"))
-        self.virtual_buttons_enabled = bool_param(rospy.get_param("~dashboard_virtual_buttons_enabled", True))
         self.dwell_confirm_sec = float(rospy.get_param("~dashboard_dwell_confirm_sec", 2.0))
         self.dwell_reset_margin_sec = float(rospy.get_param("~dashboard_dwell_reset_margin_sec", 0.3))
-        requested_layout = normalize_controller_layout(rospy.get_param("~dashboard_controller_layout", CONTROLLER_LAYOUT_RANK_CONFIRM))
-        self.gamepad_enabled = bool_param(rospy.get_param("~dashboard_gamepad_enabled", False))
-        self.controller_layout = (
-            CONTROLLER_LAYOUT_GAMEPAD
-            if requested_layout == CONTROLLER_LAYOUT_GAMEPAD and self.gamepad_enabled
-            else CONTROLLER_LAYOUT_RANK_CONFIRM
-        )
-        self.digit_mode_sec = float(rospy.get_param("~dashboard_digit_mode_sec", 3.0))
-        self.gamepad_publish_motion_buttons = bool_param(rospy.get_param("~dashboard_gamepad_publish_motion_buttons", True))
-        self.gamepad_block_arrows_on_stop = bool_param(rospy.get_param("~dashboard_gamepad_block_arrows_on_stop", True))
         self.demo_input_mode = rospy.get_param("~demo_input_mode", "trajectory")
         self.is_trajectory_mode = self.demo_input_mode == TRAJECTORY_MODE
         self.interaction_profile = normalize_interaction_profile(
@@ -265,12 +247,8 @@ class MagneticTrajectoryDashboardNode(
         if self.recognition_backend not in RECOGNIZER_BACKENDS:
             self.recognition_backend = "dtw"
         self.recognition_model_path = ""
-        self.ocr_fallback_dtw = False
         self.candidate_min_points = int(rospy.get_param(
             "~candidate_min_points", rospy.get_param("~ocr_min_points", 8)))
-        self.ocr_canvas_size = int(rospy.get_param("~ocr_canvas_size", 256))
-        self.ocr_line_width = int(rospy.get_param("~ocr_line_width", 8))
-        self.ocr_padding_ratio = float(rospy.get_param("~ocr_padding_ratio", 0.15))
         labels_param = rospy.get_param("~candidate_labels", None)
         if isinstance(labels_param, str):
             labels_param = [t for t in labels_param.replace(",", " ").split() if t]
@@ -379,12 +357,6 @@ class MagneticTrajectoryDashboardNode(
         # confirming external /colmag/symbol_candidates.
         self.last_capture_sample_id = None
         self.last_capture_sequence_id = None
-        self.virtual_button_rects = build_controller_button_rects(
-            self.controller_layout,
-            self.canvas_width,
-            self.canvas_height,
-            self.padding,
-        )
         if self.demo_input_mode == "ocr_canvas":
             self._ocr_draw_area = (10, 24, self.canvas_width - 10, self.canvas_height - 10)
         else:
@@ -408,8 +380,6 @@ class MagneticTrajectoryDashboardNode(
         self.ocr_hover_started_at = None
         self.ocr_dwell_progress = 0.0
         self.ocr_dwell_fired = False
-        self.controller_mode = GAMEPAD_MODE_MOTION
-        self.digit_mode_expires_at = None
         self.last_confirm_key = ""
         self.last_confirmed_label = ""
         self.last_selected_rank = None
@@ -447,7 +417,6 @@ class MagneticTrajectoryDashboardNode(
         self.recognizer_labels_var = tk.StringVar(value="Labels: unknown")
         self.rank_vars = [tk.StringVar(value="-") for _ in range(3)]
         self.dwell_var = tk.StringVar(value="Integrated dwell confirm: disabled")
-        self.controller_mode_var = tk.StringVar(value="Controller: rank_confirm")
         self.hover_var = tk.StringVar(value="Hover: -")
         if self.is_trajectory_mode and self.candidate_preview_enabled:
             initial_hint = format_interaction_instruction(self.interaction_profile)
@@ -567,7 +536,6 @@ class MagneticTrajectoryDashboardNode(
         rospy.loginfo("MagneticTrajectoryDashboardNode started")
         rospy.loginfo("integrated_dashboard_confirm_enabled=%s publish_confirmed_label=%s publish_task_command=%s",
                       self.integrated_confirm_enabled, self.publish_confirmed_label, self.publish_task_command)
-        rospy.loginfo("dashboard_controller_layout=%s", self.controller_layout)
         rospy.loginfo("dashboard_board_control_layout=%s", self.board_control_layout)
 
     def _schedule_ui_refresh(self):
@@ -597,18 +565,12 @@ class MagneticTrajectoryDashboardNode(
         self.candidate_status = "recognizing"
         self.preview_interaction_state = "recognizing"
         self._update_candidate_ui()
-        status_out = {}
         points = self._active_recognition_points()
         status, candidates, backend_label = recognize_stroke(
             points,
             backend=getattr(self, "recognition_backend", "dtw"),
-            ocr_fallback_dtw=getattr(self, "ocr_fallback_dtw", True),
             min_points=getattr(self, "candidate_min_points", 8),
-            canvas_size=getattr(self, "ocr_canvas_size", 256),
-            line_width=getattr(self, "ocr_line_width", 8),
-            padding_ratio=getattr(self, "ocr_padding_ratio", 0.15),
             labels=getattr(self, "candidate_labels", None),
-            status_out=status_out,
             recognition_model_path=getattr(self, "recognition_model_path", ""),
         )
         self.recognition_backend_label = backend_label
@@ -697,7 +659,6 @@ class MagneticTrajectoryDashboardNode(
                 self.dwell_confirm_sec,
             )
             self.root.after(0, lambda t=texts["dwell"]: self.dwell_var.set(t))
-            self.root.after(0, lambda t=texts["controller"]: self.controller_mode_var.set(t))
             self.root.after(0, lambda t=texts["hover"]: self.hover_var.set(t))
             self.root.after(0, lambda: self.ocr_hint_var.set(self._ocr_state_hint_text()))
             self._refresh_mouse_operator_presentation()
@@ -719,16 +680,12 @@ class MagneticTrajectoryDashboardNode(
 
         texts = format_integrated_dwell_status_texts(
             self.integrated_confirm_enabled,
-            self.controller_layout,
             self.dwell_state.get("current_button_id", ""),
             self.dwell_state.get("dwell_progress", 0.0),
             self.dwell_confirm_sec,
-            self.controller_mode,
             self.last_command_intent,
-            gamepad_layout=CONTROLLER_LAYOUT_GAMEPAD,
         )
         self.root.after(0, lambda t=texts["dwell"]: self.dwell_var.set(t))
-        self.root.after(0, lambda t=texts["controller"]: self.controller_mode_var.set(t))
         self.root.after(0, lambda t=texts["hover"]: self.hover_var.set(t))
 
     def _publish_dashboard_state(self):
@@ -756,8 +713,6 @@ class MagneticTrajectoryDashboardNode(
         payload = {
             "timestamp": time.time(),
             "mode": "integrated_dashboard",
-            "controller_layout": self.controller_layout,
-            "controller_mode": self.controller_mode if self.controller_layout == CONTROLLER_LAYOUT_GAMEPAD else "",
             "current_virtual_button": self.dwell_state.get("current_button_id", ""),
             "dwell_progress": self.dwell_state.get("dwell_progress", 0.0),
             "integrated_confirm_enabled": True,

@@ -119,12 +119,9 @@ def test_mouse_toolbar_stop_uses_existing_c4_cancel_contract():
     assert confirms.should_publish_mouse_toolbar_stop("BLOCKED") is False
 
 
-def test_mouse_toolbar_wording_and_legacy_gamepad_mapping_scope():
+def test_mouse_toolbar_wording_and_stop_payload_builder():
     dashboard = dashboard_source()
-    controller_input = (ROS_PACKAGE / "dashboard_controller_input.py").read_text()
     assert "OCR toolbar" not in dashboard
-    assert '"A": "S"' in controller_input
-    assert '"A": "STOP"' in controller_input
     assert "build_mouse_toolbar_stop_payload" in dashboard
 
 

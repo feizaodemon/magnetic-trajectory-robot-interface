@@ -2,7 +2,6 @@ from colmag_ros.dashboard_dwell_status import (
     format_interaction_instruction,
     format_integrated_dwell_status_texts,
     format_ocr_canvas_dwell_texts,
-    format_trajectory_preview_hint_text,
     format_trajectory_preview_interaction_text,
     normalize_interaction_profile,
 )
@@ -18,7 +17,6 @@ def test_ocr_canvas_dwell_texts_preserve_existing_strings():
 
     assert texts == {
         "dwell": "Mode: OCR_CANVAS | State: DRAWING | Hover: B | Dwell: 42% | Hover control: enabled | Dwell confirm: 2.0s",
-        "controller": "Mode: OCR_CANVAS | State: DRAWING",
         "hover": "Hover: B | Dwell: 42%",
     }
 
@@ -58,15 +56,6 @@ def test_trajectory_preview_interaction_text_zeroes_disabled_progress_and_defaul
     ) == "Interaction: collecting | Source: none | Active: - | Dwell: 0%"
 
 
-def test_trajectory_preview_hint_text_preserves_layout_specific_strings():
-    assert format_trajectory_preview_hint_text(True) == (
-        "Flip while moving; re-engage to draw or hover a control."
-    )
-    assert format_trajectory_preview_hint_text(False) == (
-        "Move the board cursor (or mouse) onto X Clear, A Reject, B Recognize, C Confirm"
-    )
-
-
 def test_interaction_profile_instructions_are_source_accurate():
     assert normalize_interaction_profile(None, "trajectory") == "real_board"
     assert normalize_interaction_profile(None, "ocr_canvas") == "mouse"
@@ -79,39 +68,31 @@ def test_interaction_profile_instructions_are_source_accurate():
     assert "tracking_mz" not in mouse
 
 
-def test_integrated_rank_confirm_status_texts_preserve_existing_strings():
+def test_integrated_status_texts():
     texts = format_integrated_dwell_status_texts(
         integrated_confirm_enabled=True,
-        controller_layout="rank_confirm",
         current_button_id="rank_1",
         dwell_progress=0.5,
         dwell_confirm_sec=2.0,
-        controller_mode="MOTION_MODE",
         last_command_intent="MOVE_LEFT",
-        gamepad_layout="gamepad",
     )
 
     assert texts == {
-        "dwell": "Integrated dwell confirm: enabled | Layout: rank_confirm | Hover: rank_1 | Dwell: 1.0 / 2.0 s",
-        "controller": "Controller: rank_confirm",
+        "dwell": "Integrated dwell confirm: enabled | Hover: rank_1 | Dwell: 1.0 / 2.0 s",
         "hover": "Hover: rank_1 | Last intent: MOVE_LEFT",
     }
 
 
-def test_integrated_gamepad_status_texts_preserve_mode_and_fallbacks():
+def test_integrated_status_texts_fallbacks():
     texts = format_integrated_dwell_status_texts(
         integrated_confirm_enabled=False,
-        controller_layout="gamepad",
         current_button_id="",
         dwell_progress=0.25,
         dwell_confirm_sec=4.0,
-        controller_mode="DIGIT_MODE",
         last_command_intent="",
-        gamepad_layout="gamepad",
     )
 
     assert texts == {
-        "dwell": "Integrated dwell confirm: disabled | Layout: gamepad | Hover: - | Dwell: 1.0 / 4.0 s",
-        "controller": "Controller: gamepad | Mode: DIGIT_MODE",
+        "dwell": "Integrated dwell confirm: disabled | Hover: - | Dwell: 1.0 / 4.0 s",
         "hover": "Hover: - | Last intent: -",
     }

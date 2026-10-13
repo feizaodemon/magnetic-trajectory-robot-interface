@@ -3,6 +3,9 @@
 """
 Symbol semantics vocabulary for OCR and trajectory recognition.
 Maps canonical labels to display names, tasks, and command intents.
+
+For the 8 C4 labels the task must match execution_semantics.C4_LABEL_TO_TASK,
+which is what the dispatcher executes. Display only; nothing here dispatches.
 """
 
 SYMBOL_SEMANTICS = {
@@ -44,30 +47,39 @@ SYMBOL_SEMANTICS = {
     },
     "V": {
         "label": "V",
-        "display_name": "Move Up",
-        "task": "MOVE_UP",
-        "command_intent": "run_move_up",
-        "description": "Move the robot up.",
-        "description_zh": "控制机械臂向上移动。",
+        "display_name": "Hover Approach",
+        "task": "HOVER_APPROACH",
+        "command_intent": "run_hover_approach",
+        "description": "Non-contact hover/approach preview in Gazebo.",
+        "description_zh": "在 Gazebo 中预览非接触的悬停接近动作。",
+        "safety_critical": False,
+    },
+    "O": {
+        "label": "O",
+        "display_name": "Small Orbit",
+        "task": "ORBIT_SMALL",
+        "command_intent": "run_orbit_small",
+        "description": "Small non-contact orbit preview in Gazebo.",
+        "description_zh": "在 Gazebo 中预览小范围非接触环绕动作。",
         "safety_critical": False,
     },
     "A": {
         "label": "A",
-        "display_name": "Pick & Place",
-        "task": "PICK_PLACE",
-        "command_intent": "run_pick_place",
-        "description": "Execute the pick and place sequence.",
-        "description_zh": "执行抓取与放置任务。",
-        "safety_critical": True,
+        "display_name": "Home or Ready",
+        "task": "HOME_OR_READY",
+        "command_intent": "run_home_or_ready",
+        "description": "Move toward a neutral ready pose in Gazebo.",
+        "description_zh": "在 Gazebo 中移动到中性准备位姿。",
+        "safety_critical": False,
     },
     "C": {
         "label": "C",
-        "display_name": "Compliant Control",
-        "task": "COMPLIANT_CONTROL",
-        "command_intent": "run_compliant_control",
-        "description": "Switch to compliant control mode.",
-        "description_zh": "切换到柔顺控制模式。",
-        "safety_critical": True,
+        "display_name": "Soft Descend Preview",
+        "task": "SOFT_DESCEND_PREVIEW",
+        "command_intent": "run_soft_descend_preview",
+        "description": "Non-contact soft-descend preview; no compliance or contact control.",
+        "description_zh": "非接触的缓降预览；不做柔顺或接触控制。",
+        "safety_critical": False,
     },
     "S": {
         "label": "S",
@@ -80,12 +92,12 @@ SYMBOL_SEMANTICS = {
     },
     "X": {
         "label": "X",
-        "display_name": "Avoid Obstacle",
-        "task": "AVOID_OBSTACLE",
-        "command_intent": "run_avoid_obstacle",
-        "description": "Clear or avoid obstacle.",
-        "description_zh": "清除或避开障碍物。",
-        "safety_critical": True,
+        "display_name": "Stop or Cancel",
+        "task": "STOP_OR_CANCEL",
+        "command_intent": "run_stop_or_cancel",
+        "description": "Cancel the current task; no motion.",
+        "description_zh": "取消当前任务，不产生运动。",
+        "safety_critical": False,
     },
     "N": {
         "label": "N",
