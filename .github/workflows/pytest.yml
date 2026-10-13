@@ -25,3 +25,23 @@ jobs:
       - name: Run pytest
         # Tests that need ROS Noetic packages skip themselves here.
         run: python -m pytest -q -rs
+
+  pytest-noetic:
+    # The robot runtime: ROS Noetic on Python 3.8, with the real rospy and
+    # message packages, so the ROS-only tests run instead of skipping.
+    runs-on: ubuntu-22.04
+    container: ros:noetic-ros-base
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        # control_msgs is the one message package ros-base does not include.
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3-pip libboost-dev ros-noetic-control-msgs
+          python3 -m pip install -r requirements.txt
+      - name: Run pytest
+        shell: bash
+        run: |
+          source /opt/ros/noetic/setup.bash
+          python3 -m pytest -q -rs
