@@ -616,7 +616,7 @@ class Fr3GazeboVisibleTaskBridgeNode:
 
 def main():
     rospy.init_node("fr3_gazebo_visible_task_bridge_node")
-    node = Fr3GazeboVisibleTaskBridgeNode()
+    _node = Fr3GazeboVisibleTaskBridgeNode()
     rospy.spin()
 
 if __name__ == "__main__":

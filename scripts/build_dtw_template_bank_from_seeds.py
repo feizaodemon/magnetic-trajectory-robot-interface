@@ -8,8 +8,6 @@ template records, and writes a template bank JSON under ignored
 augmentation, no executable mapping; default labels stay ``1,2,3``.
 """
 
-from __future__ import annotations
-
 import argparse
 import json
 import sys

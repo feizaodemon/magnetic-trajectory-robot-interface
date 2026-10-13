@@ -9,8 +9,6 @@ lives in the bank. Reports go under ignored
 ``outputs/classifier_artifacts/dtw_eval/``. No ROS/runtime is touched.
 """
 
-from __future__ import annotations
-
 import argparse
 import json
 import statistics

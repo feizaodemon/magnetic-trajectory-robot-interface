@@ -95,11 +95,13 @@ class DashboardOcrPanelMixin:
                 outline = style["outline"]
                 text_fg = style["text"]
             else:
-                if button_id == "X": fill = "#FFD700"
-                elif button_id == "A": fill = "#FF6B6B"
-                elif button_id == "C": fill = "#4CAF50"
-                elif button_id == "B": fill = "#87CEEB"
-                elif button_id == "CLEAR": fill = "#DDDDDD"
+                fill = {
+                    "X": "#FFD700",
+                    "A": "#FF6B6B",
+                    "C": "#4CAF50",
+                    "B": "#87CEEB",
+                    "CLEAR": "#DDDDDD",
+                }.get(button_id, fill)
                 outline = "black"
 
             canvas.delete("all")

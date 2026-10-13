@@ -17,8 +17,6 @@ mouse-seed cross-validation, NOT a runtime or real-board PASS.
 Reports go under ignored ``outputs/classifier_artifacts/dtw_seed_holdout_eval/``.
 """
 
-from __future__ import annotations
-
 import argparse
 import json
 import sys
