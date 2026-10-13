@@ -45,6 +45,14 @@ def test_ros_free_command_replay_one_shot_and_lifecycle_contract():
     )
 
 
+def test_ros_free_cartesian_teleop_core_contract():
+    _compile_and_run(
+        "fr3_cartesian_teleop_core_test",
+        REPO / "tests" / "cpp" / "fr3_cartesian_teleop_core_test.cpp",
+        REPO / "colmag_ros" / "src" / "fr3_cartesian_teleop_core.cpp",
+    )
+
+
 def test_json_escape_header():
     _compile_and_run(
         "json_escape_test",

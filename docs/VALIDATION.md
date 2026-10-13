@@ -22,7 +22,7 @@ Tests that import `rospy` or ROS message packages skip themselves when ROS Noeti
 | `ruff` | Python 3.10 | `ruff check` with the settings in `ruff.toml`: undefined names, unused imports and variables, and annotations that would not run on Python 3.8 |
 | `catkin-build` | `ros:noetic-ros-base` container | `catkin_make install` of `colmag_ros` and `colmag_gazebo_stub` in Release mode, then checks that both FR3 adapter executables and the Python packages are installed |
 
-Both pytest jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. The Cartesian core test there is not wired in yet; see [tests/README.md](../tests/README.md). No job starts ROS nodes or launch files, or touches Gazebo, GUI, serial, controllers, or hardware. Each job's log holds the exact result for its commit.
+Both pytest jobs also compile and run every ROS-free C++ test under `tests/cpp/`. No job starts ROS nodes or launch files, or touches Gazebo, GUI, serial, controllers, or hardware. Each job's log holds the exact result for its commit.
 
 ## ROS1 compile/link build
 
