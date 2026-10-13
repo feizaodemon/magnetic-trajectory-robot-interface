@@ -18,7 +18,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from colmag_ros import dashboard_points as points  # noqa: E402
-from dashboard_source import dashboard_source  # noqa: E402
+from dashboard_harness import DashboardHarness  # noqa: E402
 
 
 class DashboardPointHelperBehaviorTests(unittest.TestCase):
@@ -64,13 +64,20 @@ class DashboardPointHelperBehaviorTests(unittest.TestCase):
         )
 
 
-class DashboardPointExtractionStaticTests(unittest.TestCase):
-    def test_dashboard_flattens_strokes_through_helper(self):
-        self.assertIn(
-            "return _dashboard_points.flatten_strokes(self.all_strokes)",
-            dashboard_source(),
-        )
+def test_dashboard_flattens_strokes_through_helper(monkeypatch):
+    harness = DashboardHarness(monkeypatch, demo_input_mode="ocr_canvas")
+    node = harness.node
+    harness.fire(node.ocr_button_widgets["B"]["canvas"], "<Button-1>")
+    harness.draw_stroke((60, 60), (120, 60), (180, 60))
+    harness.draw_stroke((60, 200), (120, 200))
+    harness.run_jobs(node.ocr_auto_recognize_after_ms)
 
+    [capture] = harness.published_json(node.symbol_capture_topic)
+    assert [len(stroke) for stroke in node.all_strokes] == [3, 2]
+    assert capture["points"] == [list(p) for p in points.flatten_strokes(node.all_strokes)]
+
+
+class DashboardPointExtractionStaticTests(unittest.TestCase):
     def test_helper_has_no_ros_tk_or_execution_dependencies(self):
         text = HELPER.read_text()
         for forbidden in (

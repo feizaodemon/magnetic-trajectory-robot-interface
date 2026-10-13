@@ -2,7 +2,10 @@
 
 import ast
 from pathlib import Path
-from dashboard_source import dashboard_source
+
+from colmag_ros import dashboard_preview_controls
+from colmag_ros.dashboard_candidate_display import PreviewCandidateDisplayState
+from dashboard_harness import DashboardHarness
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -70,26 +73,50 @@ def test_setup_methods_remain_cohesive_instead_of_fragmented_wrappers():
     assert len(setup_names) == 6
 
 
-def test_ros_interface_setup_preserves_subscriber_then_publisher_order():
-    method = _dashboard_methods()["_initialize_ros_interfaces"]
-    source_lines = DASHBOARD.read_text().splitlines()
-    body = "\n".join(source_lines[method.lineno - 1:method.end_lineno])
-    assert body.index("rospy.Subscriber") < body.index("rospy.Publisher")
-    assert body.count("rospy.Subscriber") == 8
-    assert "self.control_mode_subscriber = rospy.Subscriber" in body
-    assert body.count("rospy.Publisher") == 4
-    assert "self.control_mode_request_pub = rospy.Publisher" in body
+def test_ros_interface_setup_preserves_subscriber_then_publisher_order(monkeypatch):
+    harness = DashboardHarness(
+        monkeypatch, control_mode_enabled=True,
+        integrated_dashboard_confirm_enabled=True, publish_confirmed_label=True)
+    registrations = harness.rospy.registrations
+    subscribed = [topic for kind, topic in registrations if kind == "sub"]
+    published = [topic for kind, topic in registrations if kind == "pub"]
+
+    assert registrations[0][0] == "sub"
+    assert sorted(subscribed) == sorted([
+        "/colmag/trajectory_2d", "/colmag/ui_state", "/colmag/symbol_capture",
+        "/colmag/symbol_candidates", "/colmag/confirmed_label", "/colmag/task_command",
+        "/colmag/fr3_demo_task_state", "/colmag/control_mode",
+    ])
+    assert sorted(published) == sorted([
+        "/colmag/control_mode/request", "/colmag/symbol_capture",
+        "/colmag/confirmed_label", "/colmag/trajectory_dashboard_state",
+    ])
 
 
-def test_display_state_and_formatter_live_only_in_canonical_package():
+def test_display_state_and_formatter_live_only_in_canonical_package(monkeypatch):
     canonical = DISPLAY.read_text()
-    dashboard = dashboard_source()
     assert "class PreviewCandidateDisplayState" in canonical
     assert "def preview_candidate_ui_texts(state):" in canonical
-    assert "PreviewCandidateDisplayState(" in dashboard
-    assert "preview_candidate_ui_texts(display_state)" in dashboard
-    assert "class PreviewCandidateDisplayState" not in dashboard
     assert not (REPO / "colmag_ros" / "scripts" / "dashboard_candidate_display.py").exists()
+
+    # The dashboard builds the canonical state and shows the canonical formatter's text.
+    formatter = dashboard_preview_controls.preview_candidate_ui_texts
+    states = []
+
+    def recording_formatter(state):
+        states.append(state)
+        return formatter(state)
+
+    monkeypatch.setattr(
+        dashboard_preview_controls, "preview_candidate_ui_texts", recording_formatter)
+    harness = DashboardHarness(monkeypatch, candidate_preview_enabled=True)
+    harness.send_sample_and_candidates()
+    harness.press_key("x")
+
+    state = states[-1]
+    assert isinstance(state, PreviewCandidateDisplayState)
+    assert state.preview_interaction_state == "cleared"
+    assert harness.node.traj_candidate_status_var.get() == formatter(state)["status"]
 
 
 def test_recognizer_callback_delegates_without_changing_public_helpers():

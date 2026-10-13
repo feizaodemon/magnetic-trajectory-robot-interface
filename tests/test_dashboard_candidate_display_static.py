@@ -1,7 +1,8 @@
 """Static/unit tests for ROS-free dashboard candidate display helpers.
 
 No ROS master, Tk GUI, Gazebo, serial, real board, controller manager, or real
-FR3 runtime is started.
+FR3 runtime is started. Dashboard-level tests use the fakes in
+``dashboard_harness``.
 """
 
 import subprocess
@@ -19,7 +20,11 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from colmag_ros import dashboard_candidate_display as display  # noqa: E402
-from dashboard_source import dashboard_source  # noqa: E402
+from dashboard_harness import (  # noqa: E402
+    SAMPLE_CANDIDATES,
+    SAMPLE_CAPTURE,
+    DashboardHarness,
+)
 
 
 class CandidateDisplayHelperTests(unittest.TestCase):
@@ -431,18 +436,72 @@ class CandidateDisplayHelperTests(unittest.TestCase):
         ])
 
 
-class DashboardExtractionStaticTests(unittest.TestCase):
-    def test_dashboard_imports_and_uses_helper(self):
-        text = dashboard_source()
-        self.assertIn("from colmag_ros.dashboard_candidate_display import", text)
-        self.assertIn("format_candidate_result_summary", text)
-        self.assertIn("format_candidate_rows_for_display", text)
-        self.assertIn("format_rank_rows(data, count=3)", text)
-        self.assertIn("preview_candidate_ui_texts(", text)
-        self.assertNotIn("def candidate_display_name(", text)
-        self.assertNotIn("def candidate_backend_status_text(", text)
-        self.assertNotIn("def recognizer_status_texts(", text)
+CONFIRM_PARAMS = {
+    "integrated_dashboard_confirm_enabled": True,
+    "publish_confirmed_label": True,
+}
 
+
+def test_dashboard_shows_candidates_through_helper_formatters(monkeypatch):
+    harness = DashboardHarness(monkeypatch, candidate_preview_enabled=True)
+    harness.send_sample_and_candidates()
+    node = harness.node
+    data = SAMPLE_CANDIDATES
+    recognizer = display.recognizer_status_texts(data)
+
+    assert [var.get() for var in node.rank_vars] == display.format_rank_rows(data, count=3)
+    assert [var.get() for var in node.traj_candidate_vars] == (
+        display.format_candidate_rows_for_display(data, count=3))
+    assert node.traj_result_var.get() == display.format_candidate_result_summary(data)
+    assert node.backend_status_var.get() == display.candidate_backend_status_text(data)
+    assert [
+        node.recognizer_mode_var.get(), node.recognizer_model_var.get(),
+        node.recognizer_status_var.get(), node.recognizer_labels_var.get(),
+    ] == [recognizer[key] for key in ("mode", "model", "status", "labels")]
+
+
+def test_external_confirm_publishes_only_candidates_for_the_latest_capture(monkeypatch):
+    harness = DashboardHarness(
+        monkeypatch, candidate_preview_enabled=True,
+        confirm_candidate_source="external_symbol_candidates", **CONFIRM_PARAMS)
+    node = harness.node
+    harness.send_sample_and_candidates()
+
+    # A newer capture makes the cap_1 candidates stale: C must not confirm them.
+    newer = {"sample_id": "cap_2", "sequence_id": 2}
+    harness.send(node.symbol_capture_topic, dict(SAMPLE_CAPTURE, **newer))
+    harness.press_key("c")
+    assert harness.messages(node.confirmed_label_topic) == []
+    assert any("stale" in text for level, text in harness.rospy.logs if level == "warn")
+
+    harness.send(node.symbol_candidates_topic, dict(SAMPLE_CANDIDATES, **newer))
+    harness.press_key("c")
+    [payload] = harness.published_json(node.confirmed_label_topic)
+    assert (payload["label"], payload["sample_id"], payload["sequence_id"]) == ("2", "cap_2", 2)
+    assert payload["backend"] == "dtw_template_bank"
+    assert payload["confirmed_by"] == "magnetic_dashboard_dwell"
+
+
+def test_mouse_toolbar_confirm_publishes_rank_one(monkeypatch):
+    harness = DashboardHarness(monkeypatch, demo_input_mode="ocr_canvas", **CONFIRM_PARAMS)
+    node = harness.node
+    confirm = node.ocr_button_widgets["C"]["canvas"]
+    harness.fire(node.ocr_button_widgets["B"]["canvas"], "<Button-1>")
+    harness.draw_stroke((100, 100), (150, 150))
+    harness.run_jobs(node.ocr_auto_recognize_after_ms)
+
+    harness.fire(confirm, "<Button-1>")  # no candidates yet: C is inert
+    assert harness.messages(node.confirmed_label_topic) == []
+
+    harness.send(node.symbol_candidates_topic, SAMPLE_CANDIDATES)
+    assert node.ocr_panel_state == "CONFIRM_PENDING"
+    harness.fire(confirm, "<Button-1>")
+    [payload] = harness.published_json(node.confirmed_label_topic)
+    assert (payload["label"], payload["selected_rank"]) == ("2", 1)
+    assert node.ocr_panel_state == "WAITING"
+
+
+class DashboardExtractionStaticTests(unittest.TestCase):
     def test_helper_has_no_ros_tk_dispatch_or_execution_imports(self):
         text = HELPER.read_text()
         for forbidden in (
@@ -456,16 +515,6 @@ class DashboardExtractionStaticTests(unittest.TestCase):
             "FollowJointTrajectory",
         ):
             self.assertNotIn(forbidden, text)
-
-    def test_dashboard_confirmation_behavior_not_modified_by_helper(self):
-        text = dashboard_source()
-        for expected in (
-            "def _external_confirm_active(",
-            "publish_external_payload(",
-            "publish_rank_one(",
-            "def _confirm_rank_by_dwell(",
-        ):
-            self.assertIn(expected, text)
 
     def test_no_generated_outputs_are_tracked_or_staged(self):
         tracked = subprocess.run(
