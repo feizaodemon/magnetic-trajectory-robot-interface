@@ -4,7 +4,7 @@
   <version>0.0.1</version>
   <description>Gazebo FollowJointTrajectory bridge for the COLMAG robot-body demo.</description>
 
-  <maintainer email="todo@example.com">COLMAG Team</maintainer>
+  <maintainer email="64273122+feizaodemon@users.noreply.github.com">Xiaowei Rong</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>catkin</buildtool_depend>
