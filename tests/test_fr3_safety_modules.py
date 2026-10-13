@@ -7,13 +7,13 @@ INCLUDE_DIR = REPO / "colmag_ros" / "include"
 BUILD_DIR = REPO / "outputs" / "agent_tmp" / "m104r2_f3a_cpp_tests"
 
 
-def _compile_and_run(name, harness, implementation):
+def _compile_and_run(name, harness, *implementations):
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     executable = BUILD_DIR / name
     compile_result = subprocess.run(
         [
             "g++", "-std=c++11", "-Wall", "-Wextra", "-pedantic", "-pthread",
-            "-I", str(INCLUDE_DIR), str(harness), str(implementation),
+            "-I", str(INCLUDE_DIR), str(harness), *map(str, implementations),
             "-o", str(executable),
         ],
         cwd=REPO,
@@ -42,6 +42,13 @@ def test_ros_free_command_replay_one_shot_and_lifecycle_contract():
         "fr3_hardware_safety_test",
         REPO / "tests" / "cpp" / "fr3_hardware_safety_test.cpp",
         REPO / "colmag_ros" / "src" / "fr3_hardware_safety.cpp",
+    )
+
+
+def test_json_escape_header():
+    _compile_and_run(
+        "json_escape_test",
+        REPO / "tests" / "cpp" / "json_escape_test.cpp",
     )
 
 
