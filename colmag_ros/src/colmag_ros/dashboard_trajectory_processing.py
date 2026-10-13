@@ -1,6 +1,7 @@
 """Pure trajectory display bounds and writing-gate decisions."""
 
 
+
 def robust_min_max(values):
     values = sorted(values)
     count = len(values)
@@ -35,23 +36,6 @@ def normalize_stroke_gate_mode(value):
     if mode in ("off", "z_range", "speed", "legacy_like"):
         return mode
     return "off"
-
-
-def optional_float(value):
-    if value is None:
-        return None
-    if isinstance(value, str):
-        text = value.strip().lower()
-        if text in ("", "none", "nan"):
-            return None
-        try:
-            return float(text)
-        except ValueError:
-            return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def stroke_gate_pass(

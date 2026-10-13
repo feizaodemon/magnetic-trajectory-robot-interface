@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Preview-only trajectory segment recorder (M63-B).
+"""Preview-only trajectory segment recorder.
 
 A tiny, dependency-free state machine that captures ONE complete trajectory
 segment after a Start trigger, instead of recognizing an uncontrolled continuous
@@ -41,19 +41,6 @@ STATE_RECORDING = "RECORDING"
 STATE_RECORDING_DONE = "RECORDING_DONE"
 STATE_CLEARED = "CLEARED"
 
-# Downstream preview states (owned by the UI; shared here for one vocabulary).
-STATE_RECOGNIZING = "RECOGNIZING"
-STATE_SHOWING_CANDIDATES = "SHOWING_CANDIDATES"
-STATE_PREVIEW_CONFIRMED = "PREVIEW_CONFIRMED"
-
-CAPTURE_STATES = (
-    STATE_IDLE,
-    STATE_ARMED,
-    STATE_RECORDING,
-    STATE_RECORDING_DONE,
-    STATE_CLEARED,
-)
-
 
 def _num(value):
     """Return a finite float or None (rejects bool, NaN, inf, non-numbers)."""
@@ -89,18 +76,6 @@ class SegmentRecorder:
     @property
     def is_recording(self):
         return self.state == STATE_RECORDING
-
-    @property
-    def is_armed(self):
-        return self.state == STATE_ARMED
-
-    @property
-    def is_done(self):
-        return self.state == STATE_RECORDING_DONE
-
-    @property
-    def has_enough_points(self):
-        return len(self.points) >= self.min_points
 
     def elapsed(self, now):
         if self.start_time is None:

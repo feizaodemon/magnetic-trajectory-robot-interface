@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build a DTW template bank from existing user-handwritten mouse seed JSONs.
 
-M104-B2c offline feasibility tooling. Reads seeds from
+Offline feasibility tooling. Reads seeds from
 ``outputs/classifier_training/seeds/<label>/*.json``, converts them into DTW
 template records, and writes a template bank JSON under ignored
 ``outputs/classifier_artifacts/dtw_bank/``. No ROS/runtime wiring, no synthetic
@@ -17,16 +17,16 @@ from pathlib import Path
 from urllib.parse import quote
 
 REPO = Path(__file__).resolve().parents[1]
-SCRIPTS = REPO / "colmag_ros" / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
+PACKAGE_SRC = REPO / "colmag_ros" / "src"
+if str(PACKAGE_SRC) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_SRC))
 
-from dtw_dataset_io import (  # noqa: E402
+from colmag_ros.dtw_dataset_io import (  # noqa: E402
     ensure_output_dir,
     load_standalone_seed,
     write_json,
 )
-from dtw_template_bank_tools import (  # noqa: E402
+from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
     DEFAULT_BANK_DIR,
     DEFAULT_PREPROCESS_PROFILE,
     PREPROCESS_PROFILES,
@@ -38,7 +38,7 @@ from dtw_template_bank_tools import (  # noqa: E402
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Offline M104-B2c: build a DTW template bank from mouse seed JSONs."
+        description="Offline: build a DTW template bank from mouse seed JSONs."
     )
     parser.add_argument("--seeds-root", default="outputs/classifier_training/seeds")
     parser.add_argument("--labels", default="1,2,3",

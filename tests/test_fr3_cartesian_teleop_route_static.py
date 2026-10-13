@@ -44,7 +44,7 @@ def test_real_profile_contains_board_acquisition_task_and_continuous_paths():
         "dtw_real_board_demo_frontend.launch",
         "/colmag/trajectory_2d",
         "colmag_fr3_hardware_bringup.launch",
-        "m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch",
+        "colmag_fr3_task_trajectory_adapter.launch",
         "colmag_fr3_cartesian_teleop_adapter",
         "required_control_mode\" value=\"TASK",
         "/$(arg controller_name)/command",

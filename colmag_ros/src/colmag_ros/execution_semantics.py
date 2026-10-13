@@ -1,4 +1,4 @@
-"""Gazebo-only execution semantics for M104-C4.
+"""Gazebo-only execution semantics for the 8-symbol task mapping.
 
 This module is intentionally ROS-free. It is the shared C4 metadata seam for
 the dispatcher, Gazebo bridge, tests, and docs.
@@ -123,25 +123,5 @@ def validated_execution_contract(namespace=None):
     }
 
 
-def target_labels_csv():
-    return ",".join(C4_TARGET_LABELS)
-
-
 def execution_semantics_for_label(label):
     return C4_EXECUTION_SEMANTICS.get(str(label or "").strip().upper())
-
-
-def label_to_task_mapping():
-    return dict(C4_LABEL_TO_TASK)
-
-
-def task_names():
-    return set(C4_SAFE_GAZEBO_TASKS)
-
-
-def task_moves_gazebo_robot_body(task):
-    return str(task or "").strip().upper() in C4_MOVING_TASKS
-
-
-def task_is_safe_no_motion(task):
-    return str(task or "").strip().upper() in C4_NO_MOTION_TASKS

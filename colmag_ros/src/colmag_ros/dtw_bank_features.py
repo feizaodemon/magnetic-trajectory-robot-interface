@@ -6,14 +6,7 @@ separate.
 """
 
 import math
-
-
-def finite_float(value, default=0.0):
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return default
-    return parsed if math.isfinite(parsed) else default
+from colmag_ros.param_utils import finite_float
 
 
 def resample_by_arclength(points, n=64):

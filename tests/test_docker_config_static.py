@@ -1,4 +1,4 @@
-"""Static packaging checks for M104-DOCKER2; starts no container."""
+"""Static packaging checks for the Docker images; starts no container."""
 
 import os
 import shutil

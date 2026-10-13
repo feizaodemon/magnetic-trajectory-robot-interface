@@ -117,37 +117,3 @@ def enrich_candidate_with_semantics(candidate):
             if k != "label" and k not in candidate:
                 candidate[k] = v
     return candidate
-
-def normalize_symbol_label(raw_text, allowed_labels=None):
-    """
-    Normalize raw OCR text to a canonical symbol label.
-    """
-    text = str(raw_text).strip().upper()
-    if not text:
-        return ""
-
-    if allowed_labels is None:
-        allowed_labels = SYMBOL_SEMANTICS.keys()
-
-    if text in allowed_labels:
-        return text
-
-    confusions = {
-        "I": "1",
-        "L": "1",
-        "|": "1",
-        "Z": "2",
-        "O": "0",
-    }
-
-    if text in confusions and confusions[text] in allowed_labels:
-        return confusions[text]
-
-    if len(text) <= 3:
-        for char in text:
-            if char in allowed_labels:
-                return char
-            if char in confusions and confusions[char] in allowed_labels:
-                return confusions[char]
-
-    return ""

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Preview-only semantic library for the unified GUI (M63-B).
+"""Preview-only semantic library for the unified GUI.
 
 Maps a recognized symbol label / candidate to a richer, human-readable *visible
 task* description so the dashboard can show what a stroke would mean, while
@@ -17,7 +17,7 @@ Design:
     for label meaning; this library reuses its ``task`` field to pick a visible
     task, then falls back to a label-keyed table for symbols it does not map.
   * Only a documented subset is marked dispatchable for a *future* gazebo-enabled
-    mode (M63-C). In M63-B nothing is dispatchable; the flag is display metadata.
+    mode. Here nothing is dispatchable; the flag is display metadata.
 
 Safety classes:
 

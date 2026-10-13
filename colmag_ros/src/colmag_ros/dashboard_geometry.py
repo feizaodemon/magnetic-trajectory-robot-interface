@@ -1,5 +1,8 @@
 """Package-level geometry and hit-test helpers for the trajectory dashboard."""
 
+BOARD_CONTROL_LAYOUT_EXTERNAL = "external_toolbar"
+BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE = "canvas_reachable"
+
 
 def clamp(value, low, high):
     return max(low, min(high, value))
@@ -334,3 +337,46 @@ def canvas_zones_to_stage_zones(canvas_zones, canvas_x, canvas_y):
             "radius": radius,
         })
     return zones
+
+
+def map_world_to_canvas(x, y, bounds, width, height, padding):
+    x_min, x_max, y_min, y_max = bounds
+    if x_max <= x_min or y_max <= y_min:
+        return width / 2.0, height / 2.0
+
+    draw_w = width - 2 * padding
+    draw_h = height - 2 * padding
+
+    # Map X to canvas X (left to right)
+    pct_x = (x - x_min) / (x_max - x_min)
+    cx = padding + pct_x * draw_w
+
+    # Map Y to canvas Y (bottom to top, so invert Y)
+    pct_y = (y - y_min) / (y_max - y_min)
+    cy = height - padding - pct_y * draw_h
+
+    # Clip
+    cx = max(padding, min(width - padding, cx))
+    cy = max(padding, min(height - padding, cy))
+
+    return cx, cy
+
+
+def map_canvas_to_world(canvas_x, canvas_y, bounds, width, height, padding):
+    x_min, x_max, y_min, y_max = bounds
+    if x_max <= x_min or y_max <= y_min:
+        return (x_min + x_max) / 2.0, (y_min + y_max) / 2.0
+
+    draw_w = width - 2 * padding
+    draw_h = height - 2 * padding
+    if draw_w <= 0 or draw_h <= 0:
+        return (x_min + x_max) / 2.0, (y_min + y_max) / 2.0
+
+    canvas_x = max(padding, min(width - padding, canvas_x))
+    canvas_y = max(padding, min(height - padding, canvas_y))
+
+    pct_x = (canvas_x - padding) / draw_w
+    pct_y = (height - padding - canvas_y) / draw_h
+    x = x_min + pct_x * (x_max - x_min)
+    y = y_min + pct_y * (y_max - y_min)
+    return x, y

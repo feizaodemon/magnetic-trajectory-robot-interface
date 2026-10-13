@@ -1,4 +1,4 @@
-"""Static install-list checks for M104-RELEASE3 + MAINT1."""
+"""Static install-list checks for the release package."""
 
 import xml.etree.ElementTree as ET
 from pathlib import Path

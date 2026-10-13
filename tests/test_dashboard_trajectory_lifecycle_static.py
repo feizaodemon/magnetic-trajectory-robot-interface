@@ -1,4 +1,4 @@
-from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
+from magnetic_trajectory_dashboard_node import (
     MagneticTrajectoryDashboardNode,
 )
 

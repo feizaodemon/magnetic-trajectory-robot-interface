@@ -1,5 +1,5 @@
 import pytest
-from colmag_ros.scripts.symbol_semantics import get_symbol_semantics, enrich_candidate_with_semantics
+from colmag_ros.symbol_semantics import get_symbol_semantics, enrich_candidate_with_semantics
 
 def test_symbol_semantics_known_labels():
     for label, expected_task in [

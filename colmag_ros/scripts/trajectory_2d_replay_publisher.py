@@ -3,13 +3,7 @@ import json
 import math
 import time
 
-
-def _bool_param(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
+from colmag_ros.param_utils import bool_param
 
 
 def _digit_two_points():
@@ -92,7 +86,7 @@ class Trajectory2DReplayPublisher:
         self.String = String
         self.topic = rospy.get_param("~trajectory_topic", "/colmag/trajectory_2d")
         self.rate_hz = float(rospy.get_param("~rate_hz", 20.0))
-        self.loop = _bool_param(rospy.get_param("~loop", False))
+        self.loop = bool_param(rospy.get_param("~loop", False))
         self.sequence_id = int(rospy.get_param("~sequence_id", 1))
         self.samples = build_default_replay_samples(
             start_time=time.time(),

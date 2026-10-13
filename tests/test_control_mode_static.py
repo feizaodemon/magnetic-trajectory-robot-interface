@@ -11,11 +11,11 @@ if str(PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(PACKAGE_SRC))
 
 from colmag_ros import control_mode
+from dashboard_source import dashboard_source
 
 
 SCRIPTS = REPO / "colmag_ros" / "scripts"
 LAUNCH = REPO / "colmag_ros" / "launch"
-DASHBOARD = SCRIPTS / "magnetic_trajectory_dashboard_node.py"
 DISPATCHER = SCRIPTS / "task_dispatcher_node.py"
 MODE_NODE = SCRIPTS / "control_mode_node.py"
 FINAL_GAZEBO = LAUNCH / "final_gazebo_robot_demo.launch"
@@ -66,7 +66,7 @@ def test_mode_node_is_latched_and_rejects_invalid_requests():
 
 
 def test_dashboard_contains_only_small_mode_request_and_status_wiring():
-    text = DASHBOARD.read_text()
+    text = dashboard_source()
     for contract in (
         "control_mode_enabled",
         "Mode: TASK",
@@ -142,7 +142,7 @@ def test_real_profile_owns_one_mode_source_and_both_capabilities():
     discrete = next(
         include for include in root.findall("include")
         if include.attrib["file"].endswith(
-            "/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch"
+            "/colmag_fr3_task_trajectory_adapter.launch"
         )
     )
     discrete_args = {

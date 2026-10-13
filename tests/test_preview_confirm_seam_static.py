@@ -1,4 +1,4 @@
-"""Bounded static/unit checks for the M95 trajectory-preview confirm seam.
+"""Bounded static/unit checks for the trajectory-preview confirm seam.
 
 No ROS master, Gazebo, Tk display, serial board, FR3, or hardware is started.
 These tests exercise the real-board / trajectory-preview C-confirm publish path
@@ -10,17 +10,17 @@ import json
 import unittest
 from pathlib import Path
 
-from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
+from magnetic_trajectory_dashboard_node import (
     MagneticTrajectoryDashboardNode,
     build_confirmed_label_payload,
     candidate_payload_key,
     should_suppress_repeated_confirm,
 )
-from colmag_ros.scripts.dashboard_confirm_publisher import PreviewConfirmPublisher
+from colmag_ros.dashboard_confirm_publisher import PreviewConfirmPublisher
+from dashboard_source import dashboard_source
 
 
 REPO = Path(__file__).resolve().parents[1]
-DASHBOARD = REPO / "colmag_ros" / "scripts" / "magnetic_trajectory_dashboard_node.py"
 HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_confirm_publisher.py"
 
 
@@ -143,7 +143,7 @@ class PreviewConfirmPublishTests(unittest.TestCase):
 
 class PreviewConfirmWiringTests(unittest.TestCase):
     def setUp(self):
-        self.src = DASHBOARD.read_text()
+        self.src = dashboard_source()
         self.helper_src = HELPER.read_text()
 
     def test_preview_confirm_calls_publisher(self):
@@ -164,7 +164,7 @@ class PreviewConfirmWiringTests(unittest.TestCase):
         self.assertLess(HELPER.read_text().count("\n") + 1, 1000)
 
     def test_dashboard_has_no_task_command_publisher(self):
-        # M95 must not wire the dashboard to /colmag/task_command.
+        # The confirm seam must not wire the dashboard to /colmag/task_command.
         self.assertNotIn("Publisher(self.task_command_topic", self.src)
 
     def test_publish_path_reuses_shared_builder_and_dedup(self):

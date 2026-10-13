@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 import math
 
+from colmag_ros.param_utils import bool_param
+
 
 DEFAULT_EXPECTED_JOINT_NAMES = (
     "panda_joint1",
@@ -24,14 +26,6 @@ class ValidationResult:
     ok: bool
     error_code: int = SUCCESSFUL
     error_string: str = ""
-
-
-def bool_param(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
 
 
 def duration_to_sec(value):

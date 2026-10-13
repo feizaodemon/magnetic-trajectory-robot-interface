@@ -1,6 +1,5 @@
-"""Focused package/install seam checks for M104-PKG-INSTALL1."""
+"""Focused package/install seam checks."""
 
-import ast
 import importlib
 import importlib.util
 import sys
@@ -8,6 +7,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
+from dashboard_source import dashboard_source
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -24,8 +24,8 @@ CANONICAL_HELPERS = (
     "dashboard_geometry",
     "dashboard_points",
     "dtw_template_bank_tools",
-    "m104c2c3_display_semantics",
-    "m104c4_execution_semantics",
+    "display_semantics",
+    "execution_semantics",
     "recognition_uncertainty",
     "semantic_library",
     "symbol_semantics",
@@ -40,14 +40,14 @@ def test_canonical_helpers_import_from_package():
         assert Path(module.__file__).resolve() == (ROS_PACKAGE / (name + ".py")).resolve()
 
 
-def test_legacy_helper_wrappers_have_no_business_logic():
+def test_legacy_helper_wrappers_are_removed():
     for name in CANONICAL_HELPERS:
-        tree = ast.parse((ROS_SCRIPTS / (name + ".py")).read_text())
-        assert not [node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))]
+        assert not (ROS_SCRIPTS / (name + ".py")).exists()
+    assert not (ROS_SCRIPTS / "_colmag_package_compat.py").exists()
 
 
 def test_c4_contract_rejects_missing_attribute_and_empty_mapping():
-    semantics = importlib.import_module("colmag_ros.m104c4_execution_semantics")
+    semantics = importlib.import_module("colmag_ros.execution_semantics")
     valid = semantics.validated_execution_contract()
     assert valid["label_to_task"] == semantics.C4_LABEL_TO_TASK
 
@@ -67,7 +67,7 @@ def test_dispatcher_and_bridge_use_canonical_fail_loud_contract():
     dispatcher = DISPATCHER.read_text()
     bridge = BRIDGE.read_text()
     for text in (dispatcher, bridge):
-        assert "from colmag_ros import m104c4_execution_semantics" in text
+        assert "from colmag_ros import execution_semantics" in text
         assert "validated_execution_contract()" in text
         assert "spec_from_file_location" not in text
         assert "getattr(_C4" not in text
@@ -77,7 +77,7 @@ def test_dispatcher_import_fails_when_canonical_semantics_module_is_missing(monk
     empty_package = ModuleType("colmag_ros")
     empty_package.__path__ = []
     monkeypatch.setitem(sys.modules, "colmag_ros", empty_package)
-    monkeypatch.delitem(sys.modules, "colmag_ros.m104c4_execution_semantics", raising=False)
+    monkeypatch.delitem(sys.modules, "colmag_ros.execution_semantics", raising=False)
     spec = importlib.util.spec_from_file_location("missing_c4_dispatcher", DISPATCHER)
     module = importlib.util.module_from_spec(spec)
     with pytest.raises(ImportError):
@@ -86,7 +86,7 @@ def test_dispatcher_import_fails_when_canonical_semantics_module_is_missing(monk
 
 def test_mouse_toolbar_stop_uses_existing_c4_cancel_contract():
     confirms = importlib.import_module("colmag_ros.dashboard_confirm_publisher")
-    semantics = importlib.import_module("colmag_ros.m104c4_execution_semantics")
+    semantics = importlib.import_module("colmag_ros.execution_semantics")
     payload = confirms.build_mouse_toolbar_stop_payload(123.0)
 
     assert payload == {
@@ -120,7 +120,7 @@ def test_mouse_toolbar_stop_uses_existing_c4_cancel_contract():
 
 
 def test_mouse_toolbar_wording_and_legacy_gamepad_mapping_scope():
-    dashboard = (ROS_SCRIPTS / "magnetic_trajectory_dashboard_node.py").read_text()
+    dashboard = dashboard_source()
     controller_input = (ROS_PACKAGE / "dashboard_controller_input.py").read_text()
     assert "OCR toolbar" not in dashboard
     assert '"A": "S"' in controller_input

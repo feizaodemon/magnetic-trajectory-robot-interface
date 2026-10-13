@@ -51,7 +51,7 @@
   </node>
 
   <group if="$(arg start_adapter)">
-    <include file="$(find colmag_ros)/launch/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch">
+    <include file="$(find colmag_ros)/launch/colmag_fr3_task_trajectory_adapter.launch">
       <arg name="send_goals" value="false" />
       <arg name="arm_id" value="$(arg arm_id)" />
       <arg name="follow_joint_trajectory_action" value="$(arg follow_joint_trajectory_action)" />

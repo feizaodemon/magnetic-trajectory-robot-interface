@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evaluate a DTW template bank against existing dashboard runtime samples.
 
-M104-B2c offline feasibility tooling. Loads a template bank JSON, extracts
+Offline feasibility tooling. Loads a template bank JSON, extracts
 ``raw_symbol_capture.points`` from runtime sample JSONs, ranks every query
 against the bank, and reports accuracy / confusion / margin / threshold-grid
 behavior. Runtime queries are never y-flipped; the seed-side y-flip decision
@@ -20,17 +20,17 @@ from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-SCRIPTS = REPO / "colmag_ros" / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
+PACKAGE_SRC = REPO / "colmag_ros" / "src"
+if str(PACKAGE_SRC) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_SRC))
 
-from dtw_dataset_io import (  # noqa: E402
+from colmag_ros.dtw_dataset_io import (  # noqa: E402
     ensure_output_dir,
     load_runtime_sample,
     write_csv,
     write_json,
 )
-from dtw_template_bank_tools import (  # noqa: E402
+from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
     DEFAULT_EVAL_DIR,
     decide_acceptance,
     is_bad_intended_label,
@@ -46,7 +46,7 @@ MIN_MARGIN_GRID = (0.0, 0.02, 0.05, 0.10)
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Offline M104-B2c: evaluate a DTW template bank on runtime samples."
+        description="Offline: evaluate a DTW template bank on runtime samples."
     )
     parser.add_argument("--template-bank", required=True)
     parser.add_argument("--runtime-samples-root",

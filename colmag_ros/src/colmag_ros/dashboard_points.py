@@ -5,6 +5,8 @@ preview recognition, and tests. It does not import ROS, Tk, recognizers, or any
 robot execution path.
 """
 
+from colmag_ros.trajectory_strokes import flatten_strokes
+
 
 def coerce_xy_point(point):
     """Return ``(x, y)`` floats from supported point shapes, or ``None``."""
@@ -82,11 +84,3 @@ def clean_stroke_points(trail):
 def build_ocr_stroke_points(trail):
     """Clean stroke points for OCR/preview recognition."""
     return clean_stroke_points(trail)
-
-
-def flatten_strokes(strokes):
-    """Flatten ordered strokes into one ordered point list."""
-    points = []
-    for stroke in strokes:
-        points.extend(stroke)
-    return points

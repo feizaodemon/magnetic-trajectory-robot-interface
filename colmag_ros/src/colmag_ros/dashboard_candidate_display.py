@@ -40,7 +40,7 @@ def candidate_backend_status_text(payload):
 def candidate_display_name(candidate):
     """Display-only label text for a candidate row; never affects dispatch."""
     try:
-        from colmag_ros.m104c2c3_display_semantics import display_label_for_candidate
+        from colmag_ros.display_semantics import display_label_for_candidate
     except Exception:
         display_label_for_candidate = None
     if display_label_for_candidate is not None:

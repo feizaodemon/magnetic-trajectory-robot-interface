@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import math
 import sys
 import time
 import uuid
@@ -12,15 +11,12 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(_PACKAGE_SRC))
 
 from colmag_ros import control_mode
-from colmag_ros import m104c4_execution_semantics
+from colmag_ros import execution_semantics
+from colmag_ros.param_utils import bool_param, finite_float
 
-_C4_CONTRACT = m104c4_execution_semantics.validated_execution_contract()
-C4_MAPPING_NAME = _C4_CONTRACT["mapping_name"]
+_C4_CONTRACT = execution_semantics.validated_execution_contract()
 C4_LABEL_TO_TASK = _C4_CONTRACT["label_to_task"]
 C4_SAFE_GAZEBO_TASKS = set(_C4_CONTRACT["safe_tasks"])
-DEFAULT_LABEL_TO_TASK = dict(C4_LABEL_TO_TASK)
-
-SAFE_GAZEBO_DEMO_TASKS = set(C4_SAFE_GAZEBO_TASKS)
 
 REVIEW_TASKS = {
     "PICK_PLACE",
@@ -42,20 +38,10 @@ CRITICAL_TASKS = {
 STOP_CLEAR_TASKS = {"STOP", "CLEAR"}
 
 
-def bool_param(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
-
-
 def normalize_allowed_task_set(value):
     name = str(value or "").strip().lower()
     if name in ("", "all", "all_legacy", "legacy"):
         return "all_legacy"
-    if name == "safe_gazebo_demo":
-        return "safe_gazebo_demo"
     return "safe_gazebo_demo"
 
 
@@ -65,7 +51,7 @@ def task_safety_class(task):
         return "CRITICAL"
     if task in REVIEW_TASKS:
         return "REVIEW"
-    if task in SAFE_GAZEBO_DEMO_TASKS:
+    if task in C4_SAFE_GAZEBO_TASKS:
         return "SAFE"
     return "REVIEW"
 
@@ -90,18 +76,10 @@ def should_publish_task_command(command, allowed_task_set="all_legacy", allow_cr
     if safety_class == "CRITICAL" and not bool_param(allow_critical_tasks):
         return False, "critical_task_blocked"
 
-    if task_set == "safe_gazebo_demo" and task not in SAFE_GAZEBO_DEMO_TASKS:
+    if task_set == "safe_gazebo_demo" and task not in C4_SAFE_GAZEBO_TASKS:
         return False, "task_not_in_allowed_set"
 
     return True, ""
-
-
-def finite_float(value, default=0.0):
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return default
-    return parsed if math.isfinite(parsed) else default
 
 
 def parse_mapping(mapping_text):
@@ -110,17 +88,15 @@ def parse_mapping(mapping_text):
     try:
         parsed = json.loads(mapping_text)
     except Exception:
-        return dict(DEFAULT_LABEL_TO_TASK)
+        return dict(C4_LABEL_TO_TASK)
     if not isinstance(parsed, dict):
-        return dict(DEFAULT_LABEL_TO_TASK)
+        return dict(C4_LABEL_TO_TASK)
     return {str(k).upper(): str(v) for k, v in parsed.items()}
 
 
 def label_to_task_mapping_for_name(mapping_name):
-    name = str(mapping_name or "").strip().lower()
-    if name == C4_MAPPING_NAME:
-        return dict(C4_LABEL_TO_TASK)
-    return dict(DEFAULT_LABEL_TO_TASK)
+    # The C4 mapping is the only one; any other name falls back to it.
+    return dict(C4_LABEL_TO_TASK)
 
 
 def build_task_command(

@@ -13,13 +13,13 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO / "colmag_ros" / "scripts"
-DASHBOARD = REPO / "colmag_ros" / "scripts" / "magnetic_trajectory_dashboard_node.py"
-HELPER = REPO / "colmag_ros" / "scripts" / "dashboard_candidate_display.py"
+HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_candidate_display.py"
 
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-import dashboard_candidate_display as display  # noqa: E402
+from colmag_ros import dashboard_candidate_display as display  # noqa: E402
+from dashboard_source import dashboard_source  # noqa: E402
 
 
 class CandidateDisplayHelperTests(unittest.TestCase):
@@ -433,7 +433,7 @@ class CandidateDisplayHelperTests(unittest.TestCase):
 
 class DashboardExtractionStaticTests(unittest.TestCase):
     def test_dashboard_imports_and_uses_helper(self):
-        text = DASHBOARD.read_text()
+        text = dashboard_source()
         self.assertIn("from colmag_ros.dashboard_candidate_display import", text)
         self.assertIn("format_candidate_result_summary", text)
         self.assertIn("format_candidate_rows_for_display", text)
@@ -458,7 +458,7 @@ class DashboardExtractionStaticTests(unittest.TestCase):
             self.assertNotIn(forbidden, text)
 
     def test_dashboard_confirmation_behavior_not_modified_by_helper(self):
-        text = DASHBOARD.read_text()
+        text = dashboard_source()
         for expected in (
             "def _external_confirm_active(",
             "publish_external_payload(",

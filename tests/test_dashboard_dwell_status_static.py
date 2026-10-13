@@ -1,4 +1,4 @@
-from colmag_ros.scripts.dashboard_dwell_status import (
+from colmag_ros.dashboard_dwell_status import (
     format_interaction_instruction,
     format_integrated_dwell_status_texts,
     format_ocr_canvas_dwell_texts,

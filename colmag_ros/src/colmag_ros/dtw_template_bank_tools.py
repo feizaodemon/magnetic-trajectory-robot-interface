@@ -1,4 +1,4 @@
-"""Package-level helpers for the M104 DTW template bank.
+"""Package-level helpers for the DTW template bank.
 
 No ROS imports live here. Preprocessing and DTW distance are shared with the
 runtime recognizer through ``colmag_ros.dtw_bank_features`` so offline
@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from colmag_ros.param_utils import finite_float
 from colmag_ros.dtw_bank_features import (
     dtw_distance,
     normalize_points as preprocess_points,
@@ -56,7 +57,10 @@ def coerce_points(points: Sequence[Any]) -> List[Point2D]:
 TEMPLATE_BANK_SCHEMA = "colmag_dtw_template_bank.v1"
 MODEL_TYPE = "dtw_template_bank"
 DEFAULT_LABELS = ("1", "2", "3")
-SEMANTIC_EXPANSION_LABELS = ("A", "C", "N", "O", "X", "L", "V")
+# Runtime gate defaults shared by the recognizer node and the offline evaluation.
+DEFAULT_MAX_DISTANCE = 0.12
+DEFAULT_MIN_MARGIN = 0.01
+DEFAULT_MIN_CONFIDENCE = 0.30
 BAD_INTENDED_LABELS = frozenset({"bad", "ambiguous", "noise", "random", "none", "na", "n/a"})
 
 DEFAULT_PREPROCESS_PROFILE = "mouse_centroid_maxabs_resample64"
@@ -290,7 +294,7 @@ def decide_acceptance(best_distance: float, margin: float,
     }
 
 
-# --- M104-B2d opt-in runtime backend helpers (still pure / ROS-free) ---
+# --- Opt-in runtime backend helpers (still pure / ROS-free) ---
 
 RUNTIME_UNCERTAINTY_REASONS = {
     "no_candidates": "dtw_no_candidates",
@@ -298,14 +302,6 @@ RUNTIME_UNCERTAINTY_REASONS = {
     "low_margin": "dtw_margin_too_small",
     "low_confidence": "dtw_confidence_too_low",
 }
-
-
-def finite_or_none(value: Any) -> Optional[float]:
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return None
-    return parsed if math.isfinite(parsed) else None
 
 
 def confidence_from_distance(distance: Any, max_distance: Any) -> float:
@@ -387,7 +383,7 @@ def bank_candidates_from_ranking(ranking: Dict[str, Any], max_distance: Any,
             "label": str(item["label"]),
             "confidence": confidence_from_distance(distance, max_distance),
             "distance": distance,
-            "margin": finite_or_none(margin),
+            "margin": finite_float(margin),
             "backend": str(backend),
             "template_bank_name": str(template_bank_name),
             "template_id": str(item.get("template_id", "")),
@@ -404,8 +400,8 @@ def _runtime_gate(accepted: bool, reason: str, candidates: Sequence[Dict[str, An
         "uncertainty_reason": "" if accepted else str(reason),
         "top1_confidence": float(candidates[0]["confidence"]) if candidates else 0.0,
         "top2_confidence": float(candidates[1]["confidence"]) if len(candidates) > 1 else 0.0,
-        "best_distance": finite_or_none(best_distance),
-        "margin": finite_or_none(margin),
+        "best_distance": finite_float(best_distance),
+        "margin": finite_float(margin),
         "max_distance": float(max_distance),
         "min_margin": float(min_margin),
         "min_confidence": float(min_confidence),
@@ -413,9 +409,9 @@ def _runtime_gate(accepted: bool, reason: str, candidates: Sequence[Dict[str, An
 
 
 def recognize_with_template_bank(points: Sequence[Any], state: Optional[Dict[str, Any]],
-                                 top_k: int = 3, max_distance: float = 0.12,
-                                 min_margin: float = 0.01,
-                                 min_confidence: float = 0.30):
+                                 top_k: int = 3, max_distance: float = DEFAULT_MAX_DISTANCE,
+                                 min_margin: float = DEFAULT_MIN_MARGIN,
+                                 min_confidence: float = DEFAULT_MIN_CONFIDENCE):
     """Pure opt-in runtime path: capture points -> (candidates, gate, metadata).
 
     Runtime query points are never y-flipped; the y-flip decision lives in the

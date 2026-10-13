@@ -1,4 +1,4 @@
-"""Static checks for the M104-LAB2 curated 8-symbol DTW bank.
+"""Static checks for the curated 8-symbol DTW bank.
 
 No ROS master, Gazebo, GUI, serial, real board, controller_manager, or real-FR3
 runtime is started. These tests only read JSON and launch XML.
@@ -18,9 +18,8 @@ TRACKED_BANK_ARG = "$(find colmag_ros)/config/dtw_banks/m104c1_8symbol_mouse_see
 OUTPUT_BANK_FRAGMENT = "outputs/classifier_artifacts/dtw_bank/m104c1_8symbol_mouse_seeded_yflip.json"
 TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
 
-C4_LAUNCH = REPO / "colmag_ros" / "launch" / "m104c4_8symbol_dtw_gazebo_robot_body_demo.launch"
 C4_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_gazebo_robot_body_demo.launch"
-C2C3_LAUNCH = REPO / "colmag_ros" / "launch" / "m104c2c3_8symbol_dtw_recognition_display.launch"
+RECOGNIZER_LAUNCH = REPO / "colmag_ros" / "launch" / "dtw_template_bank_recognizer.launch"
 C2C3_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_recognition_display.launch"
 
 
@@ -65,9 +64,8 @@ class CuratedDtwBankTests(unittest.TestCase):
 
     def test_default_8symbol_launches_use_tracked_bank(self):
         for launch, arg_name in (
-            (C4_LAUNCH, "bank_path"),
             (C4_ALIAS, "bank_path"),
-            (C2C3_LAUNCH, "dtw_template_bank_path"),
+            (RECOGNIZER_LAUNCH, "dtw_template_bank_path"),
             (C2C3_ALIAS, "dtw_template_bank_path"),
         ):
             args = _arg_defaults(launch)

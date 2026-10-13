@@ -1,4 +1,4 @@
-"""Display-only semantic labels for M104-C2C3.
+"""Display-only semantic labels for the 8-symbol recognition display.
 
 This module is intentionally small and ROS-free. It does not dispatch tasks,
 publish labels, or touch Gazebo / robot routes. The strings here are future
@@ -49,10 +49,6 @@ C2C3_DISPLAY_SEMANTICS = {
         "note": "Future planning metadata only; no execution binding.",
     },
 }
-
-
-def target_labels_csv():
-    return ",".join(C2C3_TARGET_LABELS)
 
 
 def display_semantics_for_label(label):

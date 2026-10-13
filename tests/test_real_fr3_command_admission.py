@@ -17,7 +17,7 @@ ADAPTER_ENTRYPOINT = (
     REPO
     / "colmag_ros"
     / "launch"
-    / "m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch"
+    / "colmag_fr3_task_trajectory_adapter.launch"
 )
 
 

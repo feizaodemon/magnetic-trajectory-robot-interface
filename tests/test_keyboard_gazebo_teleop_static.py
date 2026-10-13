@@ -21,7 +21,7 @@ ADAPTER_LAUNCH = (
     REPO
     / "colmag_ros"
     / "launch"
-    / "m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch"
+    / "colmag_fr3_task_trajectory_adapter.launch"
 )
 ADAPTER_SOURCE = REPO / "colmag_ros" / "src" / "colmag_fr3_task_trajectory_adapter.cpp"
 TELEOP_SCRIPT = REPO / "colmag_ros" / "scripts" / "keyboard_teleop_node.py"
@@ -194,7 +194,7 @@ def test_hardware_stack_routes_the_selected_command_topic_to_strategy_a():
         include
         for include in root.findall("include")
         if include.attrib.get("file", "").endswith(
-            "/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch"
+            "/colmag_fr3_task_trajectory_adapter.launch"
         )
     )
     include_args = {

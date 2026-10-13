@@ -76,7 +76,7 @@ def test_real_fr3_defaults_use_visible_bounded_amplitudes_and_semantic_allowlist
         assert value in config
     assert 'name="target_joint_name" default="$(arg arm_id)_joint1"' in stack
     entrypoint = (
-        REPO / "colmag_ros/launch/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch"
+        REPO / "colmag_ros/launch/colmag_fr3_task_trajectory_adapter.launch"
     ).read_text()
     assert 'name="hexagon_primary_joint_name" default="$(arg arm_id)_joint1"' in entrypoint
     assert 'name="hexagon_secondary_joint_name" default="$(arg arm_id)_joint6"' in entrypoint

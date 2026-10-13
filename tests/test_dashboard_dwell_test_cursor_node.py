@@ -1,6 +1,6 @@
 import pytest
 
-from colmag_ros.scripts.dashboard_dwell_test_cursor_node import (
+from dashboard_dwell_test_cursor_node import (
     LAYOUT_GAMEPAD,
     TEST_SEQUENCE_GAMEPAD_A_BLOCK_THEN_X,
     TEST_SEQUENCE_GAMEPAD_B_THEN_C,
@@ -10,10 +10,12 @@ from colmag_ros.scripts.dashboard_dwell_test_cursor_node import (
     rect_center,
     target_world_point_for_button,
 )
-from colmag_ros.scripts.magnetic_trajectory_dashboard_node import (
-    build_canvas_reachable_preview_hit_zones,
+from colmag_ros.dashboard_controller_input import (
     build_gamepad_button_rects,
     build_virtual_button_rects,
+)
+from colmag_ros.dashboard_geometry import (
+    build_canvas_reachable_preview_hit_zones,
     get_virtual_button_under_cursor,
     map_trajectory_point,
     map_world_to_canvas,

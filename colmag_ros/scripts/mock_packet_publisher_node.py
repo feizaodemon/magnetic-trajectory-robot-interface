@@ -3,6 +3,7 @@
 import time
 
 from colmag_ros.adapter import make_mock_raw_packet_json
+from colmag_ros.param_utils import bool_param
 
 
 MOCK_RIGHT_GESTURE = (
@@ -19,12 +20,6 @@ MOCK_RIGHT_GESTURE = (
     ("hold_end", 0.070, 0.000),
     ("hold_end", 0.070, 0.000),
 )
-
-
-def _bool_param(value):
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() in ("1", "true", "yes", "on")
 
 
 def wrap_tracking_x(x, x_min, x_max):
@@ -46,7 +41,7 @@ class MockPacketPublisherNode:
         self.publish_topic = rospy.get_param("~publish_topic", "/colmag/raw_packet")
         self.publisher = rospy.Publisher(self.publish_topic, String, queue_size=10)
         self.publish_rate = float(rospy.get_param("~publish_rate", 10.0))
-        self.wrap_tracking_position = _bool_param(
+        self.wrap_tracking_position = bool_param(
             rospy.get_param("~wrap_tracking_position", False)
         )
         self.wrap_x_min = float(rospy.get_param("~wrap_x_min", 0.0))

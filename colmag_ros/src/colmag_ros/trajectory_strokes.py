@@ -7,7 +7,7 @@ The helpers accept the old flat ``points`` representation and the newer
 from __future__ import annotations
 
 import math
-from typing import Any, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 
 Point2D = Tuple[float, float]
@@ -90,21 +90,6 @@ def normalize_payload_strokes(payload: Any) -> List[Stroke]:
 
 def flatten_strokes(strokes: Sequence[Sequence[Point2D]]) -> List[Point2D]:
     return [point for stroke in strokes for point in stroke]
-
-
-def stroke_bounds(strokes: Sequence[Sequence[Point2D]]) -> Optional[Tuple[float, float, float, float]]:
-    points = flatten_strokes(strokes)
-    if not points:
-        return None
-    xs = [point[0] for point in points]
-    ys = [point[1] for point in points]
-    return min(xs), max(xs), min(ys), max(ys)
-
-
-def iter_stroke_segments(strokes: Sequence[Sequence[Point2D]]) -> Iterable[Tuple[Point2D, Point2D]]:
-    for stroke in strokes:
-        for start, end in zip(stroke, stroke[1:]):
-            yield start, end
 
 
 def stroke_metadata(strokes: Sequence[Sequence[Point2D]]) -> dict:
