@@ -24,10 +24,10 @@ from unittest import mock
 mock_rospy = mock.MagicMock()
 mock_rospy.get_time = MockTime().get_time
 mock_rospy.get_param.side_effect = lambda param_name, default=None: default
-sys.modules["rospy"] = mock_rospy
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[1] / "colmag_ros" / "scripts"))
-from raw_packet_to_trajectory_2d_node import RawPacketToTrajectory2DNode
+# The node keeps the mock as its module-level rospy. Restore sys.modules after
+# the import so other test files still see the real rospy.
+with mock.patch.dict(sys.modules, {"rospy": mock_rospy}):
+    from raw_packet_to_trajectory_2d_node import RawPacketToTrajectory2DNode
 
 
 def test_raw_packet_parsing():
