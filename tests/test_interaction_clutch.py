@@ -2,6 +2,7 @@ from colmag_ros import dashboard_controller_input as controls
 from colmag_ros import dashboard_geometry as geometry
 from colmag_ros import dashboard_sample_lifecycle as lifecycle
 from colmag_ros.dashboard_confirm_publisher import build_mouse_toolbar_stop_payload
+from colmag_ros.dashboard_dwell_timer import DwellTimer
 import magnetic_trajectory_dashboard_node as dashboard
 from magnetic_trajectory_dashboard_node import (
     MagneticTrajectoryDashboardNode,
@@ -176,13 +177,8 @@ def test_visible_button_dwell_fires_once_and_navigation_resets_it(monkeypatch):
         hover_progress_enabled=True,
     )
     node.mouse_hover_button = ""
-    node.board_hover_button = ""
     node.hover_source = "none"
-    node.ocr_hover_button = ""
-    node._dwell_active_button = ""
-    node.ocr_hover_started_at = None
-    node.ocr_dwell_progress = 0.0
-    node.ocr_dwell_fired = False
+    node.dwell_timer = DwellTimer()
     node._board_cursor_preview_button = lambda: "B"
     node._preview_button_enabled = lambda button_id: button_id == "B"
     node._handle_preview_button_action = lambda button_id: actions.append(button_id)
@@ -216,13 +212,8 @@ def test_disabled_visible_button_does_not_accumulate_dwell_or_fire(monkeypatch):
         hover_progress_enabled=True,
     )
     node.mouse_hover_button = ""
-    node.board_hover_button = ""
     node.hover_source = "none"
-    node.ocr_hover_button = ""
-    node._dwell_active_button = ""
-    node.ocr_hover_started_at = None
-    node.ocr_dwell_progress = 0.0
-    node.ocr_dwell_fired = False
+    node.dwell_timer = DwellTimer()
     node._board_cursor_preview_button = lambda: "C"
     node._preview_button_enabled = lambda _button_id: False
     node._handle_preview_button_action = lambda button_id: actions.append(button_id)
@@ -237,7 +228,7 @@ def test_disabled_visible_button_does_not_accumulate_dwell_or_fire(monkeypatch):
     node._process_preview_dwell()
     node._process_preview_dwell()
 
-    assert node.ocr_dwell_progress == 0.0
+    assert node.dwell_timer.progress == 0.0
     assert node.dwell_state["current_button_id"] == ""
     assert node.dwell_state["activated_button_id"] == ""
     assert actions == []
@@ -332,13 +323,13 @@ def test_existing_dwell_progress_remains_the_only_hover_ring_owner(monkeypatch):
 
         # B has no drawn sample, so it is disabled: hovering it draws no ring.
         _hover_dwell(harness, "B", 0.5)
-        assert node.ocr_dwell_progress == 0.0
+        assert node.dwell_timer.progress == 0.0
         assert ring_canvas(node).drawn("arc") == []
 
         harness.send_sample_and_candidates()
         _hover_dwell(harness, "C", 0.5)
         ring = geometry.preview_button_style("C", True, active=True)["ring"]
-        assert node.ocr_dwell_progress == 0.5, layout
+        assert node.dwell_timer.progress == 0.5, layout
         arcs = ring_canvas(node).drawn("arc")
         assert [(arc["outline"], arc["extent"]) for arc in arcs] == [(ring, -180.0)], layout
         # Drawing the ring schedules nothing; only the dwell loop's next tick is queued.
@@ -346,7 +337,7 @@ def test_existing_dwell_progress_remains_the_only_hover_ring_owner(monkeypatch):
 
     # Rejecting mid-dwell disables C; the canvas ring disappears before the next tick.
     harness.press_key("a")
-    assert node.ocr_dwell_progress == 0.5
+    assert node.dwell_timer.progress == 0.5
     assert node.canvas.drawn("arc") == []
 
 
@@ -419,7 +410,7 @@ def test_mouse_confirmed_progress_advances_to_act_without_republishing_or_cleari
     node.ocr_panel_state = "CONFIRM_PENDING"
     node.current_candidate_payload = candidate
     node.last_confirmed_label = ""
-    node.ocr_hover_button = ""
+    node.dwell_timer = DwellTimer()
     node.all_strokes = []
     node.mouse_mode_var = Variable()
     node.mouse_workflow_var = Variable()

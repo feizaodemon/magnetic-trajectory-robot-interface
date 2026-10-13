@@ -145,8 +145,7 @@ class DashboardSampleCaptureMixin:
         self.last_capture_sample_id = None
         self.last_capture_sequence_id = None
         self.trajectory_candidates = []
-        self.candidate_status = "idle"
-        self.preview_interaction_state = "new_drawing_started"
+        self.preview_interaction.new_drawing()
 
     def _ingest_trajectory_sample(self, data, pt):
         """Pure trajectory viewer: update the trail + live status only.
@@ -364,8 +363,7 @@ class DashboardSampleCaptureMixin:
         self._clear_trajectory_trace()
         self.recorded_segment = []
         self.segment_recorder.start(time.time())
-        self.candidate_status = "recording"
-        self.preview_interaction_state = "recording"
+        self.preview_interaction.recording()
         self._update_candidate_ui()
         self._schedule_ui_refresh()
 
@@ -379,15 +377,13 @@ class DashboardSampleCaptureMixin:
         if state == STATE_RECORDING_DONE:
             self._on_recording_done()
         elif state == STATE_RECORDING:
-            self.candidate_status = "recording"
-            self.preview_interaction_state = "recording"
+            self.preview_interaction.recording()
             self._update_candidate_ui()
 
     def _on_recording_done(self):
         """A complete segment is captured. Optionally auto-recognize it."""
         self.recorded_segment = self.segment_recorder.segment()
-        self.candidate_status = "recording_done"
-        self.preview_interaction_state = "recording_done"
+        self.preview_interaction.recording_done()
         self._update_candidate_ui()
         self._schedule_ui_refresh()
         if self.config.candidate_preview_enabled and self.config.auto_recognize:
@@ -463,8 +459,7 @@ class DashboardSampleCaptureMixin:
             enabled=self.config.board_sample_cleanup_enabled,
         )
         if len(points) < int(self.config.candidate_min_points):
-            self.candidate_status = "collecting"
-            self.preview_interaction_state = "too_few_drawing_points"
+            self.preview_interaction.too_few_points()
             text = "Too few published drawing points: %d / %d (raw %d)" % (
                 len(points), int(self.config.candidate_min_points), len(raw_points))
             self.root.after(0, lambda t=text: self.traj_captured_sample_var.set(t))
@@ -497,8 +492,7 @@ class DashboardSampleCaptureMixin:
         self._set_captured_sample_display(sample_id, points, raw_point_count=len(raw_points))
         self._record_real_board_sample(payload, raw_points, points, cleanup_meta)
         self.symbol_capture_pub.publish(self.String(data=json.dumps(payload, sort_keys=True)))
-        self.candidate_status = "recognizing"
-        self.preview_interaction_state = "symbol_capture_published"
+        self.preview_interaction.capture_published()
         self._update_candidate_ui()
         self._publish_dashboard_state()
         return True
