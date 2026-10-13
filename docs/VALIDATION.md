@@ -20,8 +20,9 @@ Tests that import `rospy` or ROS message packages skip themselves when ROS Noeti
 | `pytest` | Python 3.10, no ROS | the suite; ROS-only tests skip |
 | `pytest-noetic` | `ros:noetic-ros-base` container, Python 3.8 | the full suite, including the ROS-only tests |
 | `ruff` | Python 3.10 | `ruff check` with the settings in `ruff.toml`: undefined names, unused imports and variables, and annotations that would not run on Python 3.8 |
+| `catkin-build` | `ros:noetic-ros-base` container | `catkin_make install` of `colmag_ros` and `colmag_gazebo_stub` in Release mode, then checks that both FR3 adapter executables and the Python packages are installed |
 
-Both pytest jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. No job runs `catkin_make`, starts ROS nodes, or touches Gazebo, GUI, serial, or hardware. Each job's log holds the exact result for its commit.
+Both pytest jobs also compile and run the ROS-free C++ safety tests under `tests/cpp/`. No job starts ROS nodes or launch files, or touches Gazebo, GUI, serial, controllers, or hardware. Each job's log holds the exact result for its commit.
 
 ## ROS1 compile/link build
 
@@ -34,7 +35,9 @@ catkin_make --pkg colmag_ros colmag_gazebo_stub
 ```
 
 This build compiles and links the shared `Fr3CartesianTeleopCore`, the Cartesian
-adapter used by both backends, and the discrete FR3 task adapter. A successful
+adapter used by both backends, and the discrete FR3 task adapter. On every
+pull request, the `catkin-build` CI job builds the same targets with
+`catkin_make install`. A successful
 build does not authorize or execute Gazebo, serial, GUI, controller, or physical
 hardware runtime.
 
