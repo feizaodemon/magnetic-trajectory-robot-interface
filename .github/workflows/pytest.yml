@@ -32,16 +32,20 @@ jobs:
     runs-on: ubuntu-22.04
     container: ros:noetic-ros-base
     steps:
-      - uses: actions/checkout@v7
-      - name: Install dependencies
-        # control_msgs is the one message package ros-base does not include.
+      - name: Install system packages
+        # git comes before checkout so it makes a real clone; some tests run
+        # git. control_msgs is the one message package ros-base lacks.
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            python3-pip libboost-dev ros-noetic-control-msgs
-          python3 -m pip install -r requirements.txt
+            git python3-pip libboost-dev ros-noetic-control-msgs
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements.txt
       - name: Run pytest
         shell: bash
         run: |
+          # The container runs as root; the checkout belongs to the runner user.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           source /opt/ros/noetic/setup.bash
           python3 -m pytest -q -rs
