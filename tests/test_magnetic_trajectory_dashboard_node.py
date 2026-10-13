@@ -31,7 +31,7 @@ from colmag_ros.dashboard_sample_lifecycle import (
     safe_sample_recording_name,
     update_drawing_zone_sample_state,
 )
-from dashboard_source import dashboard_source
+from dashboard_harness import DashboardHarness
 
 
 def test_catkin_wrapper_exec_adds_package_source_to_import_path():
@@ -202,38 +202,53 @@ def test_preview_hover_cancel_resets_dwell_only_contract():
         "activated_button_id": "",
     }
 
-def test_preview_pointer_leave_does_not_clear_sample_or_candidate_state():
-    text = dashboard_source()
-    clear_start = text.index("def _clear_ocr_hover_button(")
-    clear_body = text[clear_start:text.index("\n    def _update_ocr_toolbar_visuals", clear_start)]
-    forbidden = (
-        "_clear_trajectory_trace",
-        "_reject_preview_candidate",
-        "_publish_trajectory_symbol_capture",
-        "captured_path = []",
-        "current_candidate_payload = None",
-        "trajectory_candidates = []",
-        "_reset_drawing_sample_state",
-        "_clear_published_sample_state",
+def test_preview_pointer_leave_does_not_clear_sample_or_candidate_state(monkeypatch):
+    harness = DashboardHarness(
+        monkeypatch, candidate_preview_enabled=True, hover_dwell_enabled=True)
+    node = harness.node
+    harness.send_sample_and_candidates()
+    button = node.ocr_button_widgets["C"]["canvas"]
+    harness.fire(button, "<Enter>")
+    assert node.mouse_hover_button == "C"
+    before = (
+        list(node.captured_path),
+        node.current_candidate_payload,
+        list(node.trajectory_candidates),
     )
-    for token in forbidden:
-        assert token not in clear_body
 
-def test_trajectory_keyboard_c_confirms_and_x_clears():
-    text = dashboard_source()
-    key_start = text.index("def _on_key_press(")
-    key_body = text[key_start:]
-    trajectory_branch = key_body[key_body.index("if self.is_trajectory_mode:"):key_body.index("if self.demo_input_mode != \"ocr_canvas\":")]
-    c_branch = trajectory_branch[trajectory_branch.index('elif key == "c"'):trajectory_branch.index('elif key in ("a", "x")')]
-    assert '_handle_preview_button_action("C")' in c_branch
-    assert "_clear_trajectory_trace()" not in c_branch
-    ax_branch = trajectory_branch[trajectory_branch.index('elif key in ("a", "x")'):trajectory_branch.index('elif keysym in ("return", "kp_enter")')]
-    assert "_handle_preview_button_action(key)" in ax_branch
-    action_body_start = text.index("def _handle_preview_button_action(")
-    action_body = text[action_body_start:text.index("\n    def _preview_button_enabled", action_body_start)]
-    assert "_preview_confirm_candidate()" in action_body
-    assert "_clear_trajectory_trace()" in action_body
-    assert "_reject_preview_candidate()" in action_body
+    harness.fire(button, "<Leave>")
+    harness.fire(harness.root, "<Leave>")
+
+    assert node.mouse_hover_button == ""
+    assert (node.captured_path, node.current_candidate_payload, node.trajectory_candidates) == before
+    assert harness.messages(node.symbol_capture_topic) == []
+
+def test_trajectory_keyboard_c_confirms_and_x_clears(monkeypatch):
+    harness = DashboardHarness(
+        monkeypatch, candidate_preview_enabled=True,
+        integrated_dashboard_confirm_enabled=True, publish_confirmed_label=True)
+    node = harness.node
+    harness.send_sample_and_candidates()
+
+    harness.press_key("c")
+    assert [p["label"] for p in harness.published_json(node.confirmed_label_topic)] == ["2"]
+    assert node.preview_interaction_state == "preview_confirmed"
+    assert node.captured_path, "C confirms without clearing the sample"
+
+    harness.press_key("a")
+    assert node.preview_interaction_state == "rejected"
+    assert node.current_candidate_payload is None
+    assert node.captured_path == []
+
+    harness.send_sample_and_candidates()
+    harness.press_key("x")
+    assert node.preview_interaction_state == "cleared"
+    assert node.current_candidate_payload is None
+    assert node.captured_path == []
+
+    harness.send_sample_and_candidates()
+    harness.press_key("", keysym="Return")
+    assert node.preview_interaction_state == "preview_confirmed"
 
 def test_control_zone_points_are_ignored_by_drawing_zone_filter():
     bounds = (-1.0, 1.0, -1.0, 1.0)

@@ -3,7 +3,8 @@
 No ROS master, Gazebo, Tk display, serial board, FR3, or hardware is started.
 These tests exercise the real-board / trajectory-preview C-confirm publish path
 (`_publish_preview_confirmed_label`) on a headless fake node built with
-``object.__new__`` so no rospy/tkinter is imported.
+``object.__new__`` so no rospy/tkinter is imported. The wiring tests build a
+full node on the fakes in ``dashboard_harness``.
 """
 
 import json
@@ -17,11 +18,15 @@ from magnetic_trajectory_dashboard_node import (
     should_suppress_repeated_confirm,
 )
 from colmag_ros.dashboard_confirm_publisher import PreviewConfirmPublisher
-from dashboard_source import dashboard_source
+from dashboard_harness import DashboardHarness
 
 
 REPO = Path(__file__).resolve().parents[1]
 HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_confirm_publisher.py"
+CONFIRM_PARAMS = {
+    "integrated_dashboard_confirm_enabled": True,
+    "publish_confirmed_label": True,
+}
 
 
 class _String:
@@ -141,35 +146,42 @@ class PreviewConfirmPublishTests(unittest.TestCase):
         self.assertEqual(json.loads(node.confirm_pub.published[1].data)["label"], "3")
 
 
-class PreviewConfirmWiringTests(unittest.TestCase):
-    def setUp(self):
-        self.src = dashboard_source()
-        self.helper_src = HELPER.read_text()
+def test_preview_c_confirm_publishes_the_shared_helper_payload_once(monkeypatch):
+    harness = DashboardHarness(monkeypatch, candidate_preview_enabled=True, **CONFIRM_PARAMS)
+    harness.send_sample_and_candidates()
+    expected = _Publisher()
+    PreviewConfirmPublisher(
+        string_factory=_String,
+        build_confirmed_label_payload=build_confirmed_label_payload,
+        should_suppress_repeated_confirm=should_suppress_repeated_confirm,
+        candidate_payload_key=candidate_payload_key,
+    ).publish_rank_one(expected, True, harness.node.trajectory_candidates, "")
 
-    def test_preview_confirm_calls_publisher(self):
-        # The preview C-confirm handler must invoke the publish path.
-        self.assertIn("def _preview_confirm_candidate", self.src)
-        self.assertIn("self._publish_preview_confirmed_label()", self.src)
+    harness.press_key("c")
+    harness.press_key("c")  # same candidates -> suppressed
 
-    def test_business_logic_moved_to_helper_module(self):
-        self.assertIn("from colmag_ros.dashboard_confirm_publisher import (", self.src)
-        self.assertIn("publish_rank_one", self.helper_src)
-        publish_method = self.src.split("def _publish_preview_confirmed_label", 1)[1].split(
-            "def _top_preview_candidate_label", 1
-        )[0]
-        self.assertNotIn("build_confirmed_label_payload(payload, 1)", publish_method)
-        self.assertNotIn("json.dumps(confirmed", publish_method)
+    published = harness.published_json(harness.node.confirmed_label_topic)
+    expected_payload = json.loads(expected.published[0].data)
+    assert len(published) == 1
+    for payload in (published[0], expected_payload):
+        payload.pop("timestamp")
+    assert published[0] == expected_payload
 
-    def test_helper_module_is_small(self):
-        self.assertLess(HELPER.read_text().count("\n") + 1, 1000)
 
-    def test_dashboard_has_no_task_command_publisher(self):
-        # The confirm seam must not wire the dashboard to /colmag/task_command.
-        self.assertNotIn("Publisher(self.task_command_topic", self.src)
+def test_helper_module_is_small():
+    assert HELPER.read_text().count("\n") + 1 < 1000
 
-    def test_publish_path_reuses_shared_builder_and_dedup(self):
-        self.assertIn("_build_confirmed_label_payload(payload, 1)", self.helper_src)
-        self.assertIn("_should_suppress_repeated_confirm(last_confirm_key, payload, 1)", self.helper_src)
+
+def test_dashboard_has_no_task_command_publisher(monkeypatch):
+    # Even with every publish gate on, the dashboard never publishes task commands.
+    harness = DashboardHarness(
+        monkeypatch, candidate_preview_enabled=True, control_mode_enabled=True,
+        publish_task_command=True, **CONFIRM_PARAMS)
+    assert harness.node.task_command_topic not in harness.publisher_topics()
+    assert any(
+        level == "warn" and "never publishes /colmag/task_command" in text
+        for level, text in harness.rospy.logs
+    )
 
 
 if __name__ == "__main__":

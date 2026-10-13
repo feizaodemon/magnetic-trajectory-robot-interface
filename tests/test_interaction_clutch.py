@@ -1,12 +1,17 @@
-import inspect
-
 from colmag_ros import dashboard_controller_input as controls
 from colmag_ros import dashboard_geometry as geometry
 from colmag_ros import dashboard_sample_lifecycle as lifecycle
+from colmag_ros.dashboard_confirm_publisher import build_mouse_toolbar_stop_payload
 import magnetic_trajectory_dashboard_node as dashboard
 from magnetic_trajectory_dashboard_node import (
     MagneticTrajectoryDashboardNode,
 )
+from dashboard_harness import SAMPLE_CAPTURE, DashboardHarness
+
+CONFIRM_PARAMS = {
+    "integrated_dashboard_confirm_enabled": True,
+    "publish_confirmed_label": True,
+}
 
 
 def _dispatch_probe():
@@ -247,41 +252,47 @@ def test_navigation_blocks_preview_pointer_and_keyboard_actions():
     assert actions == []
 
 
-def test_normal_dashboard_exposes_mode_but_keeps_sample_metrics_debug_only():
-    build_cards = inspect.getsource(
-        MagneticTrajectoryDashboardNode._build_trajectory_status_cards
+def test_normal_dashboard_exposes_mode_but_keeps_sample_metrics_debug_only(monkeypatch):
+    normal = DashboardHarness(monkeypatch, candidate_preview_enabled=True)
+    debug = DashboardHarness(
+        monkeypatch, candidate_preview_enabled=True, dashboard_debug_sample_panel=True)
+    operator_vars = (
+        "traj_clutch_mode_var", "traj_operator_status_var", "traj_operator_result_var")
+    debug_only_vars = (
+        "traj_result_var", "traj_valid_var", "traj_xyz_var", "traj_count_var",
+        "traj_input_gate_var", "traj_captured_sample_var",
+        "traj_candidate_points_var", "traj_sample_cleanup_var",
     )
-    normal_cards, debug_cards = build_cards.split(
-        "if self.dashboard_debug_sample_panel:", 1
-    )
-    redraw = inspect.getsource(MagneticTrajectoryDashboardNode._redraw_canvas)
+    for harness in (normal, debug):
+        for name in operator_vars:
+            assert getattr(harness.node, name) in harness.shown_variables(), name
+    for name in debug_only_vars:
+        assert getattr(normal.node, name) not in normal.shown_variables(), name
+        assert getattr(debug.node, name) in debug.shown_variables(), name
 
-    assert "self.traj_clutch_mode_var" in normal_cards
-    assert "self.traj_operator_status_var" in normal_cards
-    assert "self.traj_operator_result_var" in normal_cards
-    assert "self.traj_result_var" not in normal_cards
-    assert "self.traj_valid_var" not in normal_cards
-    assert "self.traj_xyz_var" not in normal_cards
-    assert "self.traj_count_var" not in normal_cards
-    assert "self.traj_input_gate_var" not in normal_cards
-    assert "self.traj_captured_sample_var" not in normal_cards
-    assert "self.traj_candidate_points_var" not in normal_cards
-    assert "self.traj_sample_cleanup_var" not in normal_cards
-    assert "self.traj_captured_sample_var" in debug_cards
-    assert "self.traj_candidate_points_var" in debug_cards
-    assert "self.traj_sample_cleanup_var" in debug_cards
-    assert "self.traj_valid_var" in debug_cards
-    assert "self.traj_xyz_var" in debug_cards
-    assert "self.traj_result_var" in debug_cards
-    assert 'getattr(self, "dashboard_debug_sample_panel", False)' in redraw
-    assert 'label += " (%d pts)"' in redraw
-    assert 'text="Drawing zone"' in redraw
-    assert "only this area enters DTW" not in redraw
-    assert "Controls: hover only" not in redraw
-    canvas_builder = inspect.getsource(MagneticTrajectoryDashboardNode._build_canvas_area)
-    layout = inspect.getsource(MagneticTrajectoryDashboardNode._layout_ocr_stage)
-    assert "ocr_hover_label" not in canvas_builder + layout
-    assert "Board input — dwell on controls to activate" not in canvas_builder
+    # The captured-sample canvas label is debug-only too.
+    for harness in (normal, debug):
+        harness.send(harness.node.symbol_capture_topic, SAMPLE_CAPTURE)
+    assert not any(text.startswith("Captured sample") for text in normal.canvas_texts())
+    assert "Captured sample (3 pts)" in debug.canvas_texts()
+
+
+def test_canvas_reachable_layout_labels_only_the_drawing_zone(monkeypatch):
+    harness = DashboardHarness(
+        monkeypatch, candidate_preview_enabled=True,
+        dashboard_board_control_layout="canvas_reachable")
+    harness.fire(harness.node.ocr_gamepad_frame, "<Configure>")
+
+    canvas_texts = harness.canvas_texts()
+    widget_texts = [str(widget.options.get("text", "")) for widget in harness.widgets()]
+    assert "Drawing zone" in canvas_texts
+    for removed in (
+        "only this area enters DTW",
+        "Controls: hover only",
+        "Board input — dwell on controls to activate",
+    ):
+        assert not any(removed in text for text in canvas_texts + widget_texts)
+    assert not hasattr(harness.node, "ocr_hover_label")
 
 
 def test_disabled_preview_action_is_inert_and_never_dispatches():
@@ -295,61 +306,84 @@ def test_disabled_preview_action_is_inert_and_never_dispatches():
     assert actions == []
 
 
-def test_existing_dwell_progress_remains_the_only_hover_ring_owner():
-    dwell = "\n".join((
-        inspect.getsource(MagneticTrajectoryDashboardNode._process_ocr_toolbar_dwell),
-        inspect.getsource(MagneticTrajectoryDashboardNode._process_ocr_canvas_dwell),
-        inspect.getsource(MagneticTrajectoryDashboardNode._process_preview_dwell),
-    ))
-    canvas_ring = inspect.getsource(
-        MagneticTrajectoryDashboardNode._draw_canvas_reachable_preview_buttons)
-    toolbar_ring = inspect.getsource(
-        MagneticTrajectoryDashboardNode._update_ocr_toolbar_visuals)
-
-    assert "self.ocr_dwell_progress" in dwell
-    assert "ocr_dwell_progress" in canvas_ring
-    assert "ocr_dwell_progress" in toolbar_ring
-    assert "create_arc" in canvas_ring
-    assert "create_arc" in toolbar_ring
-    assert 'style["ring"]' in canvas_ring
-    assert 'style["ring"]' in toolbar_ring
-    assert "root.after" not in canvas_ring
-    assert "root.after" not in toolbar_ring
-    assert "active and enabled and progress > 0.0" in canvas_ring
+def _hover_dwell(harness, button_id, seconds):
+    """Mouse-hover a toolbar button and let the 50 ms dwell loop tick twice."""
+    harness.fire(harness.node.ocr_button_widgets[button_id]["canvas"], "<Enter>")
+    harness.run_jobs(50)
+    harness.advance(seconds)
+    harness.run_jobs(50)
 
 
-def test_responsive_operator_shell_enforces_accepted_minimum_and_expands_cards():
-    window = inspect.getsource(
-        MagneticTrajectoryDashboardNode._initialize_window_and_variables)
-    ui = inspect.getsource(MagneticTrajectoryDashboardNode._build_ui)
-    cards = inspect.getsource(
-        MagneticTrajectoryDashboardNode._build_trajectory_status_cards)
+def test_existing_dwell_progress_remains_the_only_hover_ring_owner(monkeypatch):
+    for layout, ring_canvas in (
+        ("external_toolbar", lambda node: node.ocr_button_widgets["C"]["canvas"]),
+        ("canvas_reachable", lambda node: node.canvas),
+    ):
+        harness = DashboardHarness(
+            monkeypatch, candidate_preview_enabled=True, hover_dwell_enabled=True,
+            dashboard_board_control_layout=layout)
+        node = harness.node
+        harness.fire(node.ocr_gamepad_frame, "<Configure>")
 
-    assert "dashboard_minimum_window_size()" in window
-    assert "fill=tk.BOTH, expand=True" in ui
-    assert '"Recognition"' in cards
-    assert '"Progress"' in cards
-    assert '"Workflow"' not in cards
-    assert "expand=True" in cards
+        # B has no drawn sample, so it is disabled: hovering it draws no ring.
+        _hover_dwell(harness, "B", 0.5)
+        assert node.ocr_dwell_progress == 0.0
+        assert ring_canvas(node).drawn("arc") == []
+
+        harness.send_sample_and_candidates()
+        _hover_dwell(harness, "C", 0.5)
+        ring = geometry.preview_button_style("C", True, active=True)["ring"]
+        assert node.ocr_dwell_progress == 0.5, layout
+        arcs = ring_canvas(node).drawn("arc")
+        assert [(arc["outline"], arc["extent"]) for arc in arcs] == [(ring, -180.0)], layout
+        # Drawing the ring schedules nothing; only the dwell loop's next tick is queued.
+        assert [job[1] for job in harness.root.jobs] == [50], layout
+
+    # Rejecting mid-dwell disables C; the canvas ring disappears before the next tick.
+    harness.press_key("a")
+    assert node.ocr_dwell_progress == 0.5
+    assert node.canvas.drawn("arc") == []
 
 
-def test_shared_canvas_uses_source_specific_labels_without_behavior_migration():
-    canvas = inspect.getsource(MagneticTrajectoryDashboardNode._build_canvas_area)
-    mouse_actions = inspect.getsource(MagneticTrajectoryDashboardNode._handle_ocr_action)
-    mouse_release = inspect.getsource(MagneticTrajectoryDashboardNode._on_canvas_release)
-    mouse_presentation = inspect.getsource(
-        MagneticTrajectoryDashboardNode._refresh_mouse_operator_presentation
-    )
+def test_responsive_operator_shell_enforces_accepted_minimum_and_expands_cards(monkeypatch):
+    harness = DashboardHarness(monkeypatch, candidate_preview_enabled=True)
+    main_frame = harness.root.children[0]
 
-    assert '("B", "B\\nDraw"' in canvas
-    assert '("A", "A\\nStop"' in canvas
-    assert '("B", "B\\nRecognize"' in canvas
-    assert '("A", "A\\nReject"' in canvas
-    assert '_start_ocr_drawing("Drawing mode started")' in mouse_actions
-    assert "_publish_ocr_stop_label()" in mouse_actions
-    assert "_schedule_ocr_auto_recognize()" in mouse_release
-    assert "NAVIGATE" not in mouse_presentation
-    assert "tracking_mz" not in mouse_presentation
+    assert harness.root.window["minsize"] == geometry.dashboard_minimum_window_size()
+    assert main_frame.pack_options == {"fill": "both", "expand": True}
+    assert harness.card_titles() == ["Interaction", "Progress", "Recognition", "Status"]
+    assert harness.card("Recognition").pack_options["expand"] is True
+
+
+def test_shared_canvas_uses_source_specific_labels_without_behavior_migration(monkeypatch):
+    preview = DashboardHarness(monkeypatch, candidate_preview_enabled=True)
+    mouse = DashboardHarness(monkeypatch, demo_input_mode="ocr_canvas", **CONFIRM_PARAMS)
+    preview_labels = {bid: w["base_text"] for bid, w in preview.node.ocr_button_widgets.items()}
+    mouse_labels = {bid: w["base_text"] for bid, w in mouse.node.ocr_button_widgets.items()}
+    assert (preview_labels["B"], preview_labels["A"]) == ("B\nRecognize", "A\nReject")
+    assert (mouse_labels["B"], mouse_labels["A"]) == ("B\nDraw", "A\nStop")
+
+    node = mouse.node
+    modes = []
+    mouse.fire(node.ocr_button_widgets["B"]["canvas"], "<Button-1>")
+    assert node.ocr_panel_state == "DRAWING"
+    modes.append(node.mouse_mode_var.get())
+
+    # Releasing a stroke schedules the automatic recognition request.
+    mouse.fire(node.canvas, "<ButtonPress-1>", x=100, y=100)
+    mouse.fire(node.canvas, "<B1-Motion>", x=150, y=150)
+    mouse.fire(node.canvas, "<ButtonRelease-1>", x=150, y=150)
+    assert mouse.run_jobs(node.ocr_auto_recognize_after_ms) == 1
+    assert node.ocr_panel_state == "RECOGNIZING"
+    assert len(mouse.published_json(node.symbol_capture_topic)[0]["points"]) == 2
+    modes.append(node.mouse_mode_var.get())
+
+    mouse.fire(node.ocr_button_widgets["A"]["canvas"], "<Button-1>")
+    assert node.ocr_panel_state == "BLOCKED"
+    assert mouse.published_json(node.confirmed_label_topic) == [
+        build_mouse_toolbar_stop_payload(mouse.now)]
+    modes.append(node.mouse_mode_var.get())
+    assert modes == ["Mode: DRAW", "Mode: IDLE", "Mode: IDLE"]
 
 
 def test_mouse_confirmed_progress_advances_to_act_without_republishing_or_clearing():
