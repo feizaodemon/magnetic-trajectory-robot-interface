@@ -7,7 +7,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
-from dashboard_source import dashboard_source
+from dashboard_harness import DashboardHarness
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -119,10 +119,20 @@ def test_mouse_toolbar_stop_uses_existing_c4_cancel_contract():
     assert confirms.should_publish_mouse_toolbar_stop("BLOCKED") is False
 
 
-def test_mouse_toolbar_wording_and_stop_payload_builder():
-    dashboard = dashboard_source()
-    assert "OCR toolbar" not in dashboard
-    assert "build_mouse_toolbar_stop_payload" in dashboard
+def test_mouse_toolbar_wording_and_stop_payload_builder(monkeypatch):
+    confirms = importlib.import_module("colmag_ros.dashboard_confirm_publisher")
+    harness = DashboardHarness(
+        monkeypatch, demo_input_mode="ocr_canvas", dashboard_debug_sample_panel=True,
+        integrated_dashboard_confirm_enabled=True, publish_confirmed_label=True)
+    node = harness.node
+
+    harness.fire(node.ocr_button_widgets["A"]["canvas"], "<Button-1>")
+
+    assert harness.published_json(node.confirmed_label_topic) == [
+        confirms.build_mouse_toolbar_stop_payload(harness.now)]
+    assert node.confirm_var.get() == "Mouse toolbar: A -> STOP_OR_CANCEL"
+    texts = harness.ui_texts() + [text for _level, text in harness.rospy.logs]
+    assert not any("OCR toolbar" in text for text in texts)
 
 
 def test_real_board_active_state_node_is_installed_with_other_entrypoints():

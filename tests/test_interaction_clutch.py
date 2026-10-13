@@ -370,9 +370,7 @@ def test_shared_canvas_uses_source_specific_labels_without_behavior_migration(mo
     modes.append(node.mouse_mode_var.get())
 
     # Releasing a stroke schedules the automatic recognition request.
-    mouse.fire(node.canvas, "<ButtonPress-1>", x=100, y=100)
-    mouse.fire(node.canvas, "<B1-Motion>", x=150, y=150)
-    mouse.fire(node.canvas, "<ButtonRelease-1>", x=150, y=150)
+    mouse.draw_stroke((100, 100), (150, 150))
     assert mouse.run_jobs(node.ocr_auto_recognize_after_ms) == 1
     assert node.ocr_panel_state == "RECOGNIZING"
     assert len(mouse.published_json(node.symbol_capture_topic)[0]["points"]) == 2

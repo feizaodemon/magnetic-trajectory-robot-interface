@@ -11,7 +11,7 @@ if str(PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(PACKAGE_SRC))
 
 from colmag_ros import control_mode
-from dashboard_source import dashboard_source
+from dashboard_harness import DashboardHarness
 
 
 SCRIPTS = REPO / "colmag_ros" / "scripts"
@@ -65,19 +65,39 @@ def test_mode_node_is_latched_and_rejects_invalid_requests():
     assert "send_commands" not in text
 
 
-def test_dashboard_contains_only_small_mode_request_and_status_wiring():
-    text = dashboard_source()
-    for contract in (
-        "control_mode_enabled",
-        "Mode: TASK",
-        "Switch to TELEOP",
-        "_request_control_mode_switch",
-        "_handle_control_mode",
-        "/colmag/control_mode/request",
-    ):
-        assert contract in text
-    for forbidden in ("dls_damping", "numericalJacobian", "allow_real_robot"):
-        assert forbidden not in text
+def test_dashboard_contains_only_small_mode_request_and_status_wiring(monkeypatch):
+    disabled = DashboardHarness(monkeypatch)
+    assert "/colmag/control_mode/request" not in disabled.publisher_topics()
+    assert "/colmag/control_mode" not in disabled.rospy.subscribers
+
+    harness = DashboardHarness(monkeypatch, control_mode_enabled=True)
+    node = harness.node
+    request_topic = "/colmag/control_mode/request"
+
+    def shown():
+        assert node.control_mode_var in harness.shown_variables()
+        assert node.control_mode_button_var in harness.shown_variables()
+        return node.control_mode_var.get(), node.control_mode_button_var.get()
+
+    def click():
+        node.control_mode_button.options["command"]()
+
+    # The mode request publisher is the only one this seam adds.
+    assert harness.publisher_topics() == [request_topic, "/colmag/symbol_capture"]
+    assert shown() == ("Mode: TASK", "Switch to TELEOP")
+    click()  # Before any mode is observed, the safe request is TASK.
+    harness.send("/colmag/control_mode", control_mode.TASK)
+    click()
+    assert shown() == ("Mode: TASK", "Switch to TELEOP")
+    harness.send("/colmag/control_mode", control_mode.TELEOP)
+    assert shown() == ("Mode: TELEOP", "Switch to TASK")
+    click()
+    harness.send("/colmag/control_mode", "bogus")
+    assert shown() == ("Mode: INVALID — blocked", "Request TASK")
+    click()
+
+    assert harness.messages(request_topic) == [
+        control_mode.TASK, control_mode.TELEOP, control_mode.TASK, control_mode.TASK]
 
 
 def test_final_gazebo_profile_owns_one_mode_source_and_both_capabilities():

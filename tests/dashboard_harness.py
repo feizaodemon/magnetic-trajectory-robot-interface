@@ -227,6 +227,7 @@ class FakeRospy(types.ModuleType):
         self.params = dict(params)
         self.publishers = []
         self.subscribers = {}
+        self.registrations = []  # ("pub" | "sub", topic) in creation order
         self.logs = []
 
     def get_param(self, name, default=None):
@@ -235,10 +236,12 @@ class FakeRospy(types.ModuleType):
     def Publisher(self, topic, msg_class, **options):
         publisher = FakePublisher(topic, msg_class, **options)
         self.publishers.append(publisher)
+        self.registrations.append(("pub", topic))
         return publisher
 
     def Subscriber(self, topic, msg_class, callback, **options):
         self.subscribers.setdefault(topic, []).append(callback)
+        self.registrations.append(("sub", topic))
         return (topic, callback)
 
     def _log(self, level, fmt, *args):
@@ -345,6 +348,15 @@ class DashboardHarness:
     def press_key(self, char, keysym=None):
         return self.fire(self.root, "<Key>", char=char, keysym=keysym or char)
 
+    def draw_stroke(self, *canvas_points):
+        """Drag the mouse across the drawing canvas through ``canvas_points``."""
+        canvas = self.node.canvas
+        (x, y), rest = canvas_points[0], canvas_points[1:]
+        self.fire(canvas, "<ButtonPress-1>", x=x, y=y)
+        for x, y in rest:
+            self.fire(canvas, "<B1-Motion>", x=x, y=y)
+        self.fire(canvas, "<ButtonRelease-1>", x=x, y=y)
+
     def publisher_topics(self):
         return [publisher.topic for publisher in self.rospy.publishers]
 
@@ -385,3 +397,9 @@ class DashboardHarness:
 
     def canvas_texts(self):
         return [options.get("text", "") for options in self.node.canvas.drawn("text")]
+
+    def ui_texts(self):
+        """Every text the operator can see: static labels, bound variables, canvas text."""
+        static = [str(widget.options["text"]) for widget in self.widgets() if "text" in widget.options]
+        variables = [str(var.get()) for var in self.shown_variables()]
+        return static + variables + self.canvas_texts()
