@@ -55,7 +55,7 @@ def test_strategy_a_wires_hexagon_into_the_existing_single_send_owner():
     adapter = (REPO / "colmag_ros/src/colmag_fr3_task_trajectory_adapter.cpp").read_text()
     config = (REPO / "colmag_ros/config/colmag_fr3_task_trajectory_adapter.yaml").read_text()
     entrypoint = (
-        REPO / "colmag_ros/launch/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch"
+        REPO / "colmag_ros/launch/colmag_fr3_task_trajectory_adapter.launch"
     ).read_text()
     cmake = (REPO / "colmag_ros/CMakeLists.txt").read_text()
     assert 'admission.normalized_task != "HEXAGON_TRAJECTORY"' in adapter

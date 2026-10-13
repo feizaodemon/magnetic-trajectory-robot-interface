@@ -100,7 +100,7 @@
 
   <!-- Discrete TASK owner. Mode transition cancellation is adapter-owned and
        uses the existing FollowJointTrajectory action client lifecycle. -->
-  <include file="$(find colmag_ros)/launch/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch">
+  <include file="$(find colmag_ros)/launch/colmag_fr3_task_trajectory_adapter.launch">
     <arg name="arm_id" value="$(arg arm_id)" />
     <arg name="command_topic" value="$(arg task_command_topic)" />
     <arg name="state_topic" value="$(arg task_state_topic)" />

@@ -142,7 +142,7 @@ def test_real_profile_owns_one_mode_source_and_both_capabilities():
     discrete = next(
         include for include in root.findall("include")
         if include.attrib["file"].endswith(
-            "/m104r1c_fr3_task_trajectory_adapter_static_entrypoint.launch"
+            "/colmag_fr3_task_trajectory_adapter.launch"
         )
     )
     discrete_args = {
