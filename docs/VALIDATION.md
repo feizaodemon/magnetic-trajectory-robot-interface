@@ -68,19 +68,6 @@ These checks ran by hand when the public portfolio edition was exported. CI repe
 
 The source snapshot included release-gate tests whose only purpose was to assert internal archive, task-ledger, agent-context, or process-document wording. Those process documents are intentionally excluded from the public portfolio edition. Portfolio-irrelevant document-coupled tests were removed only where the underlying technical behavior remains covered by focused implementation tests; Markdown closure was replaced with a repository-wide portfolio link and exact-case check.
 
-Removed document-coupled release tests:
-
-- `tests/test_m104b2c_mouse_seeded_dtw_feasibility_static.py`
-- `tests/test_m104b2d_dtw_template_bank_recognizer_static.py`
-- `tests/test_m104b2e_dtw_template_bank_smoke_launch_static.py`
-- `tests/test_m104c1_8symbol_dtw_recognition_only_static.py`
-- `tests/test_m104c2c3_8symbol_recognition_display_static.py`
-- `tests/test_m104c4_8symbol_gazebo_execution_static.py`
-- `tests/test_m104_lab_fr3_controller_validation_guide_static.py`
-- `tests/test_m104r1c_fr3_task_trajectory_adapter_static.py`
-- `tests/test_m104r2_f3a_hardware_route_static.py`
-- `tests/test_m104r2_f3b_docker_naming_static.py`
-- `tests/test_m104r2_f3c_fr3_lab_operator_static.py`
-- `tests/test_m104r2_param1_fr3_adapter_params_static.py`
+Twelve such test files were removed at export. They never existed in this repository.
 
 Retained coverage includes DTW ranking, tracked-bank shape/provenance, dashboard behavior, confirmation, dispatcher semantics, Gazebo bridge behavior, FR3 safety modules and ROS-free C++ tests, FR3 operator logic, Docker configuration, packaging, and route isolation.
