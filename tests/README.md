@@ -15,7 +15,19 @@ Cartesian core, Gazebo bridge behavior, FR3 safety helpers, Docker
 configuration, package references, and route isolation. They do not launch ROS,
 Gazebo, GUI, serial, or real hardware.
 
-The ROS1 build is a separate validation layer. It compiles and links the shared
-core plus the Gazebo/Real-FR3 Cartesian and discrete adapters.
+Layout:
 
-See [Validation](../docs/VALIDATION.md) for evidence boundaries and portfolio-specific checks.
+- `test_*.py`: the pytest suite. Tests that need real ROS message packages skip
+  themselves without ROS Noetic.
+- `cpp/`: ROS-free C++ tests for the FR3 safety helpers and trajectory
+  generators. The pytest suite compiles them with `g++` and runs them.
+  `fr3_cartesian_teleop_core_test.cpp` is not yet wired into the suite.
+- `dashboard_harness.py`: builds a real dashboard node with fake `rospy`,
+  `std_msgs`, and `tkinter` modules, so dashboard tests need no display or ROS
+  master.
+
+The ROS1 build is a separate validation layer. It compiles and links the shared
+core plus the Gazebo/Real-FR3 Cartesian and discrete adapters. CI runs it in the
+`catkin-build` job.
+
+See [Validation](../docs/VALIDATION.md) for the CI jobs and evidence boundaries.
