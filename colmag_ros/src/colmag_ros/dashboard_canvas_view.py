@@ -90,6 +90,20 @@ class DashboardCanvasViewMixin:
         if self.config.is_trajectory_mode:
             self._active_bounds = self._active_trajectory_bounds()
 
+        # Layers are drawn back to front.
+        ocr_mode = self.config.demo_input_mode == "ocr_canvas"
+        self._draw_canvas_guides()
+        if not ocr_mode:
+            self._draw_trail(self.drawing_zone_trail, fill="#16A34A", width=4)
+        self._draw_captured_sample()
+        if not ocr_mode:
+            self._draw_trail(self.trail, fill="#2563EB", width=3)
+        self._draw_ocr_strokes()
+        self._draw_current_point()
+        self._draw_canvas_reachable_preview_buttons()
+
+    def _draw_canvas_guides(self):
+        """Drawing-zone frame, axes, or grid lines behind everything else."""
         if self.config.demo_input_mode == "ocr_canvas" and self._ocr_draw_area:
             x0, y0, x1, y1 = self._ocr_draw_area
             zone_style = drawing_zone_style()
@@ -123,16 +137,20 @@ class DashboardCanvasViewMixin:
                 fill=zone_style["text"],
                 font=("TkDefaultFont", 9, "bold"))
 
-        if self.config.demo_input_mode != "ocr_canvas":
-            for segment in split_trail_segments(self.drawing_zone_trail):
-                coords = []
-                for x, y in segment:
-                    cx, cy = self._canvas_xy(x, y)
-                    coords.extend([cx, cy])
-                self.canvas.create_line(*coords, fill="#16A34A", width=4)
+    def _draw_trail(self, trail, fill, width):
+        """Draw a trail as polylines. ``None`` entries are stroke breaks (gated or
+        non-writing points) that split it into segments. Single-point segments
+        are dropped so create_line is never called with fewer than 2 points."""
+        for segment in split_trail_segments(trail):
+            coords = []
+            for x, y in segment:
+                cx, cy = self._canvas_xy(x, y)
+                coords.extend([cx, cy])
+            self.canvas.create_line(*coords, fill=fill, width=width)
 
-        # Draw frozen sample sent to recognition. It intentionally differs from
-        # the live trail color so the operator can inspect what B recognized.
+    def _draw_captured_sample(self):
+        """Frozen sample sent to recognition. Its color differs from the live
+        trail so the operator can inspect what B recognized."""
         if len(self.captured_path) > 1:
             pts = []
             for x, y in self.captured_path:
@@ -153,33 +171,18 @@ class DashboardCanvasViewMixin:
                     text=label, anchor=self.tk.W,
                     fill="#92400E", font=("TkDefaultFont", 10, "bold"))
 
-        # Draw live trail. ``None`` entries are stroke breaks (gated / non-writing
-        # points) that split the polyline into separate segments. Single-point
-        # segments are dropped so create_line is never called with < 2 points.
-        if self.config.demo_input_mode != "ocr_canvas":
-            for segment in split_trail_segments(self.trail):
-                coords = []
-                for x, y in segment:
-                    cx, cy = self._canvas_xy(x, y)
-                    coords.extend([cx, cy])
-                self.canvas.create_line(*coords, fill="#2563EB", width=3)
-
-        # Draw manual strokes for OCR Canvas
-        for stroke in self.all_strokes:
+    def _draw_ocr_strokes(self):
+        """Finished OCR canvas strokes, then the stroke being drawn."""
+        for stroke in [*self.all_strokes, self.drawing_stroke]:
             if len(stroke) > 1:
                 pts = []
                 for x, y in stroke:
                     cx, cy = map_world_to_canvas(x, y, self.config.bounds, self.canvas_width, self.canvas_height, self.config.padding)
                     pts.extend([cx, cy])
                 self.canvas.create_line(*pts, fill="#8E44AD", width=3, smooth=True)
-        if len(self.drawing_stroke) > 1:
-            pts = []
-            for x, y in self.drawing_stroke:
-                cx, cy = map_world_to_canvas(x, y, self.config.bounds, self.canvas_width, self.canvas_height, self.config.padding)
-                pts.extend([cx, cy])
-            self.canvas.create_line(*pts, fill="#8E44AD", width=3, smooth=True)
 
-        # Draw current point (grey when gated as non-writing or invalid).
+    def _draw_current_point(self):
+        """Current point marker, grey when gated as non-writing or invalid."""
         if self.config.is_trajectory_mode:
             if self.latest_point is not None:
                 cx, cy = self._canvas_xy(self.latest_point[0], self.latest_point[1])
@@ -192,8 +195,6 @@ class DashboardCanvasViewMixin:
             cx, cy = self._canvas_xy(x, y)
             r = 8
             self.canvas.create_oval(cx-r, cy-r, cx+r, cy+r, fill="#E74C3C", outline="#C0392B")
-
-        self._draw_canvas_reachable_preview_buttons()
 
     def _draw_canvas_reachable_preview_buttons(self):
         if not self._use_canvas_reachable_preview_controls():
