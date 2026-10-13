@@ -22,9 +22,13 @@ git rev-parse HEAD
 ## Offline validation
 
 ```bash
+python3 -m pip install -r requirements.txt
 python3 -m pytest -p no:cacheprovider -q
 git diff --check
 ```
+
+Without ROS Noetic, the tests that import `rospy` or ROS messages skip
+themselves. See [Validation](VALIDATION.md).
 
 ## Mouse GUI only
 
@@ -103,6 +107,39 @@ docker/run_fr3_demo.sh status
 ```
 
 Do not run `dry-run`, `mouse`, or `board` against connected hardware without explicit authorization and local safety supervision.
+
+## DTW template bank
+
+The recognizer launches load the tracked bank
+`colmag_ros/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json`. It holds
+124 templates for the labels `1,2,3,V,O,X,A,C`, built from user-handwritten
+mouse seeds with the `mouse_centroid_maxabs_resample64` profile and y-flip.
+Each template records its source seed file.
+
+The seed JSONs are not published, so this repository alone cannot rebuild the
+bank. With seeds under `outputs/classifier_training/seeds/<label>/*.json`, the
+offline tools are:
+
+```bash
+# Build a bank into ignored outputs/.
+python3 scripts/build_dtw_template_bank_from_seeds.py \
+  --labels 1,2,3,V,O,X,A,C \
+  --out outputs/classifier_artifacts/dtw_bank/m104c1_8symbol_mouse_seeded_yflip.json
+
+# Hold-out check on the seeds: the earlier seeds of each label become
+# templates, the later ones become queries.
+python3 scripts/eval_dtw_bank_seed_holdout.py
+
+# Score a bank against recorded dashboard samples under
+# outputs/classifier_training/runtime_samples (labels 1,2,3 by default).
+python3 scripts/eval_dtw_bank_on_runtime_samples.py \
+  --template-bank colmag_ros/config/dtw_banks/m104c1_8symbol_mouse_seeded_yflip.json
+```
+
+All three write only under `outputs/` and start no ROS, GUI, serial, or robot
+process. When the generated bank exists at the path above,
+`tests/test_curated_dtw_bank_static.py` checks that the tracked bank has the
+same labels and template points.
 
 ## Generated outputs
 

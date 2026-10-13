@@ -91,7 +91,7 @@ The Board profile separates cursor navigation from recorded drawing so movement 
 
 The recognizer normalizes a completed trajectory, compares it with the tracked DTW bank, and publishes ranked candidates on `/colmag/symbol_candidates`. The dashboard may publish a selected label on `/colmag/confirmed_label` only after explicit confirmation. The dispatcher is the sole owner of `/colmag/task_command`; candidate display alone cannot execute a task.
 
-The tracked bank was generated from user-handwritten mouse seeds and retains per-template provenance fields. It is included in this public portfolio edition with those provenance fields preserved.
+The tracked bank was generated from user-handwritten mouse seeds and retains per-template provenance fields. It is included in this public portfolio edition with those provenance fields preserved. See [Running](docs/RUNNING.md#dtw-template-bank) for the offline build and evaluation tools.
 
 ## Gazebo and FR3 backends
 
@@ -126,15 +126,18 @@ tests/              Static, unit, route-isolation, and safety checks
 docs/               Portfolio architecture, run, validation, and boundary docs
 ```
 
-Legacy compatibility-sensitive module, launch, configuration, and test filenames are retained where renaming would risk breaking imports, install rules, or route contracts. They are not used as reader-facing milestones.
+Some runtime identifiers keep their original milestone prefix (`m104…`) because other parts depend on them: the tracked DTW bank file that the launch defaults and Docker image point at, the dispatcher mapping name `m104c4_8symbol_gazebo`, two ROS node names, and the real-board sample record schema. Apart from that bank file, file and module names carry no milestone prefix.
 
 ## Quick Start
 
-Run the repository test suite without creating a pytest cache:
+Install the test dependencies, then run the repository test suite without creating a pytest cache:
 
 ```bash
+python3 -m pip install -r requirements.txt
 python3 -m pytest -p no:cacheprovider -q
 ```
+
+ROS Noetic is not needed: the tests that import ROS packages skip themselves without it.
 
 Build the Mouse-to-Gazebo profile from the current revision:
 
@@ -154,16 +157,17 @@ The FR3 profiles are intentionally excluded from the quick path. See [Running](d
 
 ## Validation
 
-The public portfolio edition is checked for:
+CI runs pytest on every pull request, once with Python 3.10 without ROS and once in a ROS Noetic container. The suite checks:
 
-- Python/static/unit contracts and ROS-free C++ safety helpers;
-- Markdown and image-link closure with case-sensitive paths;
-- Docker `COPY` sources and Compose references;
-- ROS package manifests and launch includes;
-- secrets, private network values, personal absolute paths, and identity-bearing files;
-- nontechnical process packaging and misleading sole-authorship wording.
+- Python static and unit contracts, and the ROS-free C++ safety helpers;
+- Markdown and image links with case-sensitive paths;
+- Docker image, Compose profile, and launcher contracts;
+- launch file XML, route isolation, and install lists;
+- that generated `outputs/` files are not tracked.
 
-Exact results for this revision are recorded in [Validation](docs/VALIDATION.md).
+When this portfolio edition was exported, it was also checked by hand for secrets, private network values, personal absolute paths, identity-bearing files, nontechnical process packaging, and misleading sole-authorship wording. CI does not repeat those checks.
+
+See [Validation](docs/VALIDATION.md) for the commands, the CI jobs, and what each layer does not prove.
 
 ## Known limitations
 

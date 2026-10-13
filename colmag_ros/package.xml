@@ -2,7 +2,7 @@
 <package format="2">
   <name>colmag_ros</name>
   <version>0.0.1</version>
-  <description>ROS1 wrapper nodes for the COLMAG serial MVP project.</description>
+  <description>Magnetic Trajectory Robot Interface: trajectory capture, DTW recognition, dashboard, task dispatch, and Gazebo/FR3 adapters.</description>
 
   <maintainer email="64273122+feizaodemon@users.noreply.github.com">Xiaowei Rong</maintainer>
   <license>MIT</license>
