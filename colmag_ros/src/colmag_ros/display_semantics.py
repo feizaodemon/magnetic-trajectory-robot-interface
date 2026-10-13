@@ -51,10 +51,6 @@ C2C3_DISPLAY_SEMANTICS = {
 }
 
 
-def target_labels_csv():
-    return ",".join(C2C3_TARGET_LABELS)
-
-
 def display_semantics_for_label(label):
     """Return display-only semantics for a C2C3 label, or None."""
     return C2C3_DISPLAY_SEMANTICS.get(str(label or "").strip())

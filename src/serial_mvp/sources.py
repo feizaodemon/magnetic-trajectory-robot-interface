@@ -9,7 +9,6 @@ import time
 import serial
 
 from .packet import (
-    AXES_PER_SENSOR,
     END_BYTE,
     FLOAT_VALUE_COUNT,
     SENSORS_PER_PACKET,

@@ -1,4 +1,4 @@
-"""Static checks for the M104-LAB2 curated 8-symbol DTW bank.
+"""Static checks for the curated 8-symbol DTW bank.
 
 No ROS master, Gazebo, GUI, serial, real board, controller_manager, or real-FR3
 runtime is started. These tests only read JSON and launch XML.

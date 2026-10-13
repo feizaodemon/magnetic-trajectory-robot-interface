@@ -1,9 +1,9 @@
 """Tk window layout for the trajectory dashboard."""
 
-from colmag_ros import dashboard_geometry as _dashboard_geometry
 from colmag_ros.dashboard_geometry import (
     build_canvas_reachable_preview_hit_zones,
     canvas_zones_to_stage_zones,
+    compute_dashboard_panel_widths,
     compute_ocr_stage_geometry,
 )
 from colmag_ros.dashboard_texts import (
@@ -12,10 +12,6 @@ from colmag_ros.dashboard_texts import (
     default_header_title,
     default_main_panel_title,
 )
-
-
-def compute_dashboard_panel_widths(total_width):
-    return _dashboard_geometry.compute_dashboard_panel_widths(total_width)
 
 
 class DashboardLayoutMixin:

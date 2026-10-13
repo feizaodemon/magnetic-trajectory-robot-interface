@@ -1,6 +1,5 @@
 """Pure trajectory display bounds and writing-gate decisions."""
 
-from colmag_ros.param_utils import optional_float
 
 
 def robust_min_max(values):

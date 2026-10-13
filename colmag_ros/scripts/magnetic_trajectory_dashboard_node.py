@@ -6,77 +6,44 @@ from collections import deque
 from pathlib import Path
 
 
-DEFAULT_REAL_BOARD_SAMPLE_RECORDING_DIR = "outputs/runtime_samples/real_board"
-
-
 _PACKAGE_SRC = Path(__file__).resolve().parents[1] / "src"
 if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(_PACKAGE_SRC))
 
 from colmag_ros.trajectory_segment_recorder import SegmentRecorder
-from colmag_ros.dashboard_confirm_publisher import (
-    PreviewConfirmPublisher,
-)
+from colmag_ros.dashboard_confirm_publisher import PreviewConfirmPublisher
 from colmag_ros.dashboard_candidate_display import (
     backend_display_name,
     candidate_backend_status_text,
     format_operator_workflow,
     format_rank_rows,
-    format_recognition_labels,
-    preview_candidate_ui_texts,
     recognizer_status_texts,
     summarize_candidates,
 )
-from colmag_ros import dashboard_points as _dashboard_points
-from colmag_ros import dashboard_geometry as _dashboard_geometry
-from colmag_ros import dashboard_controller_input as _dashboard_controller_input
-from colmag_ros import dashboard_trajectory_processing as _dashboard_trajectory_processing
 from colmag_ros import control_mode
 from colmag_ros.dashboard_controller_input import (
+    CONTROLLER_LAYOUT_GAMEPAD,
+    CONTROLLER_LAYOUT_RANK_CONFIRM,
+    GAMEPAD_MODE_MOTION,
     build_confirmed_label_payload,
     build_controller_button_rects,
-    build_gamepad_button_rects,
-    build_gamepad_confirmed_label_payload,
-    build_virtual_button_rects,
-    cancelled_preview_hover_state,
     candidate_payload_key,
-    gamepad_button_to_intent,
-    gamepad_button_to_label,
     normalize_controller_layout,
-    should_ignore_gamepad_button,
     should_suppress_repeated_confirm,
-    update_controller_mode,
     update_dwell_state,
 )
 from colmag_ros.dashboard_geometry import (
-    BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE,
     BOARD_CONTROL_LAYOUT_EXTERNAL,
-    build_canvas_reachable_drawing_zone,
-    build_canvas_reachable_preview_hit_zones,
-    clamp,
     dashboard_minimum_window_size,
-    get_virtual_button_under_cursor,
-    is_point_inside_rect,
-    map_canvas_to_world,
-    map_trajectory_point,
-    map_world_to_canvas,
-    resolve_preview_button_hit,
-    trajectory_point_in_drawing_zone,
+    normalize_board_control_layout,
 )
 from colmag_ros.dashboard_points import (
-    build_ocr_stroke_points,
-    clean_stroke_points,
     extract_single_point,
     extract_xy_points,
 )
 from colmag_ros.dashboard_sample_lifecycle import (
-    build_dashboard_drawing_zone_capture_payload,
-    cleanup_drawing_sample_points,
+    DEFAULT_REAL_BOARD_SAMPLE_RECORDING_DIR,
     real_board_sample_recording_dir,
-    safe_sample_recording_name,
-    sample_cleanup_metadata,
-    trajectory_input_is_active,
-    update_drawing_zone_sample_state,
 )
 from colmag_ros.dashboard_trajectory_processing import (
     normalize_scale_mode,
@@ -86,7 +53,6 @@ from colmag_ros.dashboard_dwell_status import (
     format_interaction_instruction,
     format_integrated_dwell_status_texts,
     format_ocr_canvas_dwell_texts,
-    format_trajectory_preview_hint_text,
     format_trajectory_preview_interaction_text,
     normalize_interaction_profile,
 )
@@ -95,30 +61,15 @@ from colmag_ros.dashboard_texts import (
     default_footer_text,
     default_safety_badge,
 )
-from colmag_ros.param_utils import bool_param
+from colmag_ros.param_utils import bool_param, optional_float
+from colmag_ros.preview_recognition import RECOGNIZER_BACKENDS, recognize_stroke
 from colmag_ros.dashboard_layout import DashboardLayoutMixin
 from colmag_ros.dashboard_canvas_view import DashboardCanvasViewMixin
-from colmag_ros.dashboard_sample_capture import (
-    DashboardSampleCaptureMixin,
-    build_real_board_sample_record,
-)
+from colmag_ros.dashboard_sample_capture import DashboardSampleCaptureMixin
 from colmag_ros.dashboard_preview_controls import DashboardPreviewControlsMixin
 from colmag_ros.dashboard_ocr_panel import DashboardOcrPanelMixin
 from colmag_ros.dashboard_gamepad import DashboardGamepadMixin
 
-CONTROLLER_LAYOUT_RANK_CONFIRM = _dashboard_controller_input.CONTROLLER_LAYOUT_RANK_CONFIRM
-CONTROLLER_LAYOUT_GAMEPAD = _dashboard_controller_input.CONTROLLER_LAYOUT_GAMEPAD
-
-GAMEPAD_MODE_MOTION = _dashboard_controller_input.GAMEPAD_MODE_MOTION
-GAMEPAD_MODE_BLOCKED = _dashboard_controller_input.GAMEPAD_MODE_BLOCKED
-GAMEPAD_MODE_DIGIT = _dashboard_controller_input.GAMEPAD_MODE_DIGIT
-GAMEPAD_MODE_CONFIRM_PENDING = _dashboard_controller_input.GAMEPAD_MODE_CONFIRM_PENDING
-
-GAMEPAD_ARROW_BUTTONS = _dashboard_controller_input.GAMEPAD_ARROW_BUTTONS
-GAMEPAD_FACE_BUTTONS = _dashboard_controller_input.GAMEPAD_FACE_BUTTONS
-GAMEPAD_BUTTONS = _dashboard_controller_input.GAMEPAD_BUTTONS
-GAMEPAD_BUTTON_TO_LABEL = _dashboard_controller_input.GAMEPAD_BUTTON_TO_LABEL
-GAMEPAD_BUTTON_TO_INTENT = _dashboard_controller_input.GAMEPAD_BUTTON_TO_INTENT
 
 def safe_json_loads(text):
     try:
@@ -129,92 +80,6 @@ def safe_json_loads(text):
         pass
     return None
 
-_robust_min_max = _dashboard_trajectory_processing.robust_min_max
-
-
-def _enforce_min_span(lo, hi, min_span):
-    return _dashboard_trajectory_processing.enforce_min_span(lo, hi, min_span)
-
-
-opt_float = _dashboard_trajectory_processing.optional_float
-
-
-def recognize_trajectory_candidates(points, min_points=8, labels=None):
-    """Preview-only top-3 recognition over a live stroke point sequence.
-
-    Reuses the existing in-repo ``recognize_top3`` DTW recognizer (pure Python;
-    no ROS / numpy / OCR dependency). Returns ``(status, candidates)`` where
-    status is one of ``collecting`` / ``ready`` / ``none`` / ``unavailable`` and
-    candidates is a list of ``{rank, label, confidence, distance}``. This never
-    publishes anything and never touches a robot / task / confirm path.
-    """
-    pts = clean_stroke_points(points)
-    if len(pts) < int(min_points):
-        return "collecting", []
-    try:
-        from trajectory_symbol_top3_recognizer_node import recognize_top3
-    except Exception:  # pragma: no cover - defensive import guard
-        return "unavailable", []
-    kwargs = {}
-    if labels:
-        kwargs["labels"] = tuple(labels)
-    candidates = recognize_top3(pts, **kwargs)
-    if not candidates:
-        return "none", []
-    return "ready", candidates
-
-RECOGNIZER_BACKENDS = ("lightweight", "dtw", "fake")
-
-
-def recognize_fake(points, min_points=8, labels=None):
-    """Deterministic offline recognizer for tests / no-dependency preview.
-
-    Uses pure trajectory DTW and picks a top-3 from a small
-    label set using only the cleaned point count, so results are stable and
-    reproducible offline. Returns ``(status, candidates)`` matching
-    ``recognize_trajectory_candidates``. Preview-only; publishes nothing.
-    """
-    pts = clean_stroke_points(points)
-    if len(pts) < int(min_points):
-        return "collecting", []
-    pool = list(labels) if labels else ["1", "2", "3", "A", "C", "X"]
-    if not pool:
-        return "none", []
-    n = len(pts)
-    ranked = []
-    for rank in range(min(3, len(pool))):
-        label = pool[(n + rank) % len(pool)]
-        confidence = round(max(0.1, 0.9 - 0.25 * rank), 2)
-        ranked.append({
-            "rank": rank + 1,
-            "label": label,
-            "confidence": confidence,
-            "distance": float(rank),
-        })
-    return "ready", ranked
-
-def recognize_stroke(points, backend="dtw", ocr_fallback_dtw=True, min_points=8,
-                     canvas_size=256, line_width=8, padding_ratio=0.15, labels=None,
-                     status_out=None, recognition_model_path=""):
-    """Backend-selecting preview recognition.
-
-    Returns ``(status, candidates, backend_label)``. Production routes use the
-    external DTW template-bank node; this preview helper keeps only the local DTW
-    implementation and the deterministic fake used by offline tests.
-    """
-    pts = clean_stroke_points(points)
-    backend = str(backend or "dtw").strip().lower()
-
-    if len(pts) < int(min_points):
-        return "collecting", [], backend_display_name(backend, recognition_model_path)
-
-    if backend == "fake":
-        status, cands = recognize_fake(pts, min_points, labels)
-        status = "no_text" if status == "none" else status
-        return status, cands, "Fake (offline)"
-    status, cands = recognize_trajectory_candidates(pts, min_points, labels)
-    status = "no_text" if status == "none" else status
-    return status, cands, backend_display_name("dtw", recognition_model_path)
 
 def coerce_float(value, default=None):
     try:
@@ -222,17 +87,6 @@ def coerce_float(value, default=None):
     except (TypeError, ValueError):
         return default
 
-def normalize_board_control_layout(value):
-    return _dashboard_geometry.normalize_board_control_layout(
-        value,
-        external_layout=BOARD_CONTROL_LAYOUT_EXTERNAL,
-        canvas_reachable_layout=BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE,
-    )
-
-def _rect_from_center(button_id, label, cx, cy, size, kind="rect"):
-    return _dashboard_controller_input._rect_from_center(
-        button_id, label, cx, cy, size, kind,
-    )
 
 class MagneticTrajectoryDashboardNode(
     DashboardLayoutMixin,
@@ -294,7 +148,7 @@ class MagneticTrajectoryDashboardNode(
         # Confirm-candidate source for trajectory-mode dwell confirm.
         #   internal (default): confirm the dashboard's in-process preview
         #     recognizer top candidate (self.trajectory_candidates) -> keeps the
-        #     M62-A5/G2 behavior unchanged.
+        #     behavior unchanged.
         #   external_symbol_candidates: confirm the external ROS
         #     /colmag/symbol_candidates payload (e.g. dtw_template_bank), falling
         #     back to internal only when no external candidates are available.
@@ -366,13 +220,13 @@ class MagneticTrajectoryDashboardNode(
         # off | z_range | speed | legacy_like. Defaults are pass-through so an
         # untuned gate never hides valid strokes.
         self.stroke_gate_mode = normalize_stroke_gate_mode(rospy.get_param("~trajectory_stroke_gate_mode", "off"))
-        self.gate_z_min = opt_float(rospy.get_param("~trajectory_z_min", None))
-        self.gate_z_max = opt_float(rospy.get_param("~trajectory_z_max", None))
+        self.gate_z_min = optional_float(rospy.get_param("~trajectory_z_min", None))
+        self.gate_z_max = optional_float(rospy.get_param("~trajectory_z_max", None))
         self.input_valid_gate_enabled = bool_param(rospy.get_param("~trajectory_input_valid_gate_enabled", True))
         raw_input_z_min = rospy.get_param("~trajectory_input_z_min", "inherit")
         raw_input_z_max = rospy.get_param("~trajectory_input_z_max", "inherit")
-        self.input_z_min = self.gate_z_min if str(raw_input_z_min).strip().lower() == "inherit" else opt_float(raw_input_z_min)
-        self.input_z_max = self.gate_z_max if str(raw_input_z_max).strip().lower() == "inherit" else opt_float(raw_input_z_max)
+        self.input_z_min = self.gate_z_min if str(raw_input_z_min).strip().lower() == "inherit" else optional_float(raw_input_z_min)
+        self.input_z_max = self.gate_z_max if str(raw_input_z_max).strip().lower() == "inherit" else optional_float(raw_input_z_max)
         self.input_reactivate_samples = max(1, int(rospy.get_param("~trajectory_input_reactivate_samples", 2)))
         self._input_active_streak = 0
         self.board_sample_cleanup_enabled = bool_param(rospy.get_param("~dashboard_board_sample_cleanup_enabled", True))
@@ -426,7 +280,7 @@ class MagneticTrajectoryDashboardNode(
             or bool_param(rospy.get_param("~ocr_auto_recognize", False)))
         self.ocr_debounce_sec = float(rospy.get_param(
             "~ocr_debounce_sec", rospy.get_param("~candidate_auto_idle_sec", 0.8)))
-        # Four preview-only hover/click buttons (M62-A5).
+        # Four preview-only hover/click buttons.
         self.hover_buttons_enabled = bool_param(rospy.get_param("~hover_buttons_enabled", True))
         self.hover_click_enabled = bool_param(rospy.get_param("~hover_click_enabled", True))
         self.hover_dwell_enabled = bool_param(rospy.get_param("~hover_dwell_enabled", False))
@@ -435,7 +289,7 @@ class MagneticTrajectoryDashboardNode(
             rospy.get_param("~hover_dwell_sec", 1.0),
         ))
         self.hover_progress_enabled = bool_param(rospy.get_param("~hover_progress_enabled", True))
-        # M62-A5C: the live board's red current point can drive button dwell without
+        # The live board's red current point can drive button dwell without
         # a mouse. Primary demo interaction; mouse hover/click stays as fallback.
         self.board_cursor_dwell_enabled = bool_param(rospy.get_param("~board_cursor_dwell_enabled", True))
         self.board_control_layout = normalize_board_control_layout(
@@ -452,7 +306,7 @@ class MagneticTrajectoryDashboardNode(
         self.preview_interaction_state = "idle"
         self.preview_confirmed_label = ""
 
-        # M63-B preview-only segment recording. When enabled, Start records ONE
+        # Preview-only segment recording. When enabled, Start records ONE
         # complete trajectory segment (time window, or z-lift when available) and
         # recognition runs on that completed segment instead of the live stream.
         # Default OFF so existing continuous live-preview behavior is unchanged.
@@ -475,7 +329,7 @@ class MagneticTrajectoryDashboardNode(
             max_points=self.record_max_points,
         )
         self.recorded_segment = []
-        # M63-B preview-only semantic library (display only; no dispatch).
+        # Preview-only semantic library (display only; no dispatch).
         self.semantic_preview_enabled = bool_param(rospy.get_param("~semantic_preview_enabled", True))
 
     def _initialize_dashboard_state(self):
@@ -573,6 +427,7 @@ class MagneticTrajectoryDashboardNode(
     def _initialize_window_and_variables(self):
         tk = self.tk
         self.root = tk.Tk()
+        self._redraw_pending = False
         self.root.title("COLMAG Magnetic Trajectory Dashboard")
         self.root.geometry("1060x760")
         min_width, min_height = dashboard_minimum_window_size()
@@ -628,7 +483,7 @@ class MagneticTrajectoryDashboardNode(
         self.traj_operator_status_var = tk.StringVar(
             value="Draw a character in the center")
 
-        # Candidate preview (M62-A4/A5, display only).
+        # Candidate preview (display only).
         self.traj_preview_mode_var = tk.StringVar(value="Mode: Real magnetic board trajectory recognition")
         self.traj_backend_var = tk.StringVar(value="Backend: %s" % self.recognition_backend_label)
         self.traj_recognizer_detail_var = tk.StringVar(value="External recognizer: waiting for /colmag/symbol_candidates")
@@ -716,6 +571,10 @@ class MagneticTrajectoryDashboardNode(
         rospy.loginfo("dashboard_board_control_layout=%s", self.board_control_layout)
 
     def _schedule_ui_refresh(self):
+        # Samples can arrive faster than Tk draws; one pending redraw covers them all.
+        if self._redraw_pending:
+            return
+        self._redraw_pending = True
         self.root.after(0, self._redraw_canvas)
 
     def _handle_trajectory(self, msg):
@@ -729,8 +588,6 @@ class MagneticTrajectoryDashboardNode(
             self._ingest_trajectory_sample(data, pt)
             return
         self.trail.append(pt)
-        if hasattr(self, '_process_virtual_button_dwell'):
-            self._process_virtual_button_dwell(pt)
         self._schedule_ui_refresh()
 
     def _recognize_current_stroke(self):

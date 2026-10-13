@@ -3,11 +3,8 @@ import json
 import math
 import time
 
-from magnetic_trajectory_dashboard_node import (
-    build_gamepad_button_rects,
-    build_virtual_button_rects,
-    map_canvas_to_world,
-)
+from colmag_ros.dashboard_controller_input import build_gamepad_button_rects, build_virtual_button_rects
+from colmag_ros.dashboard_geometry import map_canvas_to_world
 from colmag_ros.param_utils import bool_param
 
 

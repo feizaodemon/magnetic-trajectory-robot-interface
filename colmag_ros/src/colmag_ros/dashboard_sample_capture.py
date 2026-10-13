@@ -4,10 +4,10 @@ import json
 import math
 import time
 
-from colmag_ros import dashboard_sample_lifecycle as _dashboard_sample_lifecycle
 from colmag_ros.dashboard_geometry import derive_orientation_clutch_mode
 from colmag_ros.dashboard_points import clean_stroke_points
 from colmag_ros.dashboard_sample_lifecycle import (
+    build_real_board_sample_record,
     build_dashboard_drawing_zone_capture_payload,
     cleanup_drawing_sample_points,
     real_board_sample_recording_dir,
@@ -17,7 +17,14 @@ from colmag_ros.dashboard_sample_lifecycle import (
     update_drawing_zone_sample_state,
 )
 from colmag_ros.dashboard_trajectory_processing import stroke_gate_pass
-from colmag_ros.param_utils import optional_float as opt_float
+from colmag_ros.param_utils import optional_float
+from colmag_ros.trajectory_segment_recorder import (
+    STATE_ARMED,
+    STATE_CLEARED,
+    STATE_IDLE,
+    STATE_RECORDING,
+    STATE_RECORDING_DONE,
+)
 
 
 def _short_exc(exc, limit=160):
@@ -25,23 +32,6 @@ def _short_exc(exc, limit=160):
     text = "%s: %s" % (type(exc).__name__, exc)
     text = " ".join(text.split())  # collapse newlines/whitespace
     return text[:limit]
-
-
-def build_real_board_sample_record(
-    *,
-    capture_payload,
-    raw_points,
-    cleaned_points,
-    cleanup_metadata,
-    candidate_payload=None,
-):
-    return _dashboard_sample_lifecycle.build_real_board_sample_record(
-        capture_payload=capture_payload,
-        raw_points=raw_points,
-        cleaned_points=cleaned_points,
-        cleanup_metadata=cleanup_metadata,
-        candidate_payload=candidate_payload,
-    )
 
 
 class DashboardSampleCaptureMixin:
@@ -199,7 +189,7 @@ class DashboardSampleCaptureMixin:
 
     def _classify_trajectory_sample(self, data, pt):
         valid = bool(data.get("valid", True))
-        z_val = opt_float(data.get("z"))
+        z_val = optional_float(data.get("z"))
         input_inactive_reason = trajectory_input_inactive_reason(
             valid,
             z_val,
@@ -361,7 +351,7 @@ class DashboardSampleCaptureMixin:
             )
         return mode
 
-    # --- Preview-only segment recording (M63-B): display only, no publish ---
+    # --- Preview-only segment recording: display only, no publish ---
     def _start_recording(self):
         """Start button: clear the previous segment and record a new one.
 
@@ -384,13 +374,13 @@ class DashboardSampleCaptureMixin:
     def _feed_recorder(self, pt, z_val, ts, valid, writing):
         """Feed one live sample into the segment recorder (recording mode only)."""
         rec = self.segment_recorder
-        if rec.state not in ("ARMED", "RECORDING"):
+        if rec.state not in (STATE_ARMED, STATE_RECORDING):
             return
         now = ts if isinstance(ts, (int, float)) else time.time()
         state = rec.feed(pt[0], pt[1], now, z=z_val, valid=valid, writing=writing)
-        if state == "RECORDING_DONE":
+        if state == STATE_RECORDING_DONE:
             self._on_recording_done()
-        elif state == "RECORDING":
+        elif state == STATE_RECORDING:
             self.candidate_status = "recording"
             self.preview_interaction_state = "recording"
             self._update_candidate_ui()
@@ -437,12 +427,12 @@ class DashboardSampleCaptureMixin:
         if not getattr(self, "trajectory_recording_enabled", False) or rec is None:
             return "Recording: disabled"
         state_map = {
-            "IDLE": "idle (press S/Start)",
-            "ARMED": "armed — waiting for pen down",
-            "RECORDING": "recording…",
-            "RECORDING_DONE": "segment ready (%d pts, stop=%s)" % (
+            STATE_IDLE: "idle (press S/Start)",
+            STATE_ARMED: "armed — waiting for pen down",
+            STATE_RECORDING: "recording…",
+            STATE_RECORDING_DONE: "segment ready (%d pts, stop=%s)" % (
                 len(rec.points), rec.stop_reason or "-"),
-            "CLEARED": "cleared",
+            STATE_CLEARED: "cleared",
         }
         return "Recording: %s" % state_map.get(rec.state, rec.state)
 
@@ -518,6 +508,3 @@ class DashboardSampleCaptureMixin:
         self._update_candidate_ui()
         self._publish_dashboard_state()
         return True
-
-    def _publish_trajectory_symbol_capture_from_trail(self):
-        return self._publish_trajectory_symbol_capture_from_drawing_zone()

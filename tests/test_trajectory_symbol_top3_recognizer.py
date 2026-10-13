@@ -18,6 +18,7 @@ def load_recognizer_module():
 
 
 recognizer = load_recognizer_module()
+from colmag_ros import preview_recognition  # noqa: E402
 
 
 class CallbackString:
@@ -114,7 +115,7 @@ def test_recognizer_returns_top3_json_payload_for_digit_two():
         [0.65, -0.80],
     ]
 
-    candidates = recognizer.recognize_top3(points)
+    candidates = preview_recognition.recognize_top3(points)
 
     assert len(candidates) == 3
     assert candidates[0]["label"] == "2"
@@ -142,14 +143,14 @@ def test_callback_invalid_json_and_non_object_keep_invalid_payload_schema(monkey
 def test_builtin_templates_cover_current_dtw_labels():
     labels = ("1", "2", "3", "V", "O", "X", "A", "C")
 
-    templates = recognizer.build_builtin_templates(labels)
+    templates = preview_recognition.build_builtin_templates(labels)
 
     assert {template["label"] for template in templates} == set(labels)
 
 
 def test_default_dtw_helpers_need_no_optional_recognizer_dependency():
     points = [[0.0, 0.0], [1.0, 1.0]]
-    candidates = recognizer.recognize_top3(points)
+    candidates = preview_recognition.recognize_top3(points)
 
     assert len(candidates) > 0
 

@@ -104,7 +104,7 @@ def _external_payload(sample_id="cap_1", sequence_id=7):
 
 
 class ExternalConfirmPathTests(unittest.TestCase):
-    """M104-G3a-F1: confirm the external dtw_template_bank symbol_candidates
+    """Confirm the external dtw_template_bank symbol_candidates
     payload authoritatively, preserving recognizer metadata."""
 
     def test_external_confirm_preserves_backend_and_metadata(self):

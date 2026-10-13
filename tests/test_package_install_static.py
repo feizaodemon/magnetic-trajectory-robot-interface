@@ -1,4 +1,4 @@
-"""Focused package/install seam checks for M104-PKG-INSTALL1."""
+"""Focused package/install seam checks."""
 
 import importlib
 import importlib.util

@@ -1,4 +1,4 @@
-"""Bounded static/unit checks for the M95 trajectory-preview confirm seam.
+"""Bounded static/unit checks for the trajectory-preview confirm seam.
 
 No ROS master, Gazebo, Tk display, serial board, FR3, or hardware is started.
 These tests exercise the real-board / trajectory-preview C-confirm publish path
@@ -164,7 +164,7 @@ class PreviewConfirmWiringTests(unittest.TestCase):
         self.assertLess(HELPER.read_text().count("\n") + 1, 1000)
 
     def test_dashboard_has_no_task_command_publisher(self):
-        # M95 must not wire the dashboard to /colmag/task_command.
+        # The confirm seam must not wire the dashboard to /colmag/task_command.
         self.assertNotIn("Publisher(self.task_command_topic", self.src)
 
     def test_publish_path_reuses_shared_builder_and_dedup(self):

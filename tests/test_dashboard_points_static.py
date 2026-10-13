@@ -18,7 +18,6 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from colmag_ros import dashboard_points as points  # noqa: E402
-import magnetic_trajectory_dashboard_node as dash  # noqa: E402
 from dashboard_source import dashboard_source  # noqa: E402
 
 
@@ -66,19 +65,7 @@ class DashboardPointHelperBehaviorTests(unittest.TestCase):
 
 
 class DashboardPointExtractionStaticTests(unittest.TestCase):
-    def test_dashboard_compatibility_wrappers_delegate_to_helper(self):
-        self.assertEqual(dash.extract_xy_points({"points": [[1, 2]]}), [(1.0, 2.0)])
-        self.assertEqual(dash.extract_single_point({"position": {"x": 1, "y": 2}}), (1.0, 2.0))
-        self.assertEqual(dash.clean_stroke_points([(0, 0), None]), [(0, 0)])
-        self.assertEqual(dash.build_ocr_stroke_points([(0, 0), None]), [(0, 0)])
-
-        for name in (
-            "extract_xy_points",
-            "extract_single_point",
-            "clean_stroke_points",
-            "build_ocr_stroke_points",
-        ):
-            self.assertIs(getattr(dash, name), getattr(points, name))
+    def test_dashboard_flattens_strokes_through_helper(self):
         self.assertIn(
             "return _dashboard_points.flatten_strokes(self.all_strokes)",
             dashboard_source(),

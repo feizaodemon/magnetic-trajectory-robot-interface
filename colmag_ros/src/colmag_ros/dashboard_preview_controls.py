@@ -66,7 +66,7 @@ class DashboardPreviewControlsMixin:
         except Exception:
             return "Meaning: -"
 
-    # --- Preview-only OCR/candidate bridge (M62-A4/A5): display only, no publish ---
+    # --- Preview-only OCR/candidate bridge: display only, no publish ---
     def _cancel_candidate_recognize_job(self):
         if self._candidate_recognize_job is None:
             return
@@ -142,7 +142,7 @@ class DashboardPreviewControlsMixin:
             return
         self.preview_confirmed_label = label
         self.preview_interaction_state = "preview_confirmed"
-        # M95: the trajectory-preview C confirm now also publishes the confirmed
+        # The trajectory-preview C confirm also publishes the confirmed
         # label (board red cursor / mouse preview), not just the preview UI. The
         # publish itself is gated inside the helper (double gate + de-dup).
         self._publish_preview_confirmed_label()

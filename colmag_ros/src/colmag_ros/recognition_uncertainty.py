@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-import math
 from typing import Any, Dict, List, Sequence
+
+from colmag_ros.param_utils import finite_float
 
 
 def _confidence(candidate: Dict[str, Any]) -> float:
-    try:
-        value = float(candidate.get("confidence", 0.0))
-    except (TypeError, ValueError):
-        value = 0.0
-    if not math.isfinite(value):
-        return 0.0
-    return max(0.0, min(1.0, value))
+    return max(0.0, min(1.0, finite_float(candidate.get("confidence", 0.0), 0.0)))
 
 
 def apply_uncertainty_gate(candidates: Sequence[Dict[str, Any]],

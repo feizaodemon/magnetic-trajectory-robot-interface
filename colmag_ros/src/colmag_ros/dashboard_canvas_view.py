@@ -92,6 +92,8 @@ class DashboardCanvasViewMixin:
         return bool(resolve_preview_button_hit(cx, cy, zones))
 
     def _redraw_canvas(self):
+        # Clear first, so state changes during this frame schedule another redraw.
+        self._redraw_pending = False
         self.canvas.delete("all")
 
         # Refresh the active scaling window once per frame (auto / fixed_symmetric).

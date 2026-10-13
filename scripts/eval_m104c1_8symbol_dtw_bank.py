@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M104-C1 offline held-out evaluation for the 8-symbol DTW template bank.
+"""Offline held-out evaluation for the 8-symbol DTW template bank.
 
 Recognition-only. This script does NOT touch ROS, Gazebo, GUI, serial, the real
 board, the task dispatcher, the task-command topic, or any robot execution path.
@@ -39,6 +39,9 @@ from colmag_ros.dtw_dataset_io import (  # noqa: E402
     write_json,
 )
 from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
+    DEFAULT_MAX_DISTANCE,
+    DEFAULT_MIN_CONFIDENCE,
+    DEFAULT_MIN_MARGIN,
     build_template_bank,
     build_template_record,
     confidence_from_distance,
@@ -53,15 +56,13 @@ from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
 C1_TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
 C1_EVAL_DIR = Path("outputs") / "classifier_artifacts" / "m104c1_8symbol_eval"
 
-# C1 keeps the reviewed B2d/G2 gate so offline numbers stay comparable.
-DEFAULT_MAX_DISTANCE = 0.12
-DEFAULT_MIN_MARGIN = 0.01
-DEFAULT_MIN_CONFIDENCE = 0.30
+# The gate defaults come from dtw_template_bank_tools so offline numbers stay
+# comparable with the runtime recognizer.
 
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Offline M104-C1: held-out 8-symbol DTW recognition-only evaluation."
+        description="Offline: held-out 8-symbol DTW recognition-only evaluation."
     )
     parser.add_argument("--seeds-root", default="outputs/classifier_training/seeds")
     parser.add_argument("--labels", default=",".join(C1_TARGET_LABELS),

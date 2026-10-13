@@ -1,4 +1,4 @@
-"""Tests for M20-B 64x64 trajectory rasterization."""
+"""Tests for 64x64 trajectory rasterization."""
 
 from __future__ import annotations
 

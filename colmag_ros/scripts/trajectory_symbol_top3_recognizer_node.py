@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import math
 import sys
 import time
 from pathlib import Path
@@ -12,79 +11,13 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
 
 from colmag_ros.recognition_uncertainty import apply_uncertainty_gate
 from colmag_ros.trajectory_strokes import flatten_strokes, normalize_payload_strokes, stroke_metadata
-from colmag_ros.dtw_bank_features import (
-    dtw_distance,
-    finite_float,
-    normalize_points,
-    resample_by_arclength,
+from colmag_ros.dtw_template_bank_tools import (
+    DEFAULT_MAX_DISTANCE,
+    DEFAULT_MIN_CONFIDENCE,
+    DEFAULT_MIN_MARGIN,
 )
+from colmag_ros.preview_recognition import DEFAULT_LABELS
 
-DEFAULT_LABELS = ("1", "2", "3", "V", "O", "X", "A", "C")
-
-def _line(points):
-    return [(float(x), float(y)) for x, y in points]
-
-BUILTIN_TEMPLATE_POINTS = {
-    "A": _line([(-0.8, -0.8), (-0.45, 0.1), (0.0, 0.9), (0.45, 0.1), (0.8, -0.8), (0.35, -0.05), (-0.35, -0.05)]),
-    "2": _line([(-0.65, 0.65), (-0.15, 0.9), (0.55, 0.65), (0.35, 0.15), (-0.45, -0.45), (-0.65, -0.8), (0.65, -0.8)]),
-    "C": _line([(0.65, 0.65), (0.15, 0.9), (-0.55, 0.65), (-0.8, 0.0), (-0.55, -0.65), (0.15, -0.9), (0.65, -0.65)]),
-    "X": _line([(-0.75, 0.75), (0.75, -0.75), (0.0, 0.0), (0.75, 0.75), (-0.75, -0.75)]),
-    "1": _line([(-0.25, 0.55), (0.0, 0.85), (0.0, -0.8)]),
-    "3": _line([(-0.55, 0.75), (0.45, 0.75), (0.0, 0.05), (0.5, -0.1), (0.35, -0.75), (-0.55, -0.7)]),
-    "V": _line([(-0.75, 0.75), (0.0, -0.85), (0.75, 0.75)]),
-    "O": _line([(0.0, 0.9), (0.65, 0.65), (0.9, 0.0), (0.65, -0.65), (0.0, -0.9), (-0.65, -0.65), (-0.9, 0.0), (-0.65, 0.65), (0.0, 0.9)]),
-}
-
-def build_builtin_templates(labels=DEFAULT_LABELS, resample_length=64):
-    templates = []
-    for label in labels:
-        if label not in BUILTIN_TEMPLATE_POINTS:
-            continue
-        templates.append(
-            {
-                "label": label,
-                "points": normalize_points(BUILTIN_TEMPLATE_POINTS[label], resample_length),
-                "template_id": "builtin_%s" % label,
-            }
-        )
-    return templates
-
-def confidence_from_distances(distance, worst_distance):
-    if not math.isfinite(distance):
-        return 0.0
-    if not math.isfinite(worst_distance) or worst_distance <= 1e-9:
-        return 1.0
-    return max(0.0, min(1.0, 1.0 - distance / worst_distance))
-
-def recognize_top3(points, labels=DEFAULT_LABELS, resample_length=64):
-    normalized = normalize_points(points, resample_length)
-    templates = build_builtin_templates(labels, resample_length)
-    distances = []
-    for template in templates:
-        distances.append((dtw_distance(normalized, template["points"]), template))
-    distances.sort(key=lambda item: item[0])
-
-    top = distances[:3]
-    worst_distance = distances[-1][0] if distances else float("inf")
-    candidates = []
-    for rank, (distance, template) in enumerate(top, start=1):
-        candidates.append(
-            {
-                "rank": rank,
-                "label": template["label"],
-                "confidence": confidence_from_distances(distance, worst_distance),
-                "distance": distance,
-            }
-        )
-    return candidates
-
-
-def feature_mode_for_backend(backend):
-    return "trajectory_dtw"
-
-
-def ocr_result_source_for_backend(backend, candidates):
-    return "not_used"
 
 class TrajectorySymbolTop3RecognizerNode:
     def __init__(self):
@@ -106,16 +39,16 @@ class TrajectorySymbolTop3RecognizerNode:
         )
 
         # The DTW template bank is the production recognizer. The bank is a reviewed
-        # colmag_dtw_template_bank.v1 JSON built by the B2c seed tooling;
+        # colmag_dtw_template_bank.v1 JSON built by the seed tooling;
         # runtime query points are never y-flipped (the y-flip lives in the
         # bank's seed import). A missing/unloadable bank publishes uncertain
         # payloads instead of falling back to another backend.
         self.dtw_template_bank_path = str(rospy.get_param("~dtw_template_bank_path", "")).strip()
         self.dtw_template_allowed_labels = str(rospy.get_param("~dtw_template_allowed_labels", "1,2,3"))
         self.dtw_template_top_k = int(rospy.get_param("~dtw_template_top_k", 3))
-        self.dtw_template_max_distance = float(rospy.get_param("~dtw_template_max_distance", 0.12))
-        self.dtw_template_min_margin = float(rospy.get_param("~dtw_template_min_margin", 0.01))
-        self.dtw_template_min_confidence = float(rospy.get_param("~dtw_template_min_confidence", 0.30))
+        self.dtw_template_max_distance = float(rospy.get_param("~dtw_template_max_distance", DEFAULT_MAX_DISTANCE))
+        self.dtw_template_min_margin = float(rospy.get_param("~dtw_template_min_margin", DEFAULT_MIN_MARGIN))
+        self.dtw_template_min_confidence = float(rospy.get_param("~dtw_template_min_confidence", DEFAULT_MIN_CONFIDENCE))
         self.dtw_template_bank_state = None
 
         requested_backend = str(rospy.get_param("~recognizer_backend", "dtw_template_bank")).strip().lower()
@@ -276,8 +209,8 @@ class TrajectorySymbolTop3RecognizerNode:
             "accepted": accepted,
             "reason": reason,
             "backend": used_backend,
-            "ocr_result_source": ocr_result_source_for_backend(used_backend, candidates),
-            "feature_mode": feature_mode_for_backend(used_backend),
+            "ocr_result_source": "not_used",
+            "feature_mode": "trajectory_dtw",
             "source_topic": "/colmag/symbol_capture",
             "sample_id": capture.get("sample_id", ""),
             "sequence_id": capture.get("sequence_id", 0),

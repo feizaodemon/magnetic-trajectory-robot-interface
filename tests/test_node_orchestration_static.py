@@ -1,4 +1,4 @@
-"""Structural gates for the behavior-preserving M104-MAINT3 refactor."""
+"""Structural gates for the behavior-preserving node orchestration refactor."""
 
 import ast
 from pathlib import Path
@@ -107,8 +107,3 @@ def test_recognizer_callback_delegates_without_changing_public_helpers():
     assert {"_parse_capture_message", "_recognize_capture", "_build_recognition_payload"} <= set(methods)
     callback = methods["_handle_capture"]
     assert callback.end_lineno - callback.lineno + 1 < 80
-    import trajectory_symbol_top3_recognizer_node as recognizer_module
-    from colmag_ros import dtw_bank_features
-
-    for public_helper in ("dtw_distance", "normalize_points", "resample_by_arclength"):
-        assert getattr(recognizer_module, public_helper) is getattr(dtw_bank_features, public_helper)

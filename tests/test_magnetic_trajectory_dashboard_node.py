@@ -1,49 +1,54 @@
 import pytest
-import json
 import sys
 from pathlib import Path
 from magnetic_trajectory_dashboard_node import (
     safe_json_loads,
     extract_xy_points,
     extract_single_point,
-    map_world_to_canvas,
-    map_canvas_to_world,
     summarize_candidates,
     coerce_float,
-    is_point_inside_rect,
-    get_virtual_button_under_cursor,
     update_dwell_state,
-    build_virtual_button_rects,
-    build_gamepad_button_rects,
     build_controller_button_rects,
     build_confirmed_label_payload,
-    build_canvas_reachable_drawing_zone,
-    build_canvas_reachable_preview_hit_zones,
-    build_dashboard_drawing_zone_capture_payload,
-    build_gamepad_confirmed_label_payload,
-    build_real_board_sample_record,
     candidate_payload_key,
-    cancelled_preview_hover_state,
-    clean_stroke_points,
-    cleanup_drawing_sample_points,
-    gamepad_button_to_intent,
-    gamepad_button_to_label,
     normalize_controller_layout,
     real_board_sample_recording_dir,
-    sample_cleanup_metadata,
-    safe_sample_recording_name,
-    should_ignore_gamepad_button,
     should_suppress_repeated_confirm,
-    trajectory_input_is_active,
-    trajectory_point_in_drawing_zone,
-    update_drawing_zone_sample_state,
-    update_controller_mode,
     CONTROLLER_LAYOUT_GAMEPAD,
     CONTROLLER_LAYOUT_RANK_CONFIRM,
+    GAMEPAD_MODE_MOTION,
+)
+from colmag_ros.dashboard_controller_input import (
+    build_virtual_button_rects,
+    build_gamepad_button_rects,
+    build_gamepad_confirmed_label_payload,
+    cancelled_preview_hover_state,
+    gamepad_button_to_intent,
+    gamepad_button_to_label,
+    should_ignore_gamepad_button,
+    update_controller_mode,
     GAMEPAD_MODE_BLOCKED,
     GAMEPAD_MODE_CONFIRM_PENDING,
     GAMEPAD_MODE_DIGIT,
-    GAMEPAD_MODE_MOTION,
+)
+from colmag_ros.dashboard_geometry import (
+    map_world_to_canvas,
+    map_canvas_to_world,
+    is_point_inside_rect,
+    get_virtual_button_under_cursor,
+    build_canvas_reachable_drawing_zone,
+    build_canvas_reachable_preview_hit_zones,
+    trajectory_point_in_drawing_zone,
+)
+from colmag_ros.dashboard_points import clean_stroke_points
+from colmag_ros.dashboard_sample_lifecycle import (
+    build_dashboard_drawing_zone_capture_payload,
+    build_real_board_sample_record,
+    cleanup_drawing_sample_points,
+    sample_cleanup_metadata,
+    safe_sample_recording_name,
+    trajectory_input_is_active,
+    update_drawing_zone_sample_state,
 )
 from dashboard_source import dashboard_source
 
@@ -81,10 +86,9 @@ def test_catkin_wrapper_exec_adds_package_source_to_import_path():
 
         assert str(context["_PACKAGE_SRC"]) == package_src
         assert sys.path[0] == package_src
-        assert callable(context["preview_candidate_ui_texts"])
         assert callable(context["format_integrated_dwell_status_texts"])
-        assert hasattr(context["_dashboard_points"], "extract_xy_points")
-        assert hasattr(context["_dashboard_geometry"], "map_trajectory_point")
+        assert callable(context["extract_xy_points"])
+        assert callable(context["recognize_stroke"])
     finally:
         sys.path[:] = saved_path
         for name, module in saved_modules.items():
@@ -191,9 +195,7 @@ def test_get_virtual_button_under_cursor():
     assert get_virtual_button_under_cursor(5, 5, rects) == ""
 
 def test_drawing_zone_is_central_and_separate_from_canvas_controls():
-    from magnetic_trajectory_dashboard_node import (
-        resolve_preview_button_hit,
-    )
+    from colmag_ros.dashboard_geometry import resolve_preview_button_hit
 
     width, height, padding, button_size = 560, 407, 20, 58
     reach_rect = (padding, padding, width - padding, height - padding)

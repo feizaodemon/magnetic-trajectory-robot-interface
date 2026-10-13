@@ -17,7 +17,7 @@ if str(SCRIPTS) not in sys.path:
 
 from colmag_ros import dtw_bank_features as features  # noqa: E402
 from colmag_ros import dtw_template_bank_tools as bank_tools  # noqa: E402
-import trajectory_symbol_top3_recognizer_node as recognizer  # noqa: E402
+from colmag_ros import preview_recognition  # noqa: E402
 
 
 def _legacy_finite_float(value, default=0.0):
@@ -131,13 +131,9 @@ def test_dtw_distance_matches_frozen_reference_exactly():
     assert math.isinf(features.dtw_distance([], second))
 
 
-def test_runtime_compatibility_names_delegate_without_behavior_change():
-    points = [(0.0, 0.0), (1.0, 0.5), (2.0, 0.0)]
-    assert recognizer.finite_float("nan", 7.0) == features.finite_float("nan", 7.0)
-    assert recognizer.resample_by_arclength(points, 9) == features.resample_by_arclength(points, 9)
-    assert recognizer.normalize_points(points, 64) == features.normalize_points(points, 64)
-    normalized = features.normalize_points(points, 64)
-    assert recognizer.dtw_distance(normalized, normalized) == features.dtw_distance(normalized, normalized)
+def test_preview_recognition_uses_canonical_dtw_features():
+    assert preview_recognition.normalize_points is features.normalize_points
+    assert preview_recognition.dtw_distance is features.dtw_distance
 
 
 def test_curated_bank_top3_distance_and_gate_match_frozen_reference():

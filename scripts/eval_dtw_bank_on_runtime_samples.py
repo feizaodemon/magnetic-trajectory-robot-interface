@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evaluate a DTW template bank against existing dashboard runtime samples.
 
-M104-B2c offline feasibility tooling. Loads a template bank JSON, extracts
+Offline feasibility tooling. Loads a template bank JSON, extracts
 ``raw_symbol_capture.points`` from runtime sample JSONs, ranks every query
 against the bank, and reports accuracy / confusion / margin / threshold-grid
 behavior. Runtime queries are never y-flipped; the seed-side y-flip decision
@@ -46,7 +46,7 @@ MIN_MARGIN_GRID = (0.0, 0.02, 0.05, 0.10)
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Offline M104-B2c: evaluate a DTW template bank on runtime samples."
+        description="Offline: evaluate a DTW template bank on runtime samples."
     )
     parser.add_argument("--template-bank", required=True)
     parser.add_argument("--runtime-samples-root",
