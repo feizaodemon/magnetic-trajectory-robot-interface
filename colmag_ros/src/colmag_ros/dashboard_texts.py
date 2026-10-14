@@ -1,10 +1,7 @@
 """Default header, panel, and footer texts for the trajectory dashboard."""
 
 TRAJECTORY_MODE = "trajectory"
-
-
-def default_header_title(demo_input_mode):
-    return "COLMAG Magnetic Trajectory Dashboard"
+HEADER_TITLE = "COLMAG Magnetic Trajectory Dashboard"
 
 
 def default_header_subtitle(demo_input_mode):
@@ -21,11 +18,3 @@ def default_main_panel_title(demo_input_mode):
     if demo_input_mode == TRAJECTORY_MODE:
         return "Live Magnetic Trajectory"
     return "Symbol Recognition Preview"
-
-
-def default_safety_badge(demo_input_mode):
-    return ""
-
-
-def default_footer_text(demo_input_mode):
-    return ""

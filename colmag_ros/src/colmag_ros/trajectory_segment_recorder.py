@@ -87,7 +87,7 @@ class SegmentRecorder:
         return list(self.points)
 
     # --- control -------------------------------------------------------------
-    def start(self, now):
+    def start(self):
         """Start a new segment: clear the previous one and arm capture.
 
         Recording begins on the first writing point fed after this call, so the
@@ -140,15 +140,15 @@ class SegmentRecorder:
         # Lift-away stop (only when z is available and enabled).
         if (self.stop_on_lift and z_val is not None
                 and z_val > self.lift_z_threshold):
-            return self._finish("lift", now)
+            return self._finish("lift")
 
         if recordable:
             self.points.append((float(x), float(y)))
             if len(self.points) >= self.max_points:
-                return self._finish("max_points", now)
+                return self._finish("max_points")
 
         if now - self.start_time >= self.duration_sec:
-            return self._finish("duration", now)
+            return self._finish("duration")
         return self.state
 
     def poll(self, now):
@@ -160,19 +160,19 @@ class SegmentRecorder:
         if self.state != STATE_RECORDING or self.start_time is None:
             return self.state
         if float(now) - self.start_time >= self.duration_sec:
-            return self._finish("duration", now)
+            return self._finish("duration")
         return self.state
 
-    def finish_now(self, now, reason="manual"):
+    def finish_now(self, reason="manual"):
         """Force-finalize the current recording (e.g. on Recognize).
 
         Returns the current state; only acts while RECORDING.
         """
         if self.state != STATE_RECORDING:
             return self.state
-        return self._finish(reason, now)
+        return self._finish(reason)
 
-    def _finish(self, reason, now):
+    def _finish(self, reason):
         self.stop_reason = reason
         self.state = STATE_RECORDING_DONE
         return self.state

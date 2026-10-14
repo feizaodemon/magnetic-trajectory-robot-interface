@@ -267,7 +267,7 @@ class DashboardPreviewControlsMixin:
         for index, text in enumerate(view["rows"]):
             self.root.after(0, lambda i=index, t=text: row_vars[i].set(t))
 
-    def _refresh_operator_status(self, candidate_rows=None):
+    def _refresh_operator_status(self):
         sample_ready = self._drawing_sample_ready()
         top_candidate = self._top_preview_candidate_label()
         interaction_state = self.preview_interaction.state
@@ -356,7 +356,7 @@ class DashboardPreviewControlsMixin:
         self.root.after(0, lambda t=texts["operator_status"]: self.traj_operator_status_var.set(t))
         for i, txt in enumerate(texts["candidate_rows"]):
             self.root.after(0, lambda i=i, t=txt: self.traj_candidate_vars[i].set(t))
-        self._refresh_operator_status(texts["candidate_rows"])
+        self._refresh_operator_status()
 
     def _sync_external_candidate_display(self, data, backend_text):
         tops = summarize_candidates(data)
@@ -394,7 +394,7 @@ class DashboardPreviewControlsMixin:
         self.root.after(0, lambda t=progress_text: self.traj_recognition_progress_var.set(t))
         for i, text in enumerate(display_rows):
             self.root.after(0, lambda i=i, t=text: self.traj_candidate_vars[i].set(t))
-        self._refresh_operator_status(display_rows)
+        self._refresh_operator_status()
 
     def _ocr_confirm_enabled(self):
         return self.ocr_panel_state == "CONFIRM_PENDING" and bool(summarize_candidates(self.current_candidate_payload))

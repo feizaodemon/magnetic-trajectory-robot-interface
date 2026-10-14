@@ -7,9 +7,9 @@ from colmag_ros.dashboard_geometry import (
     compute_ocr_stage_geometry,
 )
 from colmag_ros.dashboard_texts import (
+    HEADER_TITLE,
     TRAJECTORY_MODE,
     default_header_subtitle,
-    default_header_title,
     default_main_panel_title,
 )
 
@@ -74,7 +74,7 @@ class DashboardLayoutMixin:
         left_frame = ttk.Frame(header, style="Header.TFrame")
         left_frame.pack(side=tk.LEFT, padx=15, pady=10)
 
-        title = default_header_title(self.config.demo_input_mode)
+        title = HEADER_TITLE
         if self.config.subtitle_text:
             sub = self.config.subtitle_text
         else:

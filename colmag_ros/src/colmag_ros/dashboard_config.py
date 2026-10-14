@@ -19,11 +19,7 @@ from colmag_ros.dashboard_sample_lifecycle import (
     DEFAULT_REAL_BOARD_SAMPLE_RECORDING_DIR,
     real_board_sample_recording_dir,
 )
-from colmag_ros.dashboard_texts import (
-    TRAJECTORY_MODE,
-    default_footer_text,
-    default_safety_badge,
-)
+from colmag_ros.dashboard_texts import TRAJECTORY_MODE
 from colmag_ros.dashboard_trajectory_processing import (
     normalize_scale_mode,
     normalize_stroke_gate_mode,
@@ -217,8 +213,8 @@ class DashboardConfig:
             interaction_profile=normalize_interaction_profile(
                 get("interaction_profile", None), demo_input_mode),
             subtitle_text=get("subtitle_text", None),
-            safety_badge=get("safety_badge", default_safety_badge(demo_input_mode)),
-            footer_text=get("footer_text", default_footer_text(demo_input_mode)),
+            safety_badge=get("safety_badge", ""),
+            footer_text=get("footer_text", ""),
             route_scope_text=get("route_scope_text", "Gazebo only. No real robot command."),
             confirm_policy_text=get("confirm_policy_text", "Confirm publishes selected label."),
             canvas_width=canvas_width,
