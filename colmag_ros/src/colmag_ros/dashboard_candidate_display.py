@@ -11,7 +11,7 @@ from colmag_ros.dashboard_dwell_status import format_trajectory_preview_interact
 from colmag_ros.display_semantics import display_label_for_candidate
 
 
-def backend_display_name(backend, recognition_model_path=""):
+def backend_display_name(backend):
     return {
         "dtw": "DTW",
         "dtw_template_bank": "DTW template bank",
@@ -503,10 +503,6 @@ def preview_candidate_ui_texts(state):
     }
 
 
-def _basename(path):
-    text = str(path or "").replace("\\", "/").rstrip("/")
-    return text.split("/")[-1] if text else ""
-
 
 def recognizer_status_texts(payload):
     """Compact Recognizer-card lines; no feature/debug fields in main UI."""
@@ -519,11 +515,7 @@ def recognizer_status_texts(payload):
         }
     backend = str(payload.get("backend") or "unknown")
     mode = "DTW template bank" if backend == "dtw_template_bank" else backend
-    model = (
-        str(payload.get("recognition_model_name") or "").strip()
-        or _basename(payload.get("recognition_model_path") or payload.get("model_path") or "")
-        or "n/a"
-    )
+
     if payload.get("uncertain"):
         reason = str(payload.get("uncertainty_reason") or payload.get("reason") or "uncertain")
         status = "Uncertain / redraw (%s)" % reason
@@ -531,7 +523,8 @@ def recognizer_status_texts(payload):
         status = str(payload.get("status") or "unknown")
     return {
         "mode": "Mode: %s" % mode,
-        "model": "Model: %s" % model,
+        # The recognizer payload names no model, so this line is fixed.
+        "model": "Model: n/a",
         "status": "Status: %s" % status,
         "labels": format_recognition_labels(payload.get("recognition_labels")),
     }

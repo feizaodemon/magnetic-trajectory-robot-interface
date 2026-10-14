@@ -153,10 +153,7 @@ class MagneticTrajectoryDashboardNode(
             self._ocr_draw_area = None
 
         self.preview_interaction = PreviewInteraction()
-        self.recognition_backend_label = backend_display_name(
-            config.recognition_backend,
-            config.recognition_model_path,
-        )
+        self.recognition_backend_label = backend_display_name(config.recognition_backend)
         self.trajectory_candidates = []
         self._candidate_recognize_job = None
         self._recognizing = False
@@ -370,7 +367,6 @@ class MagneticTrajectoryDashboardNode(
             backend=self.config.recognition_backend,
             min_points=self.config.candidate_min_points,
             labels=self.config.candidate_labels,
-            recognition_model_path=self.config.recognition_model_path,
         )
         self.recognition_backend_label = backend_label
         self.trajectory_candidates = candidates
