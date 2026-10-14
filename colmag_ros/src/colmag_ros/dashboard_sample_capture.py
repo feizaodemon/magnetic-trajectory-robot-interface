@@ -362,7 +362,7 @@ class DashboardSampleCaptureMixin:
         # Reuse the clear path so trail/candidates/confirm reset consistently.
         self._clear_trajectory_trace()
         self.recorded_segment = []
-        self.segment_recorder.start(time.time())
+        self.segment_recorder.start()
         self.preview_interaction.recording()
         self._update_candidate_ui()
         self._schedule_ui_refresh()
@@ -411,7 +411,7 @@ class DashboardSampleCaptureMixin:
                 and self.config.recognize_only_completed_segment
                 and rec is not None):
             if rec.is_recording:
-                rec.finish_now(time.time(), reason="recognize")
+                rec.finish_now(reason="recognize")
                 self.recorded_segment = rec.segment()
             return list(self.recorded_segment or [])
         return self.trail
