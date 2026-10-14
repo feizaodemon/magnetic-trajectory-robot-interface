@@ -92,18 +92,23 @@ def draw_notice_card(canvas, cx, cy, width, height, title, body, tone):
                        anchor="n", justify="center", width=width - 32)
 
 
-# Keycap grid cells (column, row): a WASD cluster and a Q/E column beside it.
-PAD_CELLS = {"W": (1, 0), "A": (0, 1), "S": (1, 1), "D": (2, 1), "Q": (3.5, 0), "E": (3.5, 1)}
+# Keycap grid cells (column, row): a WASD cluster, a Q/E column and an O/C
+# gripper column.
+PAD_CELLS = {"W": (1, 0), "A": (0, 1), "S": (1, 1), "D": (2, 1), "Q": (3.5, 0), "E": (3.5, 1),
+             "O": (5, 0), "C": (5, 1)}
 
 
 def draw_teleop_pad(canvas, width, height, keys, active, caption):
-    """Keycaps for the Cartesian keys; the key whose direction is ``active`` lights up.
+    """Keycaps for the teleop keys; keys whose value is in ``active`` light up.
 
-    ``keys`` is ``[(letter, (x, y, z), axis_label)]``; letters without a cell are skipped.
+    ``keys`` is ``[(letter, direction or gripper command, label)]``; letters
+    without a cell are skipped.
     """
     canvas.delete("all")
-    cap, gap = 64, 10
-    cluster_w = 4.5 * cap + 3 * gap
+    gap = 10
+    # Shrink the keycaps so all six columns fit inside the canvas.
+    cap = max(36, min(64, int((width - 16 - 5 * gap) / 6)))
+    cluster_w = 6 * cap + 5 * gap
     block_h = 2 * cap + gap + 34
     x0 = (width - cluster_w) / 2.0
     top = max(8.0, (height - block_h) / 2.0)
@@ -115,7 +120,7 @@ def draw_teleop_pad(canvas, width, height, keys, active, caption):
             continue
         x = x0 + cell[0] * (cap + gap)
         y = top + cell[1] * (cap + gap)
-        lit = active is not None and tuple(active) == tuple(vector)
+        lit = vector in active
         rounded_rect(canvas, x, y + 3, x + cap, y + cap + 3, 10, fill=theme.BORDER, outline="")
         rounded_rect(canvas, x, y, x + cap, y + cap, 10,
                      fill=theme.ACCENT if lit else theme.SURFACE,

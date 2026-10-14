@@ -103,7 +103,7 @@ class DashboardCanvasViewMixin:
         if ocr_mode and self._teleop_active():
             # Mouse drawing is paused in TELEOP; the stage shows the Cartesian keys.
             draw_teleop_pad(self.canvas, self.canvas_width, self.canvas_height,
-                            pad_keys(), self.teleop_active_direction, TELEOP_PAD_CAPTION)
+                            pad_keys(), self.teleop_active_keys, TELEOP_PAD_CAPTION)
             return
         self._draw_canvas_guides()
         if not ocr_mode:

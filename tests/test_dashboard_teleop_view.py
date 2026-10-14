@@ -3,6 +3,7 @@
 from colmag_ros.dashboard_teleop_view import (
     NO_STATE_VIEW,
     direction_label,
+    gripper_view,
     input_direction,
     pad_keys,
     teleop_backend_text,
@@ -22,7 +23,18 @@ def test_direction_labels_and_pad_keys_follow_the_keyboard_mapping():
     assert direction_label((1.0, 0.0, -1.0)) == "+X -Z"
     assert direction_label(None) == ""
     keys = {letter: label for letter, _vector, label in pad_keys()}
-    assert keys == {"W": "+X", "S": "-X", "A": "+Y", "D": "-Y", "Q": "+Z", "E": "-Z"}
+    assert keys == {"W": "+X", "S": "-X", "A": "+Y", "D": "-Y", "Q": "+Z", "E": "-Z",
+                    "O": "Open", "C": "Close"}
+
+
+def test_gripper_view_text_and_lit_key():
+    assert gripper_view(None) == ("", None)
+    assert gripper_view({"state": "CLOSING", "width_m": 0.0712}) == (
+        "Gripper: Closing · 71 mm", "close")
+    assert gripper_view({"state": "HOLDING", "width_m": 0.048}) == (
+        "Gripper: Holding an object · 48 mm", None)
+    assert gripper_view({"state": "REJECTED", "reason": "teleop_not_owner", "width_m": None}) == (
+        "Gripper: Command rejected · teleop not owner", None)
 
 
 def test_state_view_texts_and_tones():

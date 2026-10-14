@@ -25,7 +25,7 @@ from colmag_ros.dashboard_widgets import (
 )
 
 RECOGNITION_TILE_SIZE = 84
-TELEOP_TERMINAL_KEYS = "SPACE pauses · ESC quits (teleop terminal)"
+TELEOP_TERMINAL_KEYS = "O/C gripper · SPACE pauses · ESC quits (teleop terminal)"
 
 
 def _draw_state_dot(canvas, tone):
@@ -460,6 +460,8 @@ class DashboardLayoutMixin:
         self._card_label(row, self.teleop_headline_var, size=14, bold=True, inset=64, padx=(8, 0))
         self._card_label(card, self.teleop_detail_var, size=10, color=theme.TEXT_SECONDARY,
                          pady=(6, 0))
+        self._card_label(card, self.teleop_gripper_var, size=10, color=theme.TEXT_SECONDARY,
+                         pady=(4, 0))
         self._card_label(card, self.teleop_backend_var, size=10, color=theme.TEXT_SECONDARY,
                          pady=(4, 0))
         self._card_label(card, text=TELEOP_TERMINAL_KEYS, size=9, color=theme.TEXT_MUTED,
@@ -560,13 +562,14 @@ class DashboardLayoutMixin:
             workflow.pack(fill=self.tk.X, pady=(0, 10), after=self.status_card)
             recognition.pack(fill=self.tk.BOTH, expand=True, pady=(0, 10), after=workflow)
 
-    def _apply_teleop_view(self, headline, detail, tone, backend, active):
+    def _apply_teleop_view(self, headline, detail, tone, backend, gripper, active):
         self.teleop_headline_var.set(headline)
         self.teleop_detail_var.set(detail)
         self.teleop_backend_var.set(backend)
+        self.teleop_gripper_var.set(gripper)
         _draw_state_dot(self.teleop_state_dot, tone)
-        if active != self.teleop_active_direction:
-            self.teleop_active_direction = active
+        if active != self.teleop_active_keys:
+            self.teleop_active_keys = active
             self._schedule_ui_refresh()
 
     def _build_safety_footer(self, parent):

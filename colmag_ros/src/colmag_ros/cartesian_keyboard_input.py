@@ -16,6 +16,8 @@ KEY_DIRECTIONS = {
     "e": (0.0, 0.0, -1.0),
 }
 
+GRIPPER_KEYS = {"o": "open", "c": "close"}
+
 PAUSE_KEYS = frozenset((" ",))
 QUIT_KEYS = frozenset(("\x03", "\x1b"))
 HELP_KEYS = frozenset(("?",))
@@ -42,6 +44,25 @@ def build_cartesian_input_payload(key, sequence_id, timestamp=None):
         "z": z,
         "engaged": direction is not None,
         "input_mode": "keyboard_cartesian",
+    }
+
+
+def gripper_command_for_key(key):
+    """Return ``"open"`` / ``"close"`` for a gripper key, or ``None``."""
+    key = str(key or "")
+    return GRIPPER_KEYS.get(key.lower()) if len(key) == 1 else None
+
+
+def build_gripper_payload(command, sequence_id, timestamp=None):
+    """Build one discrete gripper command for the Gazebo gripper bridge."""
+    if command not in GRIPPER_KEYS.values():
+        raise ValueError("unknown gripper command: %r" % command)
+    timestamp = time.time() if timestamp is None else float(timestamp)
+    return {
+        "timestamp": timestamp,
+        "sequence_id": int(sequence_id),
+        "command": command,
+        "input_mode": "keyboard_gripper",
     }
 
 
@@ -105,6 +126,7 @@ def help_lines():
         "W / Up -> +X; S / Down -> -X",
         "A / Left -> +Y; D / Right -> -Y",
         "Q -> +Z; E -> -Z",
+        "O -> open gripper; C -> close gripper (Gazebo gripper bridge)",
         "SPACE -> pause and invalidate target; ESC / Ctrl-C -> quit",
         "Hold a key to move; releasing it brakes the robot to rest.",
     )

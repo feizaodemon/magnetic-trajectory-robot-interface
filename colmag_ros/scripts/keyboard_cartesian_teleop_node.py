@@ -19,6 +19,9 @@ from colmag_ros import cartesian_keyboard_input
 
 
 PUBLISH_PERIOD_SEC = 1.0 / 30.0
+# Repeats of a held O/C closer together than this are one key hold; it covers
+# the terminal's ~0.5-0.66 s first auto-repeat delay.
+GRIPPER_REPEAT_GAP_SEC = 0.8
 
 
 def _read_char(descriptor):
@@ -55,6 +58,16 @@ class KeyboardCartesianTeleopNode:
         self.publisher = rospy.Publisher(
             self.output_topic, String, queue_size=10, latch=False
         )
+        self.gripper_topic = rospy.get_param(
+            "~gripper_command_topic", "/colmag/teleop/gripper_command"
+        )
+        self.gripper_publisher = rospy.Publisher(
+            self.gripper_topic, String, queue_size=10, latch=False
+        )
+        self.gripper_sequence_id = 0
+        # (command, time of its last key event): auto-repeat of a held O/C
+        # sends one command, not one per repeat.
+        self.last_gripper_event = (None, 0.0)
         self.sequence_id = 0
         # Covers the terminal's first auto-repeat delay; 0 publishes a tap as
         # a short pulse instead.
@@ -99,12 +112,37 @@ class KeyboardCartesianTeleopNode:
         )
         return True
 
+    def publish_gripper(self, command, now):
+        """Publish one open/close command, ignoring auto-repeat of a held key."""
+        last_command, last_time = self.last_gripper_event
+        self.last_gripper_event = (command, now)
+        if command == last_command and now - last_time < GRIPPER_REPEAT_GAP_SEC:
+            return False
+        if self.require_subscriber and self.gripper_publisher.get_num_connections() < 1:
+            self.rospy.logwarn_throttle(
+                1.0, "No gripper bridge subscriber on %s", self.gripper_topic
+            )
+            return False
+        self.gripper_sequence_id += 1
+        payload = cartesian_keyboard_input.build_gripper_payload(
+            command,
+            sequence_id=self.gripper_sequence_id,
+            timestamp=self.rospy.Time.now().to_sec(),
+        )
+        self.gripper_publisher.publish(
+            self.String(data=json.dumps(payload, sort_keys=True))
+        )
+        return True
+
     def handle_key(self, key, now):
         """Process one key; ``False`` when the node should quit."""
         if key in cartesian_keyboard_input.QUIT_KEYS:
             return False
+        gripper_command = cartesian_keyboard_input.gripper_command_for_key(key)
         if key in cartesian_keyboard_input.HELP_KEYS:
             print("\n" + "\n".join(cartesian_keyboard_input.help_lines()))
+        elif gripper_command is not None:
+            self.publish_gripper(gripper_command, now)
         elif cartesian_keyboard_input.direction_for_key(key) is not None:
             if self.hold.press(key, now):
                 self.publish_key(key)
