@@ -9,6 +9,10 @@ Magnetic Trajectory Robot Interface is a ROS1 robot interaction system with two 
 
 Both modes run against a Gazebo Panda simulation or a Franka FR3 controller path.
 
+![Mouse-to-Gazebo TASK cycle: draw a 2, review the DTW result, dwell on C to confirm, then the Gazebo Panda runs the mapped motion](docs/media/mouse_gazebo_task_demo.gif)
+
+*One `TASK` cycle in Gazebo: hover B to start, draw a 2, review the ranked result, dwell on C to confirm. The dispatcher then sends `HEXAGON_TRAJECTORY` and the bridge runs its default bounded placeholder motion. Recorded headless from the `mouse-gazebo` Docker image at revision `cadfd04`; an `xdotool` script moves the cursor.*
+
 ## Architecture at a glance
 
 ```mermaid
