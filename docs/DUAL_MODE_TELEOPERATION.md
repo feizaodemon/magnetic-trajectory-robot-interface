@@ -61,8 +61,27 @@ adapter state from `/colmag/gazebo_cartesian_teleop_state` (for example
 this route. The board dashboard keeps its trajectory view under a `TELEOP
 active` notice.
 
+### Gazebo gripper
+
+`O` and `C` in the keyboard terminal publish one discrete open or close command
+on `/colmag/teleop/gripper_command`. `gazebo_gripper_bridge_node.py`
+(`colmag_gazebo_stub`, started by the keyboard Gazebo launch unless
+`start_gripper_bridge:=false`) accepts a command only while
+`/colmag/control_mode` is `TELEOP`, the sequence id increases, and the command
+is at most 1 s old. It then calls the simulated `franka_gripper` `move` (open)
+or `grasp` (close) action and publishes `OPENING`, `CLOSING`, `OPEN`, `CLOSED`,
+`HOLDING`, `REJECTED` or `FAILED` with the finger width on
+`/colmag/teleop/gripper_state`. The dashboard shows that state on the
+Teleoperation card and lights the `O`/`C` keycaps while the gripper moves.
+There is no real-hardware gripper route.
+
+`spawn_pick_objects:=true` adds a 5 cm cube and a static place pad for a
+pick-and-place exercise (positions set by `pick_cube_x`/`pick_cube_y` and
+`place_pad_x`/`place_pad_y`).
+
 This continuous Cartesian Gazebo route was exercised at runtime, including GUI
-`TASK -> TELEOP -> TASK` transitions and moving Panda joints.
+`TASK -> TELEOP -> TASK` transitions, moving Panda joints, and a keyboard
+pick-and-place of the spawned cube.
 
 ## Real-FR3 TELEOP route
 

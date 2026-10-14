@@ -18,6 +18,17 @@
   <arg name="confirmed_topic" default="/colmag/teleop/confirmed_label" />
   <arg name="cartesian_input_topic" default="/colmag/teleop/cartesian_input" />
   <arg name="task_command_topic" default="/colmag/task_command" />
+  <!-- Gripper: O/C in the keyboard terminal open/close the simulated hand,
+       only while TELEOP owns the robot. -->
+  <arg name="start_gripper_bridge" default="true" />
+  <arg name="gripper_command_topic" default="/colmag/teleop/gripper_command" />
+  <arg name="gripper_state_topic" default="/colmag/teleop/gripper_state" />
+  <!-- Optional pick-and-place scene: a 5 cm cube and a flat target pad. -->
+  <arg name="spawn_pick_objects" default="false" />
+  <arg name="pick_cube_x" default="0.45" />
+  <arg name="pick_cube_y" default="-0.15" />
+  <arg name="place_pad_x" default="0.45" />
+  <arg name="place_pad_y" default="0.15" />
 
   <include file="$(find colmag_ros)/launch/final_gazebo_robot_demo.launch">
     <arg name="start_dtw_frontend" value="true" />
@@ -31,4 +42,24 @@
     <arg name="keyboard_confirmed_topic" value="$(arg confirmed_topic)" />
     <arg name="cartesian_input_topic" value="$(arg cartesian_input_topic)" />
   </include>
+
+  <node if="$(arg start_gripper_bridge)"
+        pkg="colmag_gazebo_stub"
+        type="gazebo_gripper_bridge_node.py"
+        name="gazebo_gripper_bridge_node"
+        output="screen">
+    <param name="gripper_command_topic" value="$(arg gripper_command_topic)" />
+    <param name="gripper_state_topic" value="$(arg gripper_state_topic)" />
+    <param name="control_mode_topic" value="/colmag/control_mode" />
+    <param name="gripper_namespace" value="/franka_gripper" />
+  </node>
+
+  <group if="$(arg spawn_pick_objects)">
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_pick_cube" output="screen"
+          args="-sdf -file $(find colmag_gazebo_stub)/models/pick_cube.sdf -model pick_cube
+                -x $(arg pick_cube_x) -y $(arg pick_cube_y) -z 0.026" />
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_place_pad" output="screen"
+          args="-sdf -file $(find colmag_gazebo_stub)/models/place_pad.sdf -model place_pad
+                -x $(arg place_pad_x) -y $(arg place_pad_y) -z 0.002" />
+  </group>
 </launch>

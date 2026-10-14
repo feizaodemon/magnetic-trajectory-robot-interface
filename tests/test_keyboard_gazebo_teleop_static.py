@@ -4,6 +4,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
+
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE_SRC = REPO / "colmag_ros" / "src"
@@ -100,6 +102,19 @@ def test_continuous_keyboard_mapping_is_normalized_cartesian_not_task_labels():
     assert release["engaged"] is True
 
 
+def test_gripper_keys_build_discrete_open_close_commands():
+    assert cartesian_keyboard_input.gripper_command_for_key("o") == "open"
+    assert cartesian_keyboard_input.gripper_command_for_key("C") == "close"
+    assert cartesian_keyboard_input.gripper_command_for_key("\x1b[C") is None
+    assert cartesian_keyboard_input.gripper_command_for_key("w") is None
+    payload = cartesian_keyboard_input.build_gripper_payload(
+        "close", sequence_id=2, timestamp=5.0)
+    assert payload == {"timestamp": 5.0, "sequence_id": 2, "command": "close",
+                       "input_mode": "keyboard_gripper"}
+    with pytest.raises(ValueError):
+        cartesian_keyboard_input.build_gripper_payload("grip", sequence_id=3)
+
+
 def test_key_hold_tracker_bridges_the_first_repeat_delay_and_detects_release():
     tracker = cartesian_keyboard_input.KeyHoldTracker(
         first_repeat_window_sec=0.6, repeat_window_sec=0.12
@@ -135,7 +150,10 @@ def test_launch_wraps_the_dual_mode_existing_gazebo_backend():
     assert include_args["start_keyboard_teleop"] == "false"
     assert include_args["task_command_topic"] == "$(arg task_command_topic)"
     assert include_args["keyboard_confirmed_topic"] == "$(arg confirmed_topic)"
-    assert root.findall("node") == []
+    # The only extra node is the Gazebo-only, TELEOP-gated gripper bridge.
+    assert [node.attrib["type"] for node in root.findall("node")] == [
+        "gazebo_gripper_bridge_node.py"
+    ]
 
 
 def test_existing_final_route_keeps_its_frontend_enabled_by_default():

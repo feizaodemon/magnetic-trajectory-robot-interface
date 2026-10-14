@@ -101,6 +101,9 @@ in the dashboard and run the terminal input owner separately:
 rosrun colmag_ros keyboard_cartesian_teleop_node.py
 ```
 
+`O`/`C` open and close the simulated gripper while `TELEOP` is active. Add
+`spawn_pick_objects:=true` to the launch for a cube and a place pad.
+
 The GUI selection does not authorize hardware. The physical-board/Real-FR3
 profile remains outside the quick path and requires every gate below.
 

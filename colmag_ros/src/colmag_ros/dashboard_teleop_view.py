@@ -4,7 +4,7 @@ ROS-free and Tk-free. The dashboard only displays this; it publishes nothing
 on the TELEOP route.
 """
 
-from colmag_ros.cartesian_keyboard_input import KEY_DIRECTIONS
+from colmag_ros.cartesian_keyboard_input import GRIPPER_KEYS, KEY_DIRECTIONS
 
 AXES = ("x", "y", "z")
 
@@ -46,12 +46,43 @@ def direction_label(vector):
 
 
 def pad_keys():
-    """``[(key letter, direction, axis label)]`` for the single-letter keyboard keys."""
+    """``[(key letter, direction or gripper command, label)]`` for the keyboard keys."""
     return [
         (key.upper(), vector, direction_label(vector))
         for key, vector in KEY_DIRECTIONS.items()
         if len(key) == 1
+    ] + [
+        (key.upper(), command, command.capitalize())
+        for key, command in GRIPPER_KEYS.items()
     ]
+
+
+# Gripper bridge state -> card text; the pad lights O/C while the hand moves.
+GRIPPER_STATE_TEXT = {
+    "OPENING": "Opening",
+    "CLOSING": "Closing",
+    "OPEN": "Open",
+    "CLOSED": "Closed",
+    "HOLDING": "Holding an object",
+    "REJECTED": "Command rejected",
+    "FAILED": "Action failed",
+    "UNKNOWN": "No command yet",
+}
+GRIPPER_ACTIVE = {"OPENING": "open", "CLOSING": "close"}
+
+
+def gripper_view(state_payload):
+    """``(card text, active gripper command or None)``; empty text without a bridge."""
+    if not isinstance(state_payload, dict) or not state_payload.get("state"):
+        return "", None
+    state = str(state_payload["state"])
+    text = "Gripper: %s" % GRIPPER_STATE_TEXT.get(state, state.replace("_", " ").capitalize())
+    width = state_payload.get("width_m")
+    if isinstance(width, (int, float)):
+        text += " · %d mm" % round(width * 1000.0)
+    if state in ("REJECTED", "FAILED") and state_payload.get("reason"):
+        text += " · %s" % str(state_payload["reason"]).replace("_", " ")
+    return text, GRIPPER_ACTIVE.get(state)
 
 
 def teleop_state_view(state_payload, direction=None):

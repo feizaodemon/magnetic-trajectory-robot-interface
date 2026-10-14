@@ -16,5 +16,10 @@ catkin_package()
 
 catkin_install_python(PROGRAMS
   scripts/fr3_gazebo_visible_task_bridge_node.py
+  scripts/gazebo_gripper_bridge_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY models
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

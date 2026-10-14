@@ -48,6 +48,7 @@ class DashboardConfig:
     # Read-only TELEOP view inputs (mouse profile with control mode only).
     cartesian_input_topic: str
     cartesian_teleop_state_topic: str
+    gripper_state_topic: str
 
     # Confirm gates. The confirmed_label publisher needs both
     # integrated_confirm_enabled and publish_confirmed_label. The preview
@@ -209,6 +210,7 @@ class DashboardConfig:
             cartesian_input_topic=get("cartesian_input_topic", "/colmag/teleop/cartesian_input"),
             cartesian_teleop_state_topic=get(
                 "cartesian_teleop_state_topic", "/colmag/gazebo_cartesian_teleop_state"),
+            gripper_state_topic=get("gripper_state_topic", "/colmag/teleop/gripper_state"),
             integrated_confirm_enabled=flag("integrated_dashboard_confirm_enabled", False),
             publish_confirmed_label=flag("publish_confirmed_label", False),
             publish_task_command=flag("publish_task_command", False),

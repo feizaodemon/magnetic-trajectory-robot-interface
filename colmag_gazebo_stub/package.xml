@@ -2,7 +2,7 @@
 <package format="2">
   <name>colmag_gazebo_stub</name>
   <version>0.0.1</version>
-  <description>Gazebo FollowJointTrajectory bridge for the COLMAG robot-body demo.</description>
+  <description>Gazebo FollowJointTrajectory bridge, TELEOP gripper bridge and pick-and-place objects for the COLMAG robot-body demo.</description>
 
   <maintainer email="64273122+feizaodemon@users.noreply.github.com">Xiaowei Rong</maintainer>
   <license>MIT</license>
@@ -16,4 +16,7 @@
   <exec_depend>control_msgs</exec_depend>
   <exec_depend>actionlib</exec_depend>
   <exec_depend>colmag_ros</exec_depend>
+  <!-- Gazebo TELEOP gripper bridge and pick-and-place objects. -->
+  <exec_depend>franka_gripper</exec_depend>
+  <exec_depend>gazebo_ros</exec_depend>
 </package>
