@@ -9,35 +9,42 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     COLMAG_WS=/workspace/catkin_ws
 
-# snapshots.ros.org sometimes answers single package downloads with HTTP 500;
-# apt retries each failed download.
+# snapshots.ros.org sometimes answers package downloads with HTTP 500 for a
+# while. apt retries a failed download at once; the install loop below retries
+# after 30, 60 and 90 s, keeping the archives that already downloaded.
 RUN echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    python3-catkin-pkg \
-    python3-numpy \
-    python3-serial \
-    python3-tk \
-    ros-noetic-actionlib \
-    ros-noetic-control-msgs \
-    ros-noetic-controller-interface \
-    ros-noetic-effort-controllers \
-    ros-noetic-franka-gazebo \
-    ros-noetic-gazebo-ros-control \
-    ros-noetic-gazebo-ros-pkgs \
-    ros-noetic-hardware-interface \
-    ros-noetic-joint-state-controller \
-    ros-noetic-joint-trajectory-controller \
-    ros-noetic-pluginlib \
-    ros-noetic-position-controllers \
-    ros-noetic-realtime-tools \
-    ros-noetic-robot-state-publisher \
-    ros-noetic-sensor-msgs \
-    ros-noetic-std-msgs \
-    ros-noetic-trajectory-msgs \
-    ros-noetic-xacro \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    for attempt in 1 2 3 4; do \
+      apt-get install -y --no-install-recommends \
+        build-essential \
+        python3-catkin-pkg \
+        python3-numpy \
+        python3-serial \
+        python3-tk \
+        ros-noetic-actionlib \
+        ros-noetic-control-msgs \
+        ros-noetic-controller-interface \
+        ros-noetic-effort-controllers \
+        ros-noetic-franka-gazebo \
+        ros-noetic-gazebo-ros-control \
+        ros-noetic-gazebo-ros-pkgs \
+        ros-noetic-hardware-interface \
+        ros-noetic-joint-state-controller \
+        ros-noetic-joint-trajectory-controller \
+        ros-noetic-pluginlib \
+        ros-noetic-position-controllers \
+        ros-noetic-realtime-tools \
+        ros-noetic-robot-state-publisher \
+        ros-noetic-sensor-msgs \
+        ros-noetic-std-msgs \
+        ros-noetic-trajectory-msgs \
+        ros-noetic-xacro \
+      && break; \
+      [ "$attempt" -lt 4 ] || exit 1; \
+      sleep $((attempt * 30)); \
+    done && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR ${COLMAG_WS}
 COPY colmag_ros src/colmag_ros
@@ -66,39 +73,46 @@ ENV DEBIAN_FRONTEND=noninteractive \
     COLMAG_WS=/workspace/catkin_ws \
     ROS_LOG_DIR=/workspace/runtime_logs/ros
 
-# snapshots.ros.org sometimes answers single package downloads with HTTP 500;
-# apt retries each failed download.
+# snapshots.ros.org sometimes answers package downloads with HTTP 500 for a
+# while. apt retries a failed download at once; the install loop below retries
+# after 30, 60 and 90 s, keeping the archives that already downloaded.
 RUN echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 \
-    libgl1-mesa-dri \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    python3-numpy \
-    python3-serial \
-    python3-tk \
-    ros-noetic-actionlib \
-    ros-noetic-control-msgs \
-    ros-noetic-controller-interface \
-    ros-noetic-effort-controllers \
-    ros-noetic-franka-gazebo \
-    ros-noetic-gazebo-ros-control \
-    ros-noetic-gazebo-ros-pkgs \
-    ros-noetic-hardware-interface \
-    ros-noetic-joint-state-controller \
-    ros-noetic-joint-trajectory-controller \
-    ros-noetic-pluginlib \
-    ros-noetic-position-controllers \
-    ros-noetic-realtime-tools \
-    ros-noetic-robot-state-publisher \
-    ros-noetic-sensor-msgs \
-    ros-noetic-std-msgs \
-    ros-noetic-trajectory-msgs \
-    ros-noetic-xacro \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    for attempt in 1 2 3 4; do \
+      apt-get install -y --no-install-recommends \
+        libgl1 \
+        libgl1-mesa-dri \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender1 \
+        python3-numpy \
+        python3-serial \
+        python3-tk \
+        ros-noetic-actionlib \
+        ros-noetic-control-msgs \
+        ros-noetic-controller-interface \
+        ros-noetic-effort-controllers \
+        ros-noetic-franka-gazebo \
+        ros-noetic-gazebo-ros-control \
+        ros-noetic-gazebo-ros-pkgs \
+        ros-noetic-hardware-interface \
+        ros-noetic-joint-state-controller \
+        ros-noetic-joint-trajectory-controller \
+        ros-noetic-pluginlib \
+        ros-noetic-position-controllers \
+        ros-noetic-realtime-tools \
+        ros-noetic-robot-state-publisher \
+        ros-noetic-sensor-msgs \
+        ros-noetic-std-msgs \
+        ros-noetic-trajectory-msgs \
+        ros-noetic-xacro \
+      && break; \
+      [ "$attempt" -lt 4 ] || exit 1; \
+      sleep $((attempt * 30)); \
+    done && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /workspace/catkin_ws/install /workspace/catkin_ws/install
 COPY docker/entrypoint.sh /ros_entrypoint_colmag.sh
