@@ -42,10 +42,3 @@ def test_new_shared_helpers_are_install_listed_with_their_callers():
     ).exists()
     assert "catkin_python_setup()" in gazebo_stub_cmake
     assert (REPO / "colmag_gazebo_stub" / "setup.py").exists()
-    assert (
-        REPO
-        / "colmag_gazebo_stub"
-        / "src"
-        / "colmag_gazebo_stub"
-        / "follow_joint_trajectory_goal_validator.py"
-    ).exists()

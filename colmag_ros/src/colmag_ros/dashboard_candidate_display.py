@@ -15,7 +15,6 @@ def backend_display_name(backend, recognition_model_path=""):
     return {
         "dtw": "DTW",
         "dtw_template_bank": "DTW template bank",
-        "lightweight": "Lightweight (DTW)",
     }.get(str(backend or "").strip().lower(), "Unknown")
 
 
@@ -24,14 +23,10 @@ def candidate_backend_status_text(payload):
     if not isinstance(payload, dict):
         return "Backend: unknown"
 
-    backend = str(payload.get("backend") or payload.get("active_backend") or "unknown")
-    fallback = payload.get("fallback_active", False)
-    fallback_reason = str(payload.get("fallback_reason", "none"))
+    backend = str(payload.get("backend") or "unknown")
 
     parts = ["Backend: %s" % backend]
     feature = str(payload.get("feature_mode") or "").strip()
-    if fallback:
-        parts.append("Fallback: %s" % fallback_reason)
     if feature:
         parts.append("Feature: %s" % feature)
     return " | ".join(parts)
@@ -522,13 +517,8 @@ def recognizer_status_texts(payload):
             "status": "Status: unknown",
             "labels": "Labels: unknown",
         }
-    backend = str(payload.get("backend") or payload.get("active_backend") or "unknown")
-    mode_map = {
-        "dtw_fallback_from_ocr_canvas": "DTW fallback",
-        "dtw_trajectory_top3": "DTW",
-        "dtw_template_bank": "DTW template bank",
-    }
-    mode = mode_map.get(backend, backend or "unknown")
+    backend = str(payload.get("backend") or "unknown")
+    mode = "DTW template bank" if backend == "dtw_template_bank" else backend
     model = (
         str(payload.get("recognition_model_name") or "").strip()
         or _basename(payload.get("recognition_model_path") or payload.get("model_path") or "")
