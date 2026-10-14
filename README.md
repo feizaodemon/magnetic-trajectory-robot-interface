@@ -2,35 +2,42 @@
 
 English | [简体中文](README.zh-CN.md)
 
-> Public portfolio edition. Attribution, provenance, hardware-validation boundaries, and third-party license notices are kept below.
+Draw a symbol on a magnetic board or with the mouse. The system recognizes it, and once you confirm, the robot runs the matching task. A second mode lets you drive the end effector directly. Built on ROS1 Noetic, running against a Gazebo Panda or a Franka FR3.
 
-Magnetic Trajectory Robot Interface is a ROS1 robot interaction system with two control modes:
-
-- `TASK`: a trajectory drawn on a magnetic board or with a mouse is ranked against a DTW template bank. The operator confirms one candidate. Only then does a task reach the robot.
-- `TELEOP`: continuous Cartesian manual control through a shared C++ core with damped-least-squares inverse kinematics.
-
-Both modes run against a Gazebo Panda simulation or a Franka FR3 controller path.
+This is my portfolio copy of a collaborative project. What I did, who else contributed, and what was and was not tested on hardware are at the end.
 
 ## Demo (Gazebo)
 
-`TASK`: a mouse-drawn `2` is recognized, confirmed on the `C` dwell button,
-and the robot-body bridge runs the mapped hexagon motion.
+`TASK`: a mouse-drawn `2` is recognized and confirmed on the `C` dwell button. The robot-body bridge then runs the mapped hexagon motion.
 
 ![TASK mode: draw, recognize, confirm, Gazebo motion](docs/media/task_gazebo.gif)
 
-`TELEOP`: keyboard Cartesian control with the Gazebo gripper picks up a 5 cm
-cube and places it on the green pad.
+`TELEOP`: keyboard Cartesian control and the Gazebo gripper pick up a 5 cm cube and put it on the green pad.
 
 ![TELEOP mode: keyboard pick-and-place in Gazebo](docs/media/teleop_pick_and_place.gif)
 
-Both clips are real-time screen recordings of headless Docker Gazebo. Mouse and
-key input is scripted with `xdotool`; the pick-and-place script releases each
-key from the measured flange position. Recorded at `cef908c` (`TASK`, with
-`visible_bridge_motion_scale:=3.0 visible_bridge_motion_duration_sec:=4.0`)
-and `35df0ec` (`TELEOP`, `spawn_pick_objects:=true`, recorded with the scripts in
-[scripts/demo](scripts/demo/README.md)). Not real-hardware footage.
+Both clips are real-time screen captures of Gazebo running headless in Docker. They are not real-hardware footage. Mouse and key input come from `xdotool` scripts. In the pick-and-place, the script releases each key based on the measured flange position. The `TASK` clip was recorded at `cef908c` with `visible_bridge_motion_scale:=3.0 visible_bridge_motion_duration_sec:=4.0`. The `TELEOP` clip was recorded at `35df0ec` with `spawn_pick_objects:=true`, using the scripts in [scripts/demo](scripts/demo/README.md).
 
-## Architecture at a glance
+## Two modes
+
+- `TASK`: the drawn trajectory is compared against a DTW template bank, and the best candidates are shown. Nothing reaches the robot until the operator confirms one.
+- `TELEOP`: continuous Cartesian control. A shared C++ core converts the input into joint targets with damped-least-squares inverse kinematics.
+
+| Backend | `TASK` | `TELEOP` |
+| --- | --- | --- |
+| Gazebo | Recognized symbol runs a task | Keyboard Cartesian control and gripper |
+| Real FR3 | Discrete tasks | Magnetic-board Cartesian control |
+
+The system starts in `TASK`, and the dashboard switches modes. A mode switch only changes which mode owns the command path. It does not start Gazebo, open the serial port, connect to an FR3, load a controller, approve calibration, or enable physical commands.
+
+How much each route has been tested:
+
+- Gazebo `TELEOP` has run end to end: keyboard input, `Fr3CartesianTeleopCore`, the simulated trajectory controller, the Panda moving, and a pick-and-place with the simulated gripper. On every pull request, the CI job `gazebo-smoke` checks mode gating, Cartesian motion, and gripper open/close again.
+- The Real-FR3 Cartesian and discrete adapters compile and are in the launch graph. Physical Real-FR3 `TELEOP` has never been run.
+
+Details: [Dual-Mode Teleoperation](docs/DUAL_MODE_TELEOPERATION.md).
+
+## From drawing to robot motion
 
 ```mermaid
 flowchart LR
@@ -45,61 +52,32 @@ flowchart LR
     Adapter --> FJT["FollowJointTrajectory"]
 ```
 
-Recognition never sends motion. Candidate display, confirmation, dispatch, and execution are separate steps. See [Architecture](docs/ARCHITECTURE.md) for components, topics, and backend separation.
+The recognizer normalizes the finished trajectory and compares it with the DTW bank. It then publishes ranked candidates on `/colmag/symbol_candidates`. Confidence and margin gates reject unclear samples. The dashboard publishes `/colmag/confirmed_label` only after `C Confirm`. The dispatcher is the only node that publishes `/colmag/task_command`, and it maps labels to a fixed task vocabulary. A candidate on screen therefore cannot start motion. Recognition, confirmation, dispatch, and execution are separate steps. See [Architecture](docs/ARCHITECTURE.md) for the components and topics.
 
-## Control modes
+The tracked bank covers `1,2,3,V,O,X,A,C`. It was built from user-handwritten mouse seeds, and every template keeps its provenance fields. The feature and bank code is plain Python with no ROS dependency. The offline build and evaluation tools are described in [Running](docs/RUNNING.md#dtw-template-bank).
 
-| Backend | `TASK` | `TELEOP` |
+## Board and mouse
+
+The serial magnetic board and the mouse share one dashboard. On the board, a magnetic-orientation clutch decides when the pen is drawing. Moving between the drawing area and the buttons is therefore not recorded.
+
+| | Board | Mouse |
 | --- | --- | --- |
-| Gazebo | Recognition-driven task execution | Keyboard Cartesian control and gripper |
-| Real FR3 | Discrete task execution | Magnetic-board Cartesian teleoperation |
-
-The system starts in `TASK`. The dashboard can request `TASK` or `TELEOP`. A mode request is not a hardware authorization: it does not start Gazebo, open serial, connect an FR3, load a controller, approve calibration, or enable physical commands.
-
-Runtime evidence differs by route:
-
-- Gazebo `TELEOP` ran at runtime: keyboard input, the shared `Fr3CartesianTeleopCore`, the simulated trajectory controller, a moving Gazebo Panda, and a keyboard pick-and-place with the simulated gripper. The CI job `gazebo-smoke` repeats mode gating, Cartesian motion, and gripper open/close on every pull request.
-- The Real-FR3 Cartesian and discrete adapters compile and are part of the launch graph. Physical Real-FR3 `TELEOP` was not run.
-
-See [Dual-Mode Teleoperation](docs/DUAL_MODE_TELEOPERATION.md).
-
-## Features
-
-- **Two input profiles.** A serial magnetic board and a mouse share one dashboard. The Board profile uses a magnetic-orientation clutch, so cursor moves between the drawing area and the buttons are not recorded.
-- **DTW recognition.** A tracked template bank ranks the symbols `1,2,3,V,O,X,A,C`. Confidence and margin gates reject unclear samples. The feature and bank helpers are ROS-free Python.
-- **Explicit confirmation.** The dashboard shows ranked candidates and dwell feedback. A task needs an explicit `C Confirm`.
-- **Dispatcher boundary.** Only the dispatcher maps a confirmed label to a task from a fixed vocabulary.
-- **Separate backends.** A Gazebo robot-body bridge and an FR3 `FollowJointTrajectory` adapter, each with conservative defaults and its own gates.
-- **Shared Cartesian core.** One C++ core serves keyboard control in Gazebo and magnetic-board control on the FR3.
-- **Gazebo gripper.** `O`/`C` in the keyboard terminal open and close the simulated Panda hand through a bridge that accepts commands only in `TELEOP`. `spawn_pick_objects:=true` adds a cube and a place pad.
-- **Packaging and tests.** Separate Docker profiles for Gazebo and FR3 with build-time revision labels. Static, unit, route-isolation, and C++ safety tests run in CI.
-
-## Board and Mouse interaction profiles
-
-| Concern | Board profile | Mouse profile |
-| --- | --- | --- |
-| Draw | Orientation clutch plus drawing zone | Mouse stroke in dashboard |
-| Recognize | Explicit `B Recognize` | Automatic after stroke release |
-| Confirm | Explicit `C Confirm` | Explicit `C Confirm` |
+| Draw | Orientation clutch plus drawing zone | Mouse stroke in the dashboard |
+| Recognize | `B Recognize` | Automatic after the stroke ends |
+| Confirm | `C Confirm` | `C Confirm` |
 | Clear | `X Clear` | `X Clear` |
-| Transfer suppression | Clutch disengagement | Not required |
+| Moves between areas | Clutch disengaged, not recorded | Not an issue |
 
 See [Interaction Profiles](docs/INTERACTION_PROFILES.md).
 
-## Recognition and explicit confirmation
+## Backends
 
-The recognizer normalizes a completed trajectory, compares it with the tracked DTW bank, and publishes ranked candidates on `/colmag/symbol_candidates`. The dashboard publishes the chosen label on `/colmag/confirmed_label` only after explicit confirmation. The dispatcher is the only publisher of `/colmag/task_command`. Showing a candidate cannot run a task.
+- Gazebo `TASK`: a simulation-only bridge builds bounded Panda joint trajectories and sends them through a `FollowJointTrajectory` action.
+- Gazebo `TELEOP`: keyboard input goes through `Fr3CartesianTeleopCore`, which publishes bounded `JointTrajectory` commands to the controller. `O` and `C` in the keyboard terminal open and close the simulated Panda hand. They go through a separate bridge to the `franka_gripper` actions. This bridge accepts commands only in `TELEOP`. `spawn_pick_objects:=true` adds a cube and a place pad.
+- Real FR3 `TASK`: a C++ adapter checks each accepted discrete command and builds a bounded trajectory for the standard controller.
+- Real FR3 `TELEOP`: the board position goes through the same Cartesian core and a separately gated controller adapter.
 
-The tracked bank was built from user-handwritten mouse seeds. Each template keeps its provenance fields. See [Running](docs/RUNNING.md#dtw-template-bank) for the offline build and evaluation tools.
-
-## Gazebo and FR3 backends
-
-- **Gazebo `TASK`:** a simulation-only bridge builds bounded Panda joint trajectories and sends them through a `FollowJointTrajectory` action.
-- **Gazebo `TELEOP`:** normalized keyboard input passes through `Fr3CartesianTeleopCore`, which publishes bounded `JointTrajectory` commands to the controller. A separate bridge sends `O`/`C` gripper commands to the simulated `franka_gripper` actions.
-- **Real FR3 `TASK`:** a C++ adapter checks each accepted discrete command and builds a bounded trajectory for the standard controller.
-- **Real FR3 `TELEOP`:** continuous magnetic-board position passes through the same Cartesian core and a separately gated controller adapter.
-
-pytest starts none of these. The CI job `gazebo-smoke` starts only the Gazebo `TELEOP` profile, with headless Gazebo. Real-robot motion stays disabled until every environment, revision, network, controller, calibration, and physical safety gate passes. See [Hardware Boundaries](docs/HARDWARE_BOUNDARIES.md).
+Each backend has conservative defaults and its own gates. pytest starts none of them. The `gazebo-smoke` CI job starts only the Gazebo `TELEOP` profile, with headless Gazebo. Real-robot motion stays off until every environment, revision, network, controller, calibration, and physical safety gate passes. See [Hardware Boundaries](docs/HARDWARE_BOUNDARIES.md).
 
 ## Technology stack
 
@@ -125,33 +103,31 @@ colmag_gazebo_stub/        Gazebo robot-body bridge package
 src/serial_mvp/            Serial packet parser and source abstraction
 scripts/                   Offline DTW tools and guarded FR3 operator helpers
   ci/                      Gazebo runtime smoke test used by CI
-  demo/                    Scripted recording of the README pick-and-place GIF
+  demo/                    Scripted recording of the pick-and-place GIF
 docker/                    Gazebo and FR3 build and runtime profiles
 tests/                     pytest suite, headless dashboard harness, C++ tests
 docs/                      Architecture, running, validation, and boundary docs
 .github/workflows/         CI: pytest (with and without ROS), ruff, catkin build, Gazebo smoke
 ```
 
-Internal ROS identifiers keep the original `colmag` namespace for compatibility. A few runtime identifiers keep their original milestone prefix (`m104…`) because other parts depend on them:
+ROS identifiers keep the original `colmag` namespace. Some runtime identifiers also keep the old milestone prefix (`m104…`), because other parts depend on them:
 
-- the tracked DTW bank file that the launch defaults and the Docker image point at;
+- the tracked DTW bank file that the launch defaults and the Docker image point to;
 - the dispatcher mapping name `m104c4_8symbol_gazebo`;
 - two ROS node names;
 - the real-board sample record schema;
 - the FR3 operator log directory under `outputs/`.
 
-Apart from the bank file, no file or module name carries a milestone prefix.
+No file or module name has this prefix, except the bank file.
 
 ## Quick start
 
-Install the test dependencies and run the suite without a pytest cache:
+Run the tests. ROS Noetic is not needed. Tests that import ROS packages skip themselves without it.
 
 ```bash
 python3 -m pip install -r requirements.txt
 python3 -m pytest -p no:cacheprovider -q
 ```
-
-ROS Noetic is not needed. Tests that import ROS packages skip themselves without it.
 
 Build the Mouse-to-Gazebo image from the current revision:
 
@@ -161,50 +137,50 @@ docker compose -f docker/compose.yaml \
   --profile mouse-gazebo build mouse-gazebo
 ```
 
-Start the simulation only when GUI and Gazebo runtime are authorized:
+Start the simulation. This opens the Gazebo and dashboard windows.
 
 ```bash
 docker/run_gazebo_demo.sh mouse-gazebo
 ```
 
-The FR3 profiles are not part of the quick start. Read [Running](docs/RUNNING.md) before using any serial, simulation, or hardware surface.
+The FR3 profiles are not covered here. Read [Running](docs/RUNNING.md) before you use the serial board, the simulation, or hardware.
 
 ## Validation
 
 CI runs on every pull request and every push to `main`:
 
 - `ruff check`;
-- pytest with Python 3.10 without ROS;
-- pytest in a ROS Noetic container, then a parse of the launch files that need no Gazebo or FR3 packages;
-- a `catkin_make install` build of both ROS packages;
-- a Gazebo smoke test: the image is built, the keyboard `TELEOP` profile runs with headless Gazebo, and a script checks mode gating, Cartesian motion, and gripper open/close.
+- pytest on Python 3.10 without ROS;
+- pytest in a ROS Noetic container, plus a parse of the launch files that need no Gazebo or FR3 packages;
+- `catkin_make install` for both ROS packages;
+- the Gazebo smoke test: build the image, run the keyboard `TELEOP` profile with headless Gazebo, and check mode gating, Cartesian motion, and gripper open/close.
 
-The suite checks:
+The tests cover:
 
 - Python static and unit contracts, and the ROS-free C++ safety helpers;
-- Markdown and image links with case-sensitive paths;
-- Docker image, Compose profile, and launcher contracts;
+- Markdown and image links, with case-sensitive paths;
+- Docker images, Compose profiles, and launchers;
 - launch file XML, route isolation, and install lists;
-- that generated `outputs/` files are not tracked.
+- that no generated `outputs/` files are tracked.
 
-At export, the portfolio edition was also checked by hand for secrets, private network values, personal absolute paths, identity-bearing files, nontechnical process material, and misleading sole-authorship wording. CI does not repeat those checks.
+At export, I checked this edition by hand for secrets, private network values, personal absolute paths, identity-bearing files, nontechnical process material, and wording that could suggest sole authorship. CI does not repeat these checks.
 
-See [Validation](docs/VALIDATION.md) for the commands, the CI jobs, and what each layer does not prove.
+[Validation](docs/VALIDATION.md) lists the commands and the CI jobs. It also states what each layer does not prove.
 
 ## Known limitations
 
 - This is a research and demo stack, not a certified robot product.
 - DTW quality depends on trajectory quality and template coverage.
-- The Board orientation clutch is an application convention, not a safety-rated sensor mode.
-- Static and unit tests do not prove live ROS timing, rendered GUI behavior, Gazebo motion, or physical FR3 safety.
+- The board's orientation clutch is an application convention, not a safety-rated sensor mode.
+- Static and unit tests say nothing about live ROS timing, how the GUI renders, Gazebo motion, or physical FR3 safety.
 - Gazebo Cartesian `TELEOP` has runtime evidence. Physical Real-FR3 Cartesian `TELEOP` does not.
 - The gripper exists only in Gazebo. There is no Real-FR3 gripper route.
-- The Gazebo smoke test checks one short scripted run. It does not cover the GUI, timing under load, or grasp quality.
+- The Gazebo smoke test is one short scripted run. It does not cover the GUI, timing under load, or grasp quality.
 - The FR3 route depends on specific upstream versions. Requalify it when the environment changes.
 
 ## My contribution
 
-The fixed branch history, source ownership map, implementation files, and recorded validation evidence support the wording below.
+The table below is supported by the fixed branch history, the source ownership map, the implementation files, and the recorded validation evidence.
 
 | Area | Contribution |
 | --- | --- |
@@ -220,12 +196,10 @@ These claims do not assert sole authorship of the original collaborative project
 
 ## Attribution and provenance
 
-This repository is a public personal portfolio edition derived from a collaborative robotics project. It focuses on the components I designed, integrated, validated, and documented. Collaborative and third-party contributions remain credited in [CREDITS.md](CREDITS.md), and the applicable notices are in [NOTICE.md](NOTICE.md).
+This repository comes from a collaborative robotics project. It contains the parts I designed, integrated, validated, and documented. [CREDITS.md](CREDITS.md) credits the collaborators and third-party contributions. [NOTICE.md](NOTICE.md) has the applicable notices.
 
-The baseline was exported as a filtered tracked snapshot from source commit `e3c81fb31f5113c50f197bb11eff183295cf3163`. The dual-mode Cartesian teleoperation work, developed and validated after that commit, was added as a curated file export. The original Git history, branches, tags, internal process records, private evidence, and nontechnical materials were not copied. Later changes, such as refactoring, CI, and documentation, are recorded in this repository's own Git history.
+The baseline is a filtered snapshot of the tracked files at source commit `e3c81fb31f5113c50f197bb11eff183295cf3163`. The dual-mode Cartesian teleoperation work was developed and validated after that commit. It was added later as a curated file export. The original Git history, branches, tags, internal process records, private evidence, and nontechnical material were not copied. Later changes, such as refactoring, CI, and documentation, are in this repository's own Git history.
 
-## License and status
+## License
 
-**Public portfolio edition.**
-
-This repository adds no repository-wide license beyond the license information already in the retained source and package metadata. Public availability does not change third-party ownership or upstream license obligations. See [NOTICE.md](NOTICE.md) for provenance and dependency-license boundaries.
+This repository adds no repository-wide license. The only license information is what the retained source and package metadata already carry. Publishing it does not change third-party ownership or upstream license obligations. See [NOTICE.md](NOTICE.md) for provenance and dependency licenses.
