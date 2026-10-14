@@ -93,6 +93,10 @@
   <arg name="visible_bridge_home_or_ready_final_hold_sec" default="1.0" />
   <arg name="visible_bridge_home_or_ready_bounded_success_enabled" default="true" />
   <arg name="visible_bridge_home_or_ready_bounded_success_tolerance_rad" default="0.01" />
+  <!-- Placeholder-motion size and duration. Joint targets stay clamped to the
+       bridge's JOINT_LIMITS whatever the scale. -->
+  <arg name="visible_bridge_motion_scale" default="1.0" />
+  <arg name="visible_bridge_motion_duration_sec" default="2.0" />
 
   <!-- One latched logical mode source. It selects TASK or TELEOP only; it has
        no robot/backend/hardware-enable parameter. -->
@@ -210,6 +214,8 @@
     <param name="home_or_ready_final_hold_sec" value="$(arg visible_bridge_home_or_ready_final_hold_sec)" />
     <param name="home_or_ready_bounded_success_enabled" value="$(arg visible_bridge_home_or_ready_bounded_success_enabled)" />
     <param name="home_or_ready_bounded_success_tolerance_rad" value="$(arg visible_bridge_home_or_ready_bounded_success_tolerance_rad)" />
+    <param name="visible_motion_scale" value="$(arg visible_bridge_motion_scale)" />
+    <param name="motion_duration_sec" value="$(arg visible_bridge_motion_duration_sec)" />
     <param name="allow_missing_gazebo_flag" value="false" />
     <param name="control_mode_topic" value="$(arg control_mode_topic)" />
     <param name="required_control_mode" value="TASK" />

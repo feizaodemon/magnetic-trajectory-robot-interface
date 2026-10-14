@@ -77,6 +77,14 @@ docker/run_gazebo_demo.sh mouse-gazebo
 
 The Board profile is `real-board-gazebo` and additionally requires an authorized serial device.
 
+The bridge's placeholder motions are small by default. For a more visible motion, pass a launch command that sets `visible_bridge_motion_scale` (default `1.0`) and `visible_bridge_motion_duration_sec` (default `2.0`). The bridge still clamps every joint target to its limits:
+
+```bash
+docker/run_gazebo_demo.sh mouse-gazebo \
+  roslaunch colmag_ros colmag_8symbol_gazebo_robot_body_demo.launch \
+  visible_bridge_motion_scale:=3.0 visible_bridge_motion_duration_sec:=4.0
+```
+
 ## Native Gazebo TASK/TELEOP profile
 
 After a ROS1 Noetic build, start the combined Gazebo profile only when Gazebo
