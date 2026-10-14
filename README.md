@@ -9,6 +9,24 @@ Magnetic Trajectory Robot Interface is a ROS1 robot interaction system with two 
 
 Both modes run against a Gazebo Panda simulation or a Franka FR3 controller path.
 
+## Demo (Gazebo)
+
+`TASK`: a mouse-drawn `2` is recognized, confirmed on the `C` dwell button,
+and the robot-body bridge runs the mapped hexagon motion.
+
+![TASK mode: draw, recognize, confirm, Gazebo motion](docs/media/task_gazebo.gif)
+
+`TELEOP`: keyboard Cartesian control with the Gazebo gripper picks up a 5 cm
+cube and places it on the green pad.
+
+![TELEOP mode: keyboard pick-and-place in Gazebo](docs/media/teleop_pick_and_place.gif)
+
+Both clips are real-time screen recordings of headless Docker Gazebo. Mouse and
+key input is scripted with `xdotool`; the pick-and-place script releases each
+key from the measured flange position. Recorded at `cef908c` (`TASK`, with
+`visible_bridge_motion_scale:=3.0 visible_bridge_motion_duration_sec:=4.0`)
+and `1d57dd1` (`TELEOP`, `spawn_pick_objects:=true`). Not real-hardware footage.
+
 ## Architecture at a glance
 
 ```mermaid
