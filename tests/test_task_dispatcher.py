@@ -53,6 +53,27 @@ def test_parse_mapping_rejects_invalid_value_instead_of_using_default(bad):
         dispatcher.parse_mapping(bad)
 
 
+def test_mapping_name_selects_c4_mapping():
+    assert dispatcher.label_to_task_mapping_for_name("m104c4_8symbol_gazebo") == (
+        dispatcher.C4_LABEL_TO_TASK
+    )
+
+
+@pytest.mark.parametrize("bad", ["m104c4_8symbol_gazebo ", "m104c4_8symbol", "", None])
+def test_unknown_mapping_name_is_rejected_instead_of_using_c4(bad):
+    with pytest.raises(ValueError, match="dispatcher_mapping_name"):
+        dispatcher.label_to_task_mapping_for_name(bad)
+    with pytest.raises(ValueError, match="dispatcher_mapping_name"):
+        dispatcher.build_task_command(confirmed("A"), dispatcher_mapping_name=bad)
+
+
+def test_explicit_empty_mapping_dispatches_nothing():
+    command = dispatcher.build_task_command(confirmed("A"), label_to_task={})
+    assert command["task"] == "NO_OP"
+    assert command["accepted"] is False
+    assert command["reason"] == "unknown_label"
+
+
 def test_unknown_or_unconfirmed_label_maps_to_no_op():
     unknown = dispatcher.build_task_command(confirmed("Z"))
     assert unknown["task"] == "NO_OP"
