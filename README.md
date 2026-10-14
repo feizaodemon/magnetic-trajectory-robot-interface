@@ -174,7 +174,6 @@ See [Validation](docs/VALIDATION.md) for the commands, the CI jobs, and what eac
 - Static and unit tests do not prove live ROS timing, rendered GUI behavior, Gazebo motion, or physical FR3 safety.
 - Gazebo Cartesian `TELEOP` has runtime evidence. Physical Real-FR3 Cartesian `TELEOP` does not.
 - The FR3 route depends on specific upstream versions. Requalify it when the environment changes.
-- Public availability does not change the authorship, attribution, or third-party license boundaries in [CREDITS.md](CREDITS.md) and [NOTICE.md](NOTICE.md).
 
 ## My contribution
 
