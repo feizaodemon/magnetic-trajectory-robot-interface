@@ -10,6 +10,8 @@ import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from launch_xml import arg_defaults
+
 
 REPO = Path(__file__).resolve().parents[1]
 TRACKED_BANK = REPO / "colmag_ros" / "config" / "dtw_banks" / "m104c1_8symbol_mouse_seeded_yflip.json"
@@ -21,11 +23,6 @@ TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
 C4_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_gazebo_robot_body_demo.launch"
 RECOGNIZER_LAUNCH = REPO / "colmag_ros" / "launch" / "dtw_template_bank_recognizer.launch"
 C2C3_ALIAS = REPO / "colmag_ros" / "launch" / "colmag_8symbol_recognition_display.launch"
-
-
-def _arg_defaults(path):
-    root = ET.parse(str(path)).getroot()
-    return {node.attrib["name"]: node.attrib.get("default", "") for node in root.findall("arg")}
 
 
 class CuratedDtwBankTests(unittest.TestCase):
@@ -68,7 +65,7 @@ class CuratedDtwBankTests(unittest.TestCase):
             (RECOGNIZER_LAUNCH, "dtw_template_bank_path"),
             (C2C3_ALIAS, "dtw_template_bank_path"),
         ):
-            args = _arg_defaults(launch)
+            args = arg_defaults(ET.parse(launch).getroot())
             self.assertEqual(args[arg_name], TRACKED_BANK_ARG, launch.name)
             self.assertNotIn(OUTPUT_BANK_FRAGMENT, args[arg_name], launch.name)
 

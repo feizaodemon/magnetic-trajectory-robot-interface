@@ -1,20 +1,6 @@
 """Tests for 64x64 trajectory rasterization."""
 
-import importlib.util
-import sys
-from pathlib import Path
-
-
-def load_rasterizer_module():
-    path = Path(__file__).resolve().parents[1] / "colmag_ros" / "src" / "colmag_ros" / "trajectory_rasterizer.py"
-    spec = importlib.util.spec_from_file_location("trajectory_rasterizer", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-trajectory_rasterizer = load_rasterizer_module()
+from colmag_ros import trajectory_rasterizer
 
 
 def test_rasterizer_preserves_aspect_ratio_and_flips_y():

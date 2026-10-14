@@ -11,6 +11,7 @@ if str(PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(PACKAGE_SRC))
 
 from colmag_ros import cartesian_keyboard_input, keyboard_teleop
+from launch_xml import arg_defaults, arg_values, param_values
 
 
 TELEOP_LAUNCH = REPO / "colmag_ros" / "launch" / "colmag_keyboard_gazebo_teleop.launch"
@@ -31,10 +32,6 @@ CARTESIAN_SCRIPT = (
 CARTESIAN_ADAPTER = (
     REPO / "colmag_ros" / "src" / "colmag_fr3_cartesian_teleop_adapter.cpp"
 )
-
-
-def _params(node):
-    return {param.attrib["name"]: param.attrib.get("value", "") for param in node.findall("param")}
 
 
 def test_command_mapping_reuses_the_canonical_c4_contract():
@@ -105,7 +102,7 @@ def test_launch_wraps_the_dual_mode_existing_gazebo_backend():
     include = root.find("include")
     assert include is not None
     assert include.attrib["file"].endswith("/final_gazebo_robot_demo.launch")
-    include_args = {arg.attrib["name"]: arg.attrib.get("value", "") for arg in include.findall("arg")}
+    include_args = arg_values(include)
     assert include_args["start_dtw_frontend"] == "true"
     assert include_args["start_cartesian_teleop"] == "true"
     assert include_args["start_keyboard_teleop"] == "false"
@@ -116,7 +113,7 @@ def test_launch_wraps_the_dual_mode_existing_gazebo_backend():
 
 def test_existing_final_route_keeps_its_frontend_enabled_by_default():
     root = ET.parse(FINAL_GAZEBO_LAUNCH).getroot()
-    args = {arg.attrib["name"]: arg.attrib.get("default", "") for arg in root.findall("arg")}
+    args = arg_defaults(root)
     assert args["start_dtw_frontend"] == "true"
     frontend = next(
         include
@@ -124,16 +121,13 @@ def test_existing_final_route_keeps_its_frontend_enabled_by_default():
         if include.attrib.get("file", "").endswith("/dtw_mouse_demo_frontend.launch")
     )
     assert frontend.attrib["if"] == "$(arg start_dtw_frontend)"
-    frontend_args = {
-        arg.attrib["name"]: arg.attrib.get("value", "")
-        for arg in frontend.findall("arg")
-    }
+    frontend_args = arg_values(frontend)
     assert frontend_args["required_control_mode"] == "TASK"
     manual_tasks = next(
         node for node in root.findall("node")
         if node.attrib.get("name") == "keyboard_manual_task_dispatcher"
     )
-    params = _params(manual_tasks)
+    params = param_values(manual_tasks)
     assert params["confirmed_label_topic"] == "$(arg keyboard_confirmed_topic)"
     assert params["task_command_topic"] == "$(arg task_command_topic)"
     assert params["gazebo_only"] == "true"
@@ -143,7 +137,7 @@ def test_existing_final_route_keeps_its_frontend_enabled_by_default():
         node for node in root.findall("node")
         if node.attrib.get("name") == "colmag_gazebo_cartesian_teleop_adapter"
     )
-    continuous_params = _params(continuous)
+    continuous_params = param_values(continuous)
     assert continuous_params["input_mode"] == "normalized_cartesian"
     assert continuous_params["normalized_input_topic"] == "$(arg cartesian_input_topic)"
     assert continuous_params["joint_state_topic"] == "/joint_states"
@@ -155,7 +149,7 @@ def test_existing_final_route_keeps_its_frontend_enabled_by_default():
 
 def test_real_launch_requires_explicit_hardware_opt_in_and_uses_isolated_topics():
     root = ET.parse(REAL_TELEOP_LAUNCH).getroot()
-    args = {arg.attrib["name"]: arg.attrib.get("default") for arg in root.findall("arg")}
+    args = arg_defaults(root)
     assert args["robot_ip"] is None
     assert args["allow_real_robot"] == "false"
     assert args["send_goals"] == "false"
@@ -167,7 +161,7 @@ def test_real_launch_requires_explicit_hardware_opt_in_and_uses_isolated_topics(
         candidate for candidate in root.findall("node")
         if candidate.attrib.get("type") == "task_dispatcher_node.py"
     )
-    params = _params(node)
+    params = param_values(node)
     assert node.attrib["type"] == "task_dispatcher_node.py"
     assert params["confirmed_label_topic"] == "$(arg confirmed_topic)"
     assert params["task_command_topic"] == "$(arg task_command_topic)"
@@ -175,9 +169,7 @@ def test_real_launch_requires_explicit_hardware_opt_in_and_uses_isolated_topics(
     assert params["required_control_mode"] == "TELEOP"
 
     include = root.find("include")
-    include_args = {
-        arg.attrib["name"]: arg.attrib.get("value", "") for arg in include.findall("arg")
-    }
+    include_args = arg_values(include)
     assert include.attrib["file"].endswith("/colmag_fr3_hardware_stack.launch")
     assert include_args["command_topic"] == "$(arg task_command_topic)"
     assert include_args["hardware_execution_enabled"] == "$(arg allow_real_robot)"
@@ -188,7 +180,7 @@ def test_real_launch_requires_explicit_hardware_opt_in_and_uses_isolated_topics(
 
 def test_hardware_stack_routes_the_selected_command_topic_to_strategy_a():
     root = ET.parse(HARDWARE_STACK_LAUNCH).getroot()
-    args = {arg.attrib["name"]: arg.attrib.get("default", "") for arg in root.findall("arg")}
+    args = arg_defaults(root)
     assert args["command_topic"] == "/colmag/task_command"
     adapter_include = next(
         include
@@ -197,10 +189,7 @@ def test_hardware_stack_routes_the_selected_command_topic_to_strategy_a():
             "/colmag_fr3_task_trajectory_adapter.launch"
         )
     )
-    include_args = {
-        arg.attrib["name"]: arg.attrib.get("value", "")
-        for arg in adapter_include.findall("arg")
-    }
+    include_args = arg_values(adapter_include)
     assert include_args["command_topic"] == "$(arg command_topic)"
 
 

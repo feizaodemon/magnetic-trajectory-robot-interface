@@ -103,9 +103,7 @@ def test_mouse_toolbar_stop_uses_existing_c4_cancel_contract():
         "source_topic": "/colmag/confirmed_label",
     }
     assert semantics.C4_LABEL_TO_TASK[payload["label"]] == "STOP_OR_CANCEL"
-    spec = importlib.util.spec_from_file_location("pkg_install_dispatcher", DISPATCHER)
-    dispatcher = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dispatcher)
+    dispatcher = importlib.import_module("task_dispatcher_node")
     command = dispatcher.build_task_command(
         payload,
         dispatcher_mapping_name="m104c4_8symbol_gazebo",

@@ -25,6 +25,8 @@ Layout:
 - `dashboard_harness.py`: builds a real dashboard node with fake `rospy`,
   `std_msgs`, and `tkinter` modules, so dashboard tests need no display or ROS
   master.
+- `launch_xml.py`: reads `<arg>` and `<param>` values from launch XML for the
+  static launch tests.
 
 The ROS1 build is a separate validation layer. It compiles and links the shared
 core plus the Gazebo/Real-FR3 Cartesian and discrete adapters. CI runs it in the
