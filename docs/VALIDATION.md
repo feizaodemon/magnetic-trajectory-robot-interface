@@ -18,11 +18,11 @@ Tests that import `rospy` or ROS message packages skip themselves when ROS Noeti
 | Job | Environment | Runs |
 | --- | --- | --- |
 | `pytest` | Python 3.10, no ROS | the suite; ROS-only tests skip |
-| `pytest-noetic` | `ros:noetic-ros-base` container, Python 3.8 | the full suite, including the ROS-only tests |
+| `pytest-noetic` | `ros:noetic-ros-base` container, Python 3.8 | the full suite, including the ROS-only tests; then `roslaunch --dump-params` and `--nodes` on the eight launch files whose dependencies ros-base has (the Gazebo and FR3 hardware launches need `franka_gazebo` or `franka_control`) |
 | `ruff` | Python 3.10 | `ruff check` with the settings in `ruff.toml`: undefined names, unused imports and variables, and annotations that would not run on Python 3.8 |
 | `catkin-build` | `ros:noetic-ros-base` container | `catkin_make install` of `colmag_ros` and `colmag_gazebo_stub` in Release mode, then checks that both FR3 adapter executables and the Python packages are installed |
 
-Both pytest jobs also compile and run every ROS-free C++ test under `tests/cpp/`. No job starts ROS nodes or launch files, or touches Gazebo, GUI, serial, controllers, or hardware. Each job's log holds the exact result for its commit.
+Both pytest jobs also compile and run every ROS-free C++ test under `tests/cpp/`. No job starts ROS nodes or runs a launch file (`--dump-params` and `--nodes` only parse it), or touches Gazebo, GUI, serial, controllers, or hardware. Each job's log holds the exact result for its commit.
 
 ## ROS1 compile/link build
 

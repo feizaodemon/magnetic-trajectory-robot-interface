@@ -151,7 +151,7 @@ CI runs on every pull request and every push to `main`:
 
 - `ruff check`;
 - pytest with Python 3.10 without ROS;
-- pytest in a ROS Noetic container;
+- pytest in a ROS Noetic container, then a parse of the launch files that need no Gazebo or FR3 packages;
 - a `catkin_make install` build of both ROS packages.
 
 The suite checks:
