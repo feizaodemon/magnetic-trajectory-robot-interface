@@ -24,6 +24,7 @@ from colmag_ros.dashboard_controller_input import (
 from colmag_ros.dashboard_dwell_status import format_interaction_instruction
 from colmag_ros.dashboard_points import build_ocr_stroke_points, clean_stroke_points
 from colmag_ros.dashboard_sample_lifecycle import cleanup_drawing_sample_points
+from colmag_ros.semantic_library import preview_line
 
 
 class DashboardPreviewControlsMixin:
@@ -85,14 +86,7 @@ class DashboardPreviewControlsMixin:
         cands = self.trajectory_candidates
         if not cands:
             return "Meaning: -"
-        try:
-            from colmag_ros.semantic_library import preview_line
-        except Exception:
-            return "Meaning: -"
-        try:
-            return "Meaning: %s" % preview_line(cands[0])
-        except Exception:
-            return "Meaning: -"
+        return "Meaning: %s" % preview_line(cands[0])
 
     # --- Preview-only OCR/candidate bridge: display only, no publish ---
     def _cancel_candidate_recognize_job(self):
@@ -222,7 +216,7 @@ class DashboardPreviewControlsMixin:
             max_points=self.config.board_sample_max_points,
             enabled=self.config.board_sample_cleanup_enabled,
         )
-        return len(points) >= int(self.config.candidate_min_points)
+        return len(points) >= self.config.candidate_min_points
 
     def _preview_button_states(self):
         has_sample = self._drawing_sample_ready()

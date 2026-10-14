@@ -458,10 +458,10 @@ class DashboardSampleCaptureMixin:
             max_points=self.config.board_sample_max_points,
             enabled=self.config.board_sample_cleanup_enabled,
         )
-        if len(points) < int(self.config.candidate_min_points):
+        if len(points) < self.config.candidate_min_points:
             self.preview_interaction.too_few_points()
             text = "Too few published drawing points: %d / %d (raw %d)" % (
-                len(points), int(self.config.candidate_min_points), len(raw_points))
+                len(points), self.config.candidate_min_points, len(raw_points))
             self.root.after(0, lambda t=text: self.traj_captured_sample_var.set(t))
             self.root.after(0, lambda t=text: self.capture_var.set(t))
             self._update_candidate_ui()

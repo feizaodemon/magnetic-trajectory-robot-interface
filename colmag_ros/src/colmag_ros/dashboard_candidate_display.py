@@ -8,6 +8,7 @@ routes.
 from dataclasses import dataclass
 
 from colmag_ros.dashboard_dwell_status import format_trajectory_preview_interaction_text
+from colmag_ros.display_semantics import display_label_for_candidate
 
 
 def backend_display_name(backend, recognition_model_path=""):
@@ -38,20 +39,7 @@ def candidate_backend_status_text(payload):
 
 def candidate_display_name(candidate):
     """Display-only label text for a candidate row; never affects dispatch."""
-    try:
-        from colmag_ros.display_semantics import display_label_for_candidate
-    except Exception:
-        display_label_for_candidate = None
-    if display_label_for_candidate is not None:
-        try:
-            label = display_label_for_candidate(candidate)
-            if label:
-                return label
-        except Exception:
-            pass
-    if isinstance(candidate, dict):
-        return str(candidate.get("display_name", "") or "")
-    return ""
+    return display_label_for_candidate(candidate)
 
 
 def summarize_candidates(payload):

@@ -11,6 +11,7 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
 
 from colmag_ros.recognition_uncertainty import apply_uncertainty_gate
 from colmag_ros.trajectory_strokes import flatten_strokes, normalize_payload_strokes, stroke_metadata
+from colmag_ros import dtw_template_bank_tools as bank_tools
 from colmag_ros.dtw_template_bank_tools import (
     DEFAULT_MAX_DISTANCE,
     DEFAULT_MIN_CONFIDENCE,
@@ -76,30 +77,13 @@ class TrajectorySymbolTop3RecognizerNode:
         )
         return "dtw_template_bank"
 
-    def _import_dtw_bank_tools(self):
-        try:
-            from colmag_ros import dtw_template_bank_tools as tools
-            return tools
-        except Exception as exc:
-            self.rospy.logwarn("dtw_template_bank_tools import failed: %s", exc)
-            return None
-
     def _dtw_template_bank_state(self):
         """Load the template bank once; a failed load stays unavailable without crashing."""
         if self.dtw_template_bank_state is None:
-            tools = self._import_dtw_bank_tools()
-            if tools is None:
-                self.dtw_template_bank_state = {
-                    "status": "unavailable",
-                    "reason": "dtw_template_bank_unavailable",
-                    "detail": "dtw_template_bank_tools import failed",
-                    "path": self.dtw_template_bank_path,
-                }
-            else:
-                self.dtw_template_bank_state = tools.load_template_bank_state(
-                    self.dtw_template_bank_path,
-                    tools.parse_labels_csv(self.dtw_template_allowed_labels),
-                )
+            self.dtw_template_bank_state = bank_tools.load_template_bank_state(
+                self.dtw_template_bank_path,
+                bank_tools.parse_labels_csv(self.dtw_template_allowed_labels),
+            )
         return self.dtw_template_bank_state
 
     def _recognize_with_dtw_template_bank(self, points):
@@ -108,25 +92,9 @@ class TrajectorySymbolTop3RecognizerNode:
         Runtime query points are never y-flipped. There is no silent fallback:
         a non-ready bank yields an uncertain gate with empty candidates.
         """
-        tools = self._import_dtw_bank_tools()
-        state = self._dtw_template_bank_state()
-        if tools is None:
-            gate = {
-                "accepted": False,
-                "uncertain": True,
-                "uncertainty_reason": "dtw_template_bank_unavailable",
-                "top1_confidence": 0.0,
-                "top2_confidence": 0.0,
-                "best_distance": None,
-                "margin": None,
-                "max_distance": self.dtw_template_max_distance,
-                "min_margin": self.dtw_template_min_margin,
-                "min_confidence": self.dtw_template_min_confidence,
-            }
-            return [], gate, {"dtw_template_bank_status": str(state.get("status", "unavailable"))}
-        return tools.recognize_with_template_bank(
+        return bank_tools.recognize_with_template_bank(
             points,
-            state,
+            self._dtw_template_bank_state(),
             top_k=self.dtw_template_top_k,
             max_distance=self.dtw_template_max_distance,
             min_margin=self.dtw_template_min_margin,
@@ -143,8 +111,8 @@ class TrajectorySymbolTop3RecognizerNode:
     def _publish_invalid_payload(self, reason):
         gate = apply_uncertainty_gate(
             [],
-            min_confidence=getattr(self, "min_confidence", 0.70),
-            min_margin=getattr(self, "min_margin", 0.20),
+            min_confidence=self.min_confidence,
+            min_margin=self.min_margin,
             invalid_payload=True,
         )
         payload = {
