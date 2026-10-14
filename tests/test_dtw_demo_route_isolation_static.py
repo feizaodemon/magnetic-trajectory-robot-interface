@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from colmag_ros import adapter as colmag_adapter
-from launch_xml import arg_defaults, param_values
+from launch_xml import arg_defaults, arg_values, param_values
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -41,6 +41,23 @@ def test_gazebo_routes_own_all_gazebo_dependencies():
         assert "franka_gazebo" in text
         assert "fr3_gazebo_visible_task_bridge_node.py" in text
         assert "follow_joint_trajectory" in text
+
+
+def test_gazebo_motion_args_default_to_bridge_defaults_and_reach_the_bridge():
+    final = ET.parse(LAUNCH / "final_gazebo_robot_demo.launch").getroot()
+    entry = ET.parse(GAZEBO).getroot()
+    expected = {"visible_bridge_motion_scale": "1.0", "visible_bridge_motion_duration_sec": "2.0"}
+    for root in (final, entry):
+        args = arg_defaults(root)
+        assert {name: args.get(name) for name in expected} == expected
+    forwarded = arg_values(entry.find("include"))
+    assert {name: forwarded.get(name) for name in expected} == {
+        name: "$(arg %s)" % name for name in expected
+    }
+    bridge = final.find("node[@name='fr3_gazebo_visible_task_bridge_node']")
+    params = param_values(bridge)
+    assert params["visible_motion_scale"] == "$(arg visible_bridge_motion_scale)"
+    assert params["motion_duration_sec"] == "$(arg visible_bridge_motion_duration_sec)"
 
 
 def test_real_fr3_routes_and_shared_frontends_have_no_gazebo_dependency():

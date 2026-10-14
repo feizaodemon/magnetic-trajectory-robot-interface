@@ -55,6 +55,8 @@
   <arg name="visible_bridge_home_or_ready_final_hold_sec" default="1.0" />
   <arg name="visible_bridge_home_or_ready_bounded_success_enabled" default="true" />
   <arg name="visible_bridge_home_or_ready_bounded_success_tolerance_rad" default="0.01" />
+  <arg name="visible_bridge_motion_scale" default="1.0" />
+  <arg name="visible_bridge_motion_duration_sec" default="2.0" />
 
   <include file="$(find colmag_ros)/launch/final_gazebo_robot_demo.launch">
     <arg name="start_franka_gazebo" value="$(arg start_franka_gazebo)" />
@@ -89,5 +91,7 @@
     <arg name="visible_bridge_home_or_ready_final_hold_sec" value="$(arg visible_bridge_home_or_ready_final_hold_sec)" />
     <arg name="visible_bridge_home_or_ready_bounded_success_enabled" value="$(arg visible_bridge_home_or_ready_bounded_success_enabled)" />
     <arg name="visible_bridge_home_or_ready_bounded_success_tolerance_rad" value="$(arg visible_bridge_home_or_ready_bounded_success_tolerance_rad)" />
+    <arg name="visible_bridge_motion_scale" value="$(arg visible_bridge_motion_scale)" />
+    <arg name="visible_bridge_motion_duration_sec" value="$(arg visible_bridge_motion_duration_sec)" />
   </include>
 </launch>
