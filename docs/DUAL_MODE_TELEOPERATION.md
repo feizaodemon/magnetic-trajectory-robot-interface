@@ -45,6 +45,14 @@ owns destination filtering, bounded target progression, Franka forward
 kinematics, a numerical Jacobian, damped-least-squares inverse kinematics,
 workspace and joint bounds, residual rejection, and finite-output checks.
 
+For keyboard input, the core treats the direction as a velocity command. It
+ramps toward `max_linear_speed_m_s` inside the acceleration and jerk limits and
+brakes before a workspace bound. The keyboard node keeps a key held through the
+terminal's first auto-repeat delay (`~first_repeat_window_sec`, default 0.6 s)
+and publishes a zero direction when the repeats stop. When input goes stale,
+the adapter brakes to rest (`STOPPING`, at most 2 s) instead of dropping the
+command stream. The board route keeps its position filter and S-curve.
+
 In `TELEOP`, the mouse dashboard pauses its drawing and dwell buttons and shows
 a read-only view instead: a keycap pad lit by the current
 `/colmag/teleop/cartesian_input` direction, and a Teleoperation card with the

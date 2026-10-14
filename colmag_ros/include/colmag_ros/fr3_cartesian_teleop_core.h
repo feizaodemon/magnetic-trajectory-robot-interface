@@ -88,6 +88,8 @@ public:
       const NormalizedCartesianInput& input,
       const Fr3JointVector& current_joints,
       double dt_sec);
+  // True while the shaped Cartesian motion has not come to rest.
+  bool isMoving() const;
 
 private:
   bool prepareStep(const Fr3JointVector& current_joints,
@@ -95,6 +97,12 @@ private:
                    std::string* reason);
   Fr3CartesianTeleopStep stepPreparedTarget(
       const CartesianVector& workspace_target,
+      double dt_sec);
+  Fr3CartesianTeleopStep commitShapedState(
+      const CartesianVector& workspace_target,
+      const CartesianVector& position,
+      const CartesianVector& velocity,
+      const CartesianVector& acceleration,
       double dt_sec);
 
   Fr3CartesianTeleopConfig config_;

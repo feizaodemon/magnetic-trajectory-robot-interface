@@ -45,11 +45,66 @@ def build_cartesian_input_payload(key, sequence_id, timestamp=None):
     }
 
 
+def build_release_payload(sequence_id, timestamp=None):
+    """Build an engaged zero-direction input: the held key was released."""
+    timestamp = time.time() if timestamp is None else float(timestamp)
+    return {
+        "timestamp": timestamp,
+        "sequence_id": int(sequence_id),
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "engaged": True,
+        "input_mode": "keyboard_cartesian",
+    }
+
+
+HOLD = "hold"
+RELEASE = "release"
+
+
+class KeyHoldTracker:
+    """Turns terminal auto-repeat into a held direction key.
+
+    A terminal reports a held key as one press, a pause of about 0.5 s, then
+    repeats every 30-40 ms. It never reports the release. The tracker keeps a
+    new key held through the first-repeat pause and treats a missing repeat
+    as a release.
+    """
+
+    def __init__(self, first_repeat_window_sec=0.6, repeat_window_sec=0.12):
+        self.first_repeat_window_sec = float(first_repeat_window_sec)
+        self.repeat_window_sec = float(repeat_window_sec)
+        self.key = None
+        self.deadline = 0.0
+
+    def press(self, key, now):
+        """Register one direction key event; ``True`` when it starts a new hold."""
+        if key == self.key:
+            self.deadline = max(self.deadline, now + self.repeat_window_sec)
+            return False
+        self.key = key
+        self.deadline = now + max(self.first_repeat_window_sec, self.repeat_window_sec)
+        return True
+
+    def clear(self):
+        self.key = None
+
+    def poll(self, now):
+        """``HOLD`` while the key counts as held, ``RELEASE`` once, else ``None``."""
+        if self.key is None:
+            return None
+        if now < self.deadline:
+            return HOLD
+        self.key = None
+        return RELEASE
+
+
 def help_lines():
     return (
         "W / Up -> +X; S / Down -> -X",
         "A / Left -> +Y; D / Right -> -Y",
         "Q -> +Z; E -> -Z",
         "SPACE -> pause and invalidate target; ESC / Ctrl-C -> quit",
-        "Hold a key for continuous auto-repeat input; stale input pauses motion.",
+        "Hold a key to move; releasing it brakes the robot to rest.",
     )

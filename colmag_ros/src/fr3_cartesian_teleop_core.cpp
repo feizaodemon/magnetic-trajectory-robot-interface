@@ -475,6 +475,83 @@ ShapedCartesianState sCurveStep(const CartesianVector& position,
   return result;
 }
 
+// Velocity-mode shaping for held-key input. The commanded velocity tracks
+// desired_velocity through a first-order loop whose gain j / a keeps the
+// acceleration and jerk inside their limits. Near a workspace bound the
+// velocity toward it is capped so the motion brakes instead of being clipped.
+ShapedCartesianState velocityStep(const CartesianVector& position,
+                                  const CartesianVector& velocity,
+                                  const CartesianVector& acceleration,
+                                  CartesianVector desired_velocity,
+                                  double dt,
+                                  const Fr3CartesianTeleopConfig& config)
+{
+  const double max_acceleration = config.max_linear_acceleration_m_s2;
+  // Speed from which the loop can stop within `room`: room = v * lag +
+  // v^2 / (2 a). The lag covers the velocity loop (a / j), the jerk ramp
+  // (a / j) and an equal margin.
+  const double lag = 3.0 * max_acceleration / config.max_linear_jerk_m_s3;
+  for (std::size_t axis = 0; axis < 3; ++axis)
+  {
+    const double room = desired_velocity[axis] > 0.0
+                            ? config.workspace_max[axis] - position[axis]
+                            : position[axis] - config.workspace_min[axis];
+    const double cap =
+        max_acceleration *
+        (std::sqrt(lag * lag + 2.0 * std::max(room, 0.0) / max_acceleration) -
+         lag);
+    desired_velocity[axis] = clamp(desired_velocity[axis], -cap, cap);
+  }
+
+  ShapedCartesianState result;
+  // Settle to rest once the residual motion is below a tenth of a step of the
+  // acceleration and jerk limits, so the final snap stays inside them.
+  if (norm(desired_velocity) <= 1e-12 &&
+      norm(velocity) <= 0.1 * max_acceleration * dt &&
+      norm(acceleration) <= 0.1 * config.max_linear_jerk_m_s3 * dt)
+  {
+    result.position = position;
+    return result;
+  }
+
+  const double gain = config.max_linear_jerk_m_s3 / max_acceleration;
+  CartesianVector desired_acceleration{{0.0, 0.0, 0.0}};
+  for (std::size_t axis = 0; axis < 3; ++axis)
+  {
+    desired_acceleration[axis] =
+        gain * (desired_velocity[axis] - velocity[axis]);
+  }
+  desired_acceleration = limitedNorm(desired_acceleration, max_acceleration);
+  CartesianVector acceleration_change{{0.0, 0.0, 0.0}};
+  for (std::size_t axis = 0; axis < 3; ++axis)
+  {
+    acceleration_change[axis] =
+        desired_acceleration[axis] - acceleration[axis];
+  }
+  acceleration_change =
+      limitedNorm(acceleration_change, config.max_linear_jerk_m_s3 * dt);
+  for (std::size_t axis = 0; axis < 3; ++axis)
+  {
+    result.acceleration[axis] = acceleration[axis] + acceleration_change[axis];
+    result.velocity[axis] = velocity[axis] + result.acceleration[axis] * dt;
+  }
+  result.velocity = limitedNorm(result.velocity, config.max_linear_speed_m_s);
+  for (std::size_t axis = 0; axis < 3; ++axis)
+  {
+    // Never move further outside the workspace than the current position.
+    const double lower = std::min(config.workspace_min[axis], position[axis]);
+    const double upper = std::max(config.workspace_max[axis], position[axis]);
+    const double next = position[axis] + result.velocity[axis] * dt;
+    result.position[axis] = clamp(next, lower, upper);
+    if (result.position[axis] != next)
+    {
+      result.velocity[axis] = 0.0;
+      result.acceleration[axis] = 0.0;
+    }
+  }
+  return result;
+}
+
 Fr3CartesianTeleopStep rejectedStep(const std::string& reason)
 {
   Fr3CartesianTeleopStep result;
@@ -629,16 +706,27 @@ Fr3CartesianTeleopStep Fr3CartesianTeleopCore::stepNormalizedCartesian(
   {
     return rejectedStep(reason);
   }
-  const CartesianVector direction = limitedNorm(input.direction, 1.0);
-  CartesianVector destination = filtered_destination_;
+  // A held key is a velocity command, not a point-to-point goal.
+  CartesianVector desired_velocity = limitedNorm(input.direction, 1.0);
+  CartesianVector workspace_target = target_position_;
   for (std::size_t axis = 0; axis < 3; ++axis)
   {
-    destination[axis] = clamp(
-        destination[axis] +
-            direction[axis] * config_.max_linear_speed_m_s * dt_sec,
+    desired_velocity[axis] *= config_.max_linear_speed_m_s;
+    workspace_target[axis] = clamp(
+        target_position_[axis] + desired_velocity[axis] * dt_sec,
         config_.workspace_min[axis], config_.workspace_max[axis]);
   }
-  return stepPreparedTarget(destination, dt_sec);
+  const ShapedCartesianState shaped = velocityStep(
+      target_position_, cartesian_velocity_, cartesian_acceleration_,
+      desired_velocity, dt_sec, config_);
+  return commitShapedState(workspace_target, shaped.position, shaped.velocity,
+                           shaped.acceleration, dt_sec);
+}
+
+bool Fr3CartesianTeleopCore::isMoving() const
+{
+  return initialized_ &&
+         (norm(cartesian_velocity_) > 0.0 || norm(cartesian_acceleration_) > 0.0);
 }
 
 bool Fr3CartesianTeleopCore::prepareStep(
@@ -714,8 +802,19 @@ Fr3CartesianTeleopStep Fr3CartesianTeleopCore::stepPreparedTarget(
   const ShapedCartesianState shaped = sCurveStep(
       target_position_, cartesian_velocity_, cartesian_acceleration_,
       filtered_destination_, dt_sec, config_);
-  if (!finiteArray(shaped.position) || !finiteArray(shaped.velocity) ||
-      !finiteArray(shaped.acceleration))
+  return commitShapedState(bounded_target, shaped.position, shaped.velocity,
+                           shaped.acceleration, dt_sec);
+}
+
+Fr3CartesianTeleopStep Fr3CartesianTeleopCore::commitShapedState(
+    const CartesianVector& workspace_target,
+    const CartesianVector& position,
+    const CartesianVector& velocity,
+    const CartesianVector& acceleration,
+    double dt_sec)
+{
+  if (!finiteArray(position) || !finiteArray(velocity) ||
+      !finiteArray(acceleration))
   {
     reset();
     return rejectedStep("non_finite_cartesian_shape");
@@ -724,7 +823,7 @@ Fr3CartesianTeleopStep Fr3CartesianTeleopCore::stepPreparedTarget(
   Fr3JointVector ik_solution{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
   double position_residual = std::numeric_limits<double>::infinity();
   double orientation_residual = std::numeric_limits<double>::infinity();
-  if (!solveIk(shaped.position, target_orientation_, commanded_joints_, config_,
+  if (!solveIk(position, target_orientation_, commanded_joints_, config_,
                &ik_solution, &position_residual, &orientation_residual))
   {
     return rejectedStep("dls_solve_failed");
@@ -753,16 +852,16 @@ Fr3CartesianTeleopStep Fr3CartesianTeleopCore::stepPreparedTarget(
     return rejectedStep("non_finite_joint_target");
   }
 
-  target_position_ = shaped.position;
-  cartesian_velocity_ = shaped.velocity;
-  cartesian_acceleration_ = shaped.acceleration;
+  target_position_ = position;
+  cartesian_velocity_ = velocity;
+  cartesian_acceleration_ = acceleration;
   commanded_joints_ = next_joints;
   filtered_joint_velocity_ = next_velocity;
 
   Fr3CartesianTeleopStep result;
   result.accepted = true;
-  result.workspace_target = bounded_target;
-  result.shaped_target = shaped.position;
+  result.workspace_target = workspace_target;
+  result.shaped_target = position;
   result.joint_positions = next_joints;
   result.joint_velocities = next_velocity;
   result.position_residual_m = position_residual;

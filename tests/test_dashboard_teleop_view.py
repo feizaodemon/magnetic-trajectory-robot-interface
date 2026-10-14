@@ -29,6 +29,8 @@ def test_state_view_texts_and_tones():
     assert teleop_state_view(None) == NO_STATE_VIEW
     assert teleop_state_view({"state": "COMMAND_PUBLISHED"}, (0.0, 1.0, 0.0)) == (
         "Moving +Y", "Bounded Cartesian target sent", "success")
+    assert teleop_state_view({"state": "STOPPING", "reason": "stale_cartesian_input"}) == (
+        "Stopping", "Key released, braking to rest", "neutral")
     assert teleop_state_view(
         {"state": "WAITING_FOR_INPUT", "input_mode": "normalized_cartesian"}) == (
         "Waiting for input", "Hold a direction key in the teleop terminal", "neutral")
