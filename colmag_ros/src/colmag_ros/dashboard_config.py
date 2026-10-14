@@ -123,7 +123,6 @@ class DashboardConfig:
     ocr_preview_enabled: bool
     candidate_preview_enabled: bool
     recognition_backend: str
-    recognition_model_path: str
     candidate_min_points: int
     candidate_labels: Optional[list]
     auto_recognize: bool
@@ -261,7 +260,6 @@ class DashboardConfig:
             candidate_preview_enabled=(
                 flag("candidate_preview_enabled", False) or ocr_preview_enabled),
             recognition_backend=recognition_backend,
-            recognition_model_path="",
             candidate_min_points=int(get("candidate_min_points", get("ocr_min_points", 8))),
             candidate_labels=list(labels) if labels else None,
             auto_recognize=(

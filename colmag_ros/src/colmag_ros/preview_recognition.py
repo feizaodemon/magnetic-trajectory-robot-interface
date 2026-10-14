@@ -99,7 +99,7 @@ def recognize_trajectory_candidates(points, min_points=8, labels=None):
     return "ready", candidates
 
 
-def recognize_stroke(points, backend="dtw", min_points=8, labels=None, recognition_model_path=""):
+def recognize_stroke(points, backend="dtw", min_points=8, labels=None):
     """Preview recognition with the built-in DTW templates.
 
     Returns ``(status, candidates, backend_label)``. Production routes use the
@@ -109,8 +109,8 @@ def recognize_stroke(points, backend="dtw", min_points=8, labels=None, recogniti
     backend = str(backend or "dtw").strip().lower()
 
     if len(pts) < int(min_points):
-        return "collecting", [], backend_display_name(backend, recognition_model_path)
+        return "collecting", [], backend_display_name(backend)
 
     status, cands = recognize_trajectory_candidates(pts, min_points, labels)
     status = "no_text" if status == "none" else status
-    return status, cands, backend_display_name("dtw", recognition_model_path)
+    return status, cands, backend_display_name("dtw")
