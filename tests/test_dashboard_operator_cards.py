@@ -93,8 +93,8 @@ def test_mouse_teleop_view_swaps_stage_and_cards_and_pauses_mouse_actions(monkey
 
     harness.send(node.config.cartesian_teleop_state_topic,
                  {"state": "PAUSED", "reason": "stale_cartesian_input"})
-    assert node.teleop_headline_var.get() == "Paused"
-    assert node.teleop_detail_var.get() == "Stale cartesian input"
+    assert node.teleop_headline_var.get() == "Idle"
+    assert node.teleop_detail_var.get() == "Hold a direction key in the teleop terminal"
     assert _lit_keycaps(node) == []
 
     harness.send(node.config.control_mode_topic, "TASK")

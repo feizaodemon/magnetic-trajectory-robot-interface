@@ -11,6 +11,7 @@ EXPECTED_READER_DOCS = {
     "CREDITS.md",
     "NOTICE.md",
     "README.md",
+    "README.zh-CN.md",
     "colmag_ros/README.md",
     "docker/README.md",
     "docker/README_FR3_HARDWARE.md",
@@ -21,6 +22,7 @@ EXPECTED_READER_DOCS = {
     "docs/INTERACTION_PROFILES.md",
     "docs/RUNNING.md",
     "docs/VALIDATION.md",
+    "scripts/demo/README.md",
     "tests/README.md",
 }
 

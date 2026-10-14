@@ -46,6 +46,10 @@ def test_state_view_texts_and_tones():
     assert teleop_state_view(
         {"state": "WAITING_FOR_INPUT", "input_mode": "normalized_cartesian"}) == (
         "Waiting for input", "Hold a direction key in the teleop terminal", "neutral")
+    assert teleop_state_view({"state": "PAUSED", "reason": "stale_cartesian_input"}) == (
+        "Idle", "Hold a direction key in the teleop terminal", "neutral")
+    assert teleop_state_view({"state": "PAUSED", "reason": "stale_joint_state"}) == (
+        "Paused", "Stale joint state", "warning")
     assert teleop_state_view({"state": "REJECTED", "reason": "workspace_limit"}) == (
         "Target rejected", "Workspace limit", "danger")
     assert teleop_state_view({"state": "NEW_STATE", "reason": ""}) == ("New state", "", "neutral")

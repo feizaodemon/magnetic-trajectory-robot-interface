@@ -57,7 +57,7 @@ In `TELEOP`, the mouse dashboard pauses its drawing and dwell buttons and shows
 a read-only view instead: a keycap pad lit by the current
 `/colmag/teleop/cartesian_input` direction, and a Teleoperation card with the
 adapter state from `/colmag/gazebo_cartesian_teleop_state` (for example
-`Moving +X`, `Paused`, `Waiting for input`). The dashboard publishes nothing on
+`Moving +X`, `Stopping`, `Idle` between key holds, `Waiting for input`). The dashboard publishes nothing on
 this route. The board dashboard keeps its trajectory view under a `TELEOP
 active` notice.
 
