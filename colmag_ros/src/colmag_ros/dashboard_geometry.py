@@ -225,22 +225,22 @@ def preview_button_style(button_id, enabled, active=False):
             "width": 2,
             "ring": "#334155" if button_id == "X" else "#DC2626",
         }
-    fill, outline = {
-        "X": ("#E2E8F0", "#475569"),
-        "A": ("#FEE2E2", "#DC2626"),
-        "B": ("#DBEAFE", "#2563EB"),
-        "C": ("#DCFCE7", "#16A34A"),
-    }.get(button_id, ("#F8FAFC", "#94A3B8"))
-    if active and button_id == "X":
-        fill, outline = "#CBD5E1", "#334155"
-    elif active:
-        fill, outline = "#FEF3C7", "#D97706"
+    # Each action keeps its own hue when hovered: a deeper tint, a darker
+    # outline, and a dwell ring in the same darker color.
+    fill, outline, active_fill, strong = {
+        "X": ("#E2E8F0", "#475569", "#CBD5E1", "#334155"),
+        "A": ("#FEE2E2", "#DC2626", "#FECACA", "#B91C1C"),
+        "B": ("#DBEAFE", "#2563EB", "#BFDBFE", "#1D4ED8"),
+        "C": ("#DCFCE7", "#16A34A", "#BBF7D0", "#15803D"),
+    }.get(button_id, ("#F8FAFC", "#94A3B8", "#E2E8F0", "#475569"))
+    if active:
+        fill, outline = active_fill, strong
     return {
         "fill": fill,
         "outline": outline,
         "text": "#1F2937",
         "width": 3 if active else 2,
-        "ring": "#334155" if button_id == "X" else "#DC2626",
+        "ring": strong,
     }
 
 

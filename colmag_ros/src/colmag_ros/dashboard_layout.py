@@ -1,5 +1,10 @@
 """Tk window layout for the trajectory dashboard."""
 
+from colmag_ros import dashboard_theme as theme
+from colmag_ros.dashboard_candidate_display import (
+    operator_workflow_steps,
+    workflow_step_index,
+)
 from colmag_ros.dashboard_geometry import (
     build_canvas_reachable_preview_hit_zones,
     canvas_zones_to_stage_zones,
@@ -12,6 +17,13 @@ from colmag_ros.dashboard_texts import (
     default_header_subtitle,
     default_main_panel_title,
 )
+from colmag_ros.dashboard_widgets import (
+    draw_confidence_meter,
+    draw_symbol_tile,
+    draw_workflow_stepper,
+)
+
+RECOGNITION_TILE_SIZE = 84
 
 
 class DashboardLayoutMixin:
@@ -23,37 +35,39 @@ class DashboardLayoutMixin:
 
         style = ttk.Style(self.root)
         style.theme_use('clam')
-        style.configure("Header.TFrame", background="#2C3E50")
-        style.configure("HeaderTitle.TLabel", background="#2C3E50", foreground="#ECF0F1", font=("TkDefaultFont", 16, "bold"))
-        style.configure("HeaderSub.TLabel", background="#2C3E50", foreground="#BDC3C7", font=("TkDefaultFont", 10))
-        style.configure("Badge.TLabel", background="#F39C12", foreground="#FFFFFF", font=("TkDefaultFont", 10, "bold"), padding=4)
-        style.configure("Card.TFrame", background="#FFFFFF", relief="flat")
-        style.configure("CardTitle.TLabel", background="#FFFFFF", foreground="#7F8C8D", font=("TkDefaultFont", 10, "bold"))
+        style.configure("CardTitle.TLabel", background=theme.SURFACE,
+                        foreground=theme.TEXT_MUTED, font=theme.font(9, bold=True))
+        style.configure("Header.TButton", background=theme.HEADER_CHIP,
+                        foreground=theme.HEADER_TEXT, bordercolor=theme.HEADER_CHIP_ACTIVE,
+                        lightcolor=theme.HEADER_CHIP, darkcolor=theme.HEADER_CHIP,
+                        focuscolor=theme.HEADER_CHIP, padding=(12, 5), font=theme.font(10))
+        style.map("Header.TButton", background=[("active", theme.HEADER_CHIP_ACTIVE)])
 
-        main_frame = tk.Frame(self.root, bg="#F0F0F0")
+        main_frame = tk.Frame(self.root, bg=theme.APP_BG)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         self._build_header(main_frame)
+        self._build_safety_footer(main_frame)
 
-        content_frame = tk.Frame(main_frame, bg="#F0F0F0")
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+        content_frame = tk.Frame(main_frame, bg=theme.APP_BG)
+        # The stage geometry keeps a 12-14 px margin inside the left frame; the
+        # paddings below line the stage up with the header text and the cards.
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=(6, 0))
         self.dashboard_content_frame = content_frame
 
-        left_frame = tk.Frame(content_frame, bg="#F0F0F0")
+        left_frame = tk.Frame(content_frame, bg=theme.APP_BG)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.dashboard_left_frame = left_frame
 
         self._build_canvas_area(left_frame)
 
-        right_frame = tk.Frame(content_frame, bg="#F0F0F0", width=380)
+        right_frame = tk.Frame(content_frame, bg=theme.APP_BG, width=380)
         right_frame.pack_propagate(False)
-        right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(15, 0))
+        right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(4, 18), pady=14)
         self.dashboard_right_frame = right_frame
         self._build_status_cards(right_frame)
         content_frame.bind("<Configure>", self._layout_dashboard_columns)
         right_frame.bind("<Configure>", self._layout_dashboard_status_wrap)
-
-        self._build_safety_footer(main_frame)
 
     def _layout_dashboard_columns(self, event=None):
         total_width = getattr(event, "width", self.dashboard_content_frame.winfo_width())
@@ -62,62 +76,64 @@ class DashboardLayoutMixin:
 
     def _layout_dashboard_status_wrap(self, event=None):
         right_width = getattr(event, "width", self.dashboard_right_frame.winfo_width())
-        for label, base_wraplength in self.dashboard_wrapped_labels:
-            label.configure(wraplength=max(base_wraplength, int(right_width) - 40))
+        for label, base_wraplength, inset in self.dashboard_wrapped_labels:
+            label.configure(wraplength=max(base_wraplength, int(right_width) - inset))
 
     def _build_header(self, parent):
         tk = self.tk
         ttk = self.ttk
-        header = ttk.Frame(parent, style="Header.TFrame")
+        header = tk.Frame(parent, bg=theme.HEADER_BG)
         header.pack(fill=tk.X)
 
-        left_frame = ttk.Frame(header, style="Header.TFrame")
-        left_frame.pack(side=tk.LEFT, padx=15, pady=10)
+        left_frame = tk.Frame(header, bg=theme.HEADER_BG)
+        left_frame.pack(side=tk.LEFT, padx=18, pady=12)
 
-        title = HEADER_TITLE
         if self.config.subtitle_text:
             sub = self.config.subtitle_text
         else:
             sub = default_header_subtitle(self.config.demo_input_mode)
-        ttk.Label(left_frame, text=title, style="HeaderTitle.TLabel").pack(anchor=tk.W)
-        ttk.Label(left_frame, text=sub, style="HeaderSub.TLabel").pack(anchor=tk.W)
+        tk.Label(left_frame, text=HEADER_TITLE, bg=theme.HEADER_BG, fg=theme.HEADER_TEXT,
+                 font=theme.font(15, bold=True)).pack(anchor=tk.W)
+        tk.Label(left_frame, text=sub, bg=theme.HEADER_BG, fg=theme.HEADER_MUTED,
+                 font=theme.font(10)).pack(anchor=tk.W, pady=(2, 0))
 
-        right_frame = ttk.Frame(header, style="Header.TFrame")
-        right_frame.pack(side=tk.RIGHT, padx=15, pady=10)
+        right_frame = tk.Frame(header, bg=theme.HEADER_BG)
+        right_frame.pack(side=tk.RIGHT, padx=18, pady=12)
         if self.config.control_mode_enabled:
-            mode_frame = ttk.Frame(right_frame, style="Header.TFrame")
-            mode_frame.pack(side=tk.LEFT, padx=(0, 10))
-            ttk.Label(
-                mode_frame,
-                textvariable=self.control_mode_var,
-                style="HeaderSub.TLabel",
-            ).pack(anchor=tk.E)
+            tk.Label(right_frame, textvariable=self.control_mode_var, bg=theme.HEADER_CHIP,
+                     fg=theme.HEADER_TEXT, font=theme.font(10, bold=True),
+                     padx=10, pady=5).pack(side=tk.LEFT, padx=(0, 8))
             self.control_mode_button = ttk.Button(
-                mode_frame,
+                right_frame,
                 textvariable=self.control_mode_button_var,
                 command=self._request_control_mode_switch,
+                style="Header.TButton",
             )
-            self.control_mode_button.pack(anchor=tk.E, pady=(3, 0))
+            self.control_mode_button.pack(side=tk.LEFT)
         if self.config.safety_badge:
-            ttk.Label(
-                right_frame, text=self.config.safety_badge, style="Badge.TLabel"
-            ).pack(anchor=tk.E)
+            tk.Label(right_frame, text=self.config.safety_badge,
+                     bg=theme.tone_colors("warning")[0], fg=theme.SURFACE,
+                     font=theme.font(10, bold=True), padx=8, pady=5).pack(side=tk.LEFT, padx=(8, 0))
 
     def _build_canvas_area(self, parent):
         tk = self.tk
-        stage_host = tk.Frame(parent, bg="#F0F0F0")
-        stage_host.pack(fill=tk.BOTH, expand=True, pady=10, padx=10)
+        stage_host = tk.Frame(parent, bg=theme.APP_BG)
+        stage_host.pack(fill=tk.BOTH, expand=True)
         self.ocr_stage_frame = stage_host
         stage_host.bind("<Configure>", self._layout_ocr_stage)
 
-        stage = tk.Frame(stage_host, bg="#EEF2F5", bd=1, relief=tk.SOLID, highlightthickness=1, highlightbackground="#CBD5E1")
+        stage = tk.Frame(stage_host, bg=theme.SURFACE, highlightthickness=1,
+                         highlightbackground=theme.BORDER)
         self.ocr_stage_card = stage
 
         title_text = default_main_panel_title(self.config.demo_input_mode)
-        self.ocr_title_label = tk.Label(stage, text=title_text, bg="#EEF2F5", fg="#1F2937", font=("TkDefaultFont", 14, "bold"))
-        self.ocr_hint_label = tk.Label(stage, textvariable=self.ocr_hint_var, bg="#EEF2F5", fg="#64748B", font=("TkDefaultFont", 10, "bold"))
+        self.ocr_title_label = tk.Label(stage, text=title_text, bg=theme.SURFACE, fg=theme.TEXT,
+                                        font=theme.font(14, bold=True))
+        self.ocr_hint_label = tk.Label(stage, textvariable=self.ocr_hint_var, bg=theme.SURFACE,
+                                       fg=theme.TEXT_SECONDARY, font=theme.font(10),
+                                       justify=tk.LEFT)
 
-        self.canvas = tk.Canvas(stage, bg="white", highlightthickness=1, highlightbackground="#CBD5E1")
+        self.canvas = tk.Canvas(stage, bg=theme.SURFACE, highlightthickness=0)
 
         if self.config.demo_input_mode == "ocr_canvas":
             buttons = [
@@ -145,7 +161,7 @@ class DashboardLayoutMixin:
             ]
 
         for button_id, label_text, handler in buttons:
-            widget = tk.Canvas(stage, bg="#EEF2F5", highlightthickness=0, cursor="hand2")
+            widget = tk.Canvas(stage, bg=theme.SURFACE, highlightthickness=0, cursor="hand2")
             preview_button = (
                 self.config.is_trajectory_mode and self.config.candidate_preview_enabled
                 and self.config.hover_buttons_enabled
@@ -219,9 +235,10 @@ class DashboardLayoutMixin:
                                 available_w, available_h, stage_w, stage_h,
                                 self.canvas_width, self.canvas_height, draw_w, draw_h)
 
-        self.ocr_title_label.place(x=pad, y=14)
-        self.ocr_hint_label.configure(wraplength=max(180, stage_w - 2 * pad))
-        self.ocr_hint_label.place(x=pad, y=38)
+        text_x = pad + 8
+        self.ocr_title_label.place(x=text_x, y=12)
+        self.ocr_hint_label.configure(wraplength=max(180, stage_w - 2 * text_x))
+        self.ocr_hint_label.place(x=text_x, y=38)
         hit_zones = []
         canvas_control_zones = []
         for button_id, widgets in self.ocr_button_widgets.items():
@@ -261,133 +278,216 @@ class DashboardLayoutMixin:
         self._redraw_canvas()
         self._update_ocr_toolbar_visuals()
 
-    def _build_status_cards(self, parent):
-        tk = self.tk
-        ttk = self.ttk
-        self.dashboard_wrapped_labels = []
+    # -- Status cards -------------------------------------------------------
 
-        def create_card(
-            title, *vars, static_texts=None, wraplength=340, font_size=10,
-            emphasized_vars=(), secondary_vars=(), expand=False,
-        ):
-            card = ttk.Frame(parent, style="Card.TFrame", padding=8)
-            card.pack(fill=tk.BOTH if expand else tk.X, expand=expand, pady=(0, 8))
-            ttk.Label(card, text=title, style="CardTitle.TLabel").pack(anchor=tk.W, pady=(0, 5))
-            if static_texts:
-                for st in static_texts:
-                    label = ttk.Label(card, text=st, background="white", font=("TkDefaultFont", 9), wraplength=wraplength, justify=tk.LEFT)
-                    label.pack(anchor=tk.W, fill=tk.X)
-                    self.dashboard_wrapped_labels.append((label, wraplength))
-            for var in vars:
-                if var:
-                    emphasized = var in emphasized_vars
-                    font = ("TkDefaultFont", font_size + 3, "bold") if emphasized else ("TkDefaultFont", font_size)
-                    foreground = "#64748B" if var in secondary_vars else "#1F2937"
-                    label = ttk.Label(
-                        card, textvariable=var, background="white",
-                        foreground=foreground, font=font,
-                        wraplength=wraplength, justify=tk.LEFT,
-                    )
-                    label.pack(anchor=tk.W, fill=tk.X)
-                    self.dashboard_wrapped_labels.append((label, wraplength))
-            return card
+    def _card(self, parent, title, expand=False):
+        tk = self.tk
+        card = tk.Frame(parent, bg=theme.SURFACE, highlightthickness=1,
+                        highlightbackground=theme.BORDER, padx=14, pady=10)
+        card.pack(fill=tk.BOTH if expand else tk.X, expand=expand, pady=(0, 10))
+        self.ttk.Label(card, text=title, style="CardTitle.TLabel").pack(anchor=tk.W, pady=(0, 6))
+        return card
+
+    def _card_label(self, parent, var=None, text=None, size=10, bold=False,
+                    color=theme.TEXT, wraplength=330, inset=44, **pack_options):
+        tk = self.tk
+        options = {"textvariable": var} if var is not None else {"text": text}
+        label = tk.Label(parent, bg=theme.SURFACE, fg=color, font=theme.font(size, bold=bold),
+                         wraplength=wraplength, justify=tk.LEFT, anchor=tk.W, **options)
+        label.pack(anchor=tk.W, fill=tk.X, **pack_options)
+        self.dashboard_wrapped_labels.append((label, wraplength, inset))
+        return label
+
+    def _build_status_cards(self, parent):
+        self.dashboard_wrapped_labels = []
+        self.status_tone_bar = None
+        self.workflow_canvas = None
+        self.recognition_tile = None
+        self.confidence_meter = None
+        self.robot_state_dot = None
 
         if self.config.is_trajectory_mode:
-            self._build_trajectory_status_cards(parent, create_card)
+            self._build_trajectory_status_cards(parent)
         elif self.config.demo_input_mode == "ocr_canvas":
-            self._build_mouse_status_cards(create_card)
+            self._build_mouse_status_cards(parent)
         else:
-            create_card("Status", self.ui_state_var, self.capture_var, self.confirm_var)
-            create_card(
-                "Recognition",
-                self.backend_status_var,
-                self.recognizer_mode_var,
-                self.recognizer_model_var,
-                self.recognizer_status_var,
-                self.recognizer_labels_var,
-                self.rank_vars[0],
-                self.rank_vars[1],
-                self.rank_vars[2],
-            )
-            create_card("Safety", static_texts=[
-                self.config.route_scope_text,
-                self.config.confirm_policy_text,
-            ])
+            card = self._card(parent, "Status")
+            for var in (self.ui_state_var, self.capture_var, self.confirm_var):
+                self._card_label(card, var)
+            card = self._card(parent, "Recognition")
+            for var in (
+                self.backend_status_var, self.recognizer_mode_var, self.recognizer_model_var,
+                self.recognizer_status_var, self.recognizer_labels_var, *self.rank_vars,
+            ):
+                self._card_label(card, var)
+            card = self._card(parent, "Safety")
+            for text in (self.config.route_scope_text, self.config.confirm_policy_text):
+                self._card_label(card, text=text, size=9)
 
-    def _build_trajectory_status_cards(self, parent, create_card):
-        create_card("Interaction", self.traj_clutch_mode_var, font_size=13,
-                    emphasized_vars=(self.traj_clutch_mode_var,))
-        if not self.config.candidate_preview_enabled:
+    def _build_trajectory_status_cards(self, parent):
+        preview = self.config.candidate_preview_enabled
+        self._build_status_card(
+            parent, self.traj_operator_status_var if preview else None, self.traj_clutch_mode_var)
+        if not preview:
             return
-        create_card("Progress", self.traj_workflow_var, font_size=11,
-                    emphasized_vars=(self.traj_workflow_var,))
-        create_card(
-            "Recognition", self.traj_operator_result_var,
-            self.traj_operator_mapping_var, *self.traj_operator_candidate_vars,
-            wraplength=350, font_size=11,
-            emphasized_vars=(self.traj_operator_result_var,),
-            secondary_vars=tuple(self.traj_operator_candidate_vars[1:]),
-            expand=True,
-        )
-        create_card("Status", self.traj_operator_status_var, font_size=12,
-                    emphasized_vars=(self.traj_operator_status_var,))
+        self._build_workflow_card(parent, "draw")
+        self._build_recognition_card(
+            parent, self.traj_operator_result_var, self.traj_operator_mapping_var,
+            self.traj_operator_candidate_vars)
+        self._build_robot_card(parent)
         if self.config.dashboard_debug_sample_panel:
-            create_card(
-                "Trajectory Diagnostics", self.traj_mode_var, self.traj_window_var,
+            self._build_debug_card(parent, "Trajectory Diagnostics", (
+                self.traj_mode_var, self.traj_window_var,
                 self.traj_valid_var, self.traj_xyz_var, self.traj_count_var,
                 self.traj_input_gate_var, self.traj_backend_var,
                 self.traj_recognizer_detail_var, self.traj_result_var,
                 self.traj_recognition_progress_var,
-                self.traj_candidate_debug_var, font_size=9,
-            )
-            create_card(
-                "Drawing Sample", self.traj_captured_sample_var,
+                self.traj_candidate_debug_var,
+            ))
+            self._build_debug_card(parent, "Drawing Sample", (
+                self.traj_captured_sample_var,
                 self.traj_candidate_points_var, self.traj_sample_state_var,
                 self.traj_sample_cleanup_var,
-            )
-            create_card(
-                "Interaction", self.traj_recording_var,
+            ))
+            self._build_debug_card(parent, "Interaction", (
+                self.traj_recording_var,
                 self.traj_interaction_var, self.traj_semantic_var,
                 self.traj_confirm_var,
-            )
+            ))
         if self.config.trajectory_recording_enabled:
-            rec_card = self.ttk.Frame(parent, style="Card.TFrame", padding=10)
-            rec_card.pack(fill=self.tk.X, pady=(0, 10))
-            self.ttk.Label(rec_card, text="Segment recording (preview)",
-                           style="CardTitle.TLabel").pack(anchor=self.tk.W, pady=(0, 5))
+            rec_card = self._card(parent, "Segment recording (preview)")
             self.ttk.Button(rec_card, text="Start (record segment)  [S]",
                             command=self._start_recording).pack(anchor=self.tk.W)
 
-    def _build_mouse_status_cards(self, create_card):
-        create_card("Interaction", self.mouse_mode_var, font_size=13,
-                    emphasized_vars=(self.mouse_mode_var,))
-        create_card("Progress", self.mouse_workflow_var, font_size=11,
-                    emphasized_vars=(self.mouse_workflow_var,))
-        create_card(
-            "Recognition", self.mouse_operator_result_var,
-            self.mouse_operator_mapping_var,
-            *self.mouse_operator_candidate_vars, font_size=11,
-            emphasized_vars=(self.mouse_operator_result_var,),
-            secondary_vars=tuple(self.mouse_operator_candidate_vars[1:]),
-            expand=True,
-        )
-        create_card("Status", self.mouse_operator_status_var, font_size=12,
-                    emphasized_vars=(self.mouse_operator_status_var,))
+    def _build_mouse_status_cards(self, parent):
+        self._build_status_card(parent, self.mouse_operator_status_var, self.mouse_mode_var)
+        self._build_workflow_card(parent, "start")
+        self._build_recognition_card(
+            parent, self.mouse_operator_result_var, self.mouse_operator_mapping_var,
+            self.mouse_operator_candidate_vars)
+        self._build_robot_card(parent)
         if self.config.dashboard_debug_sample_panel:
-            create_card(
-                "Mouse Diagnostics", self.ui_state_var, self.capture_var,
+            self._build_debug_card(parent, "Mouse Diagnostics", (
+                self.ui_state_var, self.capture_var,
                 self.backend_status_var, self.recognizer_mode_var,
                 self.recognizer_model_var, self.recognizer_labels_var,
-                self.dwell_var, self.mouse_candidate_debug_var, font_size=9,
-            )
+                self.dwell_var, self.mouse_candidate_debug_var,
+            ))
+
+    def _build_status_card(self, parent, status_var, mode_var):
+        """Next-step instruction with a tone stripe, and the pointer mode as a chip."""
+        tk = self.tk
+        card = self._card(parent, "Status")
+        row = tk.Frame(card, bg=theme.SURFACE)
+        row.pack(fill=tk.X)
+        self.status_tone_bar = tk.Frame(row, bg=theme.tone_colors("neutral")[0], width=4)
+        self.status_tone_bar.pack(side=tk.LEFT, fill=tk.Y)
+        body = tk.Frame(row, bg=theme.SURFACE)
+        body.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(12, 0))
+        if status_var is not None:
+            # Two fixed lines, so a wrapping instruction does not shift the cards below.
+            label = self._card_label(body, status_var, size=14, bold=True, inset=62)
+            label.configure(height=2, anchor=tk.NW)
+        chip = tk.Label(body, textvariable=mode_var, bg=theme.APP_BG, fg=theme.TEXT_SECONDARY,
+                        font=theme.font(9, bold=True), padx=8, pady=2)
+        chip.pack(anchor=tk.W, pady=(6, 0))
+
+    def _build_workflow_card(self, parent, stage):
+        tk = self.tk
+        card = self._card(parent, "Progress")
+        self.workflow_stage = stage
+        self.workflow_canvas = tk.Canvas(card, height=74, bg=theme.SURFACE, highlightthickness=0)
+        self.workflow_canvas.pack(fill=tk.X)
+        self.workflow_canvas.bind("<Configure>", lambda _event: self._draw_workflow())
+
+    def _build_recognition_card(self, parent, result_var, mapping_var, row_vars):
+        tk = self.tk
+        card = self._card(parent, "Recognition", expand=True)
+        top = tk.Frame(card, bg=theme.SURFACE)
+        top.pack(fill=tk.X)
+        size = RECOGNITION_TILE_SIZE
+        self.recognition_tile = tk.Canvas(top, width=size, height=size, bg=theme.SURFACE,
+                                          highlightthickness=0)
+        self.recognition_tile.pack(side=tk.LEFT, anchor=tk.N)
+        text_column = tk.Frame(top, bg=theme.SURFACE)
+        text_column.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(14, 0))
+        column_inset = 44 + size + 14
+        self._card_label(text_column, result_var, size=13, bold=True, wraplength=200,
+                         inset=column_inset, pady=(4, 0))
+        self._card_label(text_column, mapping_var, size=11, color=theme.TEXT_SECONDARY,
+                         wraplength=200, inset=column_inset, pady=(4, 0))
+        self._card_label(card, row_vars[0], size=10, bold=True, pady=(12, 6))
+        self.confidence_meter = tk.Canvas(card, height=10, bg=theme.SURFACE, highlightthickness=0)
+        self.confidence_meter.pack(fill=tk.X)
+        self.confidence_meter.bind("<Configure>", lambda _event: self._draw_recognition_visual())
+        for var in row_vars[1:]:
+            self._card_label(card, var, size=10, color=theme.TEXT_SECONDARY, pady=(8, 0))
+        self.recognition_visual = {"label": "?", "tone": "neutral", "fraction": None}
+        self._draw_recognition_visual()
+
+    def _build_robot_card(self, parent):
+        """Last task command and backend execution state; shown when confirms can dispatch."""
+        if not (self.config.integrated_confirm_enabled and self.config.publish_confirmed_label):
+            return
+        tk = self.tk
+        card = self._card(parent, "Robot task")
+        self._card_label(card, self.task_var, size=12, bold=True)
+        row = tk.Frame(card, bg=theme.SURFACE)
+        row.pack(fill=tk.X, pady=(4, 0))
+        self.robot_state_dot = tk.Canvas(row, width=12, height=12, bg=theme.SURFACE,
+                                         highlightthickness=0)
+        self.robot_state_dot.pack(side=tk.LEFT)
+        self._card_label(row, self.gazebo_var, size=10, color=theme.TEXT_SECONDARY,
+                         inset=64, padx=(6, 0))
+        self._show_robot_state_tone("neutral")
+
+    def _build_debug_card(self, parent, title, variables):
+        card = self._card(parent, title)
+        for var in variables:
+            self._card_label(card, var, size=9, color=theme.TEXT_SECONDARY)
+
+    # -- Card updates -------------------------------------------------------
+
+    def _show_status_tone(self, tone):
+        if self.status_tone_bar is not None:
+            self.status_tone_bar.configure(bg=theme.tone_colors(tone)[0])
+
+    def _show_workflow_stage(self, stage):
+        self.workflow_stage = stage
+        self._draw_workflow()
+
+    def _draw_workflow(self):
+        if self.workflow_canvas is None:
+            return
+        steps = operator_workflow_steps(self.config.interaction_profile)
+        draw_workflow_stepper(
+            self.workflow_canvas, self.workflow_canvas.winfo_width(), steps,
+            workflow_step_index(self.workflow_stage, steps))
+
+    def _show_recognition_visual(self, label, tone, fraction):
+        self.recognition_visual = {"label": label, "tone": tone, "fraction": fraction}
+        self._draw_recognition_visual()
+
+    def _draw_recognition_visual(self):
+        if self.recognition_tile is None:
+            return
+        visual = self.recognition_visual
+        draw_symbol_tile(self.recognition_tile, RECOGNITION_TILE_SIZE,
+                         visual["label"], visual["tone"])
+        draw_confidence_meter(self.confidence_meter, self.confidence_meter.winfo_width(),
+                              visual["fraction"], visual["tone"])
+
+    def _show_robot_state_tone(self, tone):
+        if self.robot_state_dot is None:
+            return
+        self.robot_state_dot.delete("all")
+        self.robot_state_dot.create_oval(2, 2, 11, 11, fill=theme.tone_colors(tone)[0], outline="")
 
     def _build_safety_footer(self, parent):
         if not self.config.footer_text:
             return
         tk = self.tk
-        ttk = self.ttk
-        footer = tk.Frame(parent, bg="#EAECEE", pady=10, padx=15)
+        footer = tk.Frame(parent, bg=theme.BORDER, pady=8, padx=16)
         footer.pack(fill=tk.X, side=tk.BOTTOM)
-
-        text = self.config.footer_text
-        ttk.Label(footer, text=text, foreground="#7F8C8D", background="#EAECEE", font=("TkDefaultFont", 10, "bold")).pack(anchor=tk.CENTER)
+        tk.Label(footer, text=self.config.footer_text, fg=theme.TEXT_SECONDARY, bg=theme.BORDER,
+                 font=theme.font(10, bold=True)).pack(anchor=tk.CENTER)
