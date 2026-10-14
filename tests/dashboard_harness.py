@@ -149,6 +149,9 @@ class FakeCanvas(FakeWidget):
     def create_arc(self, *coords, **options):
         return self._create("arc", coords, options)
 
+    def create_polygon(self, *coords, **options):
+        return self._create("polygon", coords, options)
+
     def drawn(self, kind):
         return [options for item_kind, _coords, options in self.items if item_kind == kind]
 
@@ -197,6 +200,9 @@ class FakeStyle:
     def configure(self, name, **options):
         self.styles[name] = options
 
+    def map(self, name, **options):
+        self.styles.setdefault(name, {}).update(options)
+
 
 def _fake_tk_modules():
     tk = types.ModuleType("tkinter")
@@ -206,7 +212,7 @@ def _fake_tk_modules():
     tk.Canvas = FakeCanvas
     tk.StringVar = FakeVar
     tk.TclError = FakeTclError
-    for name in ("ARC", "BOTH", "BOTTOM", "CENTER", "E", "LEFT", "RIGHT", "SOLID", "W", "X", "Y"):
+    for name in ("ARC", "BOTH", "BOTTOM", "CENTER", "E", "LEFT", "N", "NW", "RIGHT", "SOLID", "W", "X", "Y"):
         setattr(tk, name, name.lower())
     ttk = types.ModuleType("tkinter.ttk")
     ttk.Frame = FakeWidget

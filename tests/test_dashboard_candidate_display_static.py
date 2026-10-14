@@ -350,6 +350,49 @@ class CandidateDisplayHelperTests(unittest.TestCase):
             "Other candidates: C",
         ])
 
+    def test_operator_tone_follows_the_status_text_states(self):
+        cases = [
+            ({"interaction_state": "rejected"}, "Candidate rejected", "danger"),
+            ({"interaction_state": "recognizing"}, "Wait for recognition", "info"),
+            ({"interaction_state": "preview_confirmed", "confirmed_label": "2"},
+             "Confirmed: 2", "success"),
+            ({"top_candidate_label": "2"}, "Review the result, then choose C / A / X", "accent"),
+            ({}, "Draw a character in the center", "neutral"),
+        ]
+        for state, text, tone in cases:
+            self.assertEqual(display.format_operator_action_status(**state), text)
+            self.assertEqual(display.operator_action_tone(**state), tone)
+
+    def test_top_candidate_and_robot_task_views(self):
+        self.assertIsNone(display.operator_top_candidate(None))
+        payload = {"accepted": True, "candidates": [
+            {"rank": 2, "label": "1", "confidence": 0.1},
+            {"rank": 1, "label": "2", "confidence": 0.66},
+        ]}
+        self.assertEqual(display.operator_top_candidate(payload),
+                         {"label": "2", "confidence": 0.66, "accepted": True})
+        rejected = {"accepted": False, "rejected_candidates": [
+            {"rank": 1, "label": "V", "confidence": 0.2}]}
+        self.assertFalse(display.operator_top_candidate(rejected)["accepted"])
+
+        self.assertEqual(display.format_task_command({"task": "HEXAGON_TRAJECTORY"}),
+                         "Task: Hexagon trajectory")
+        self.assertEqual(display.task_execution_view(None),
+                         ("No execution state yet", "neutral"))
+        self.assertEqual(
+            display.task_execution_view({"status": "running", "phase": "waypoint_3"}),
+            ("Running \u00b7 waypoint 3", "info"))
+        self.assertEqual(
+            display.task_execution_view({"status": "succeeded", "phase": "succeeded"}),
+            ("Succeeded", "success"))
+        self.assertEqual(
+            display.task_execution_view(
+                {"status": "waiting_for_server", "phase": "waiting_for_action_server"}),
+            ("Waiting for action server", "neutral"))
+        self.assertEqual(
+            display.task_execution_view({"status": "rejected", "phase": "control_mode_rejected"}),
+            ("Rejected \u00b7 control mode rejected", "danger"))
+
     def test_recognition_and_status_have_distinct_operator_jobs(self):
         empty = display.format_operator_recognition_view(None)
         ready = display.format_operator_recognition_view(None, sample_ready=True)
@@ -368,24 +411,15 @@ class CandidateDisplayHelperTests(unittest.TestCase):
             ready["headline"], display.format_operator_action_status(sample_ready=True))
 
     def test_profile_workflows_and_empty_guidance_are_source_aware(self):
-        self.assertEqual(
-            display.format_operator_workflow("recognize", "real_board"),
-            "✓\u00a0Draw  →  ●\u00a0Recognize\nReview  →  Act",
-        )
-        self.assertEqual(
-            display.format_operator_workflow("start", "mouse"),
-            "●\u00a0Start\u00a0drawing  →  Draw\nAuto-recognize  →  Review  →  Act",
-        )
-        self.assertEqual(
-            display.format_operator_workflow("review", "mouse"),
-            "✓\u00a0Start\u00a0drawing  →  ✓\u00a0Draw\n"
-            "✓\u00a0Auto-recognize  →  ●\u00a0Review  →  Act",
-        )
-        for profile in ("real_board", "mouse"):
-            text = display.format_operator_workflow("review", profile)
-            self.assertNotIn("●\n", text)
-            self.assertNotIn("\n●\n", text)
-            self.assertNotIn("● ", text)
+        board = display.operator_workflow_steps("real_board")
+        mouse = display.operator_workflow_steps("mouse")
+        self.assertEqual([stage for stage, _label in board],
+                         ["draw", "recognize", "review", "act"])
+        self.assertEqual([stage for stage, _label in mouse],
+                         ["start", "draw", "recognize", "review", "act"])
+        self.assertEqual(mouse[2][1], "Auto-\nrecognize")
+        self.assertEqual(display.workflow_step_index("review", mouse), 3)
+        self.assertEqual(display.workflow_step_index("unknown", board), 0)
         self.assertEqual(
             display.format_operator_candidate_rows(
                 ["Candidate 1: -", "Candidate 2: -", "Candidate 3: -"],

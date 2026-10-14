@@ -85,7 +85,9 @@ The mixins call pure, ROS-free helpers that the tests exercise directly:
 | `dashboard_points.py` | point and stroke helpers |
 | `dashboard_dwell_timer.py`, `dashboard_dwell_status.py` | dwell timing and status text |
 | `dashboard_controller_input.py` | dwell and confirmation decisions |
-| `dashboard_candidate_display.py` | candidate formatting |
+| `dashboard_candidate_display.py` | candidate, progress, and robot-task formatting |
+| `dashboard_theme.py` | shared colors and fonts |
+| `dashboard_widgets.py` | canvas-drawn controls: dwell buttons, progress stepper, symbol tile, confidence meter |
 | `dashboard_confirm_publisher.py` | confirmation payload |
 | `dashboard_sample_lifecycle.py`, `dashboard_trajectory_processing.py` | real-board sample lifecycle, display bounds, writing gate |
 | `preview_interaction.py`, `preview_recognition.py` | preview state and preview-only recognition |

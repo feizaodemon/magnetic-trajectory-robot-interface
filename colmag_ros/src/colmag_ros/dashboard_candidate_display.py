@@ -221,6 +221,45 @@ def format_operator_recognition_view(payload, status="", sample_ready=False):
     }
 
 
+def operator_top_candidate(payload):
+    """Top-ranked candidate as ``{"label", "confidence", "accepted"}``, or None."""
+    rows = _candidate_rows(payload, include_rejected=True)
+    if not rows:
+        return None
+    return {
+        "label": rows[0]["label"],
+        "confidence": rows[0]["confidence"],
+        "accepted": payload.get("accepted") is True,
+    }
+
+
+def format_task_command(payload):
+    """Robot-card line for a dispatched task command payload."""
+    task = str((payload or {}).get("task") or "").strip()
+    return "Task: %s" % (format_mapped_action(task) or "-")
+
+
+def task_execution_view(payload):
+    """``(text, tone)`` for an execution-state payload from the robot backend."""
+    status = str((payload or {}).get("status") or "").strip().lower().replace("_", " ")
+    phase = str((payload or {}).get("phase") or "").strip().lower().replace("_", " ")
+    if not status:
+        return "No execution state yet", "neutral"
+    tone = {
+        "running": "info",
+        "succeeded": "success",
+        "failed": "danger",
+        "rejected": "danger",
+    }.get(status, "neutral")
+    if phase.startswith(status.split()[0]):
+        text = phase.capitalize()
+    elif phase:
+        text = "%s · %s" % (status.capitalize(), phase)
+    else:
+        text = status.capitalize()
+    return text, tone
+
+
 def format_candidate_debug_details(payload):
     """Expose DTW/template evidence only in the opt-in diagnostics panel."""
     rows = _candidate_rows(payload, include_rejected=True)
@@ -259,27 +298,19 @@ def derive_operator_workflow_stage(
     return "draw"
 
 
-def format_operator_workflow(stage, interaction_profile="real_board"):
+def operator_workflow_steps(interaction_profile="real_board"):
+    """``(stage, label)`` steps of the progress stepper for a profile."""
     if interaction_profile == "mouse":
-        steps = (("start", "Start drawing"), ("draw", "Draw"),
-                 ("recognize", "Auto-recognize"), ("review", "Review"),
-                 ("act", "Act"))
-    else:
-        steps = (("draw", "Draw"), ("recognize", "Recognize"),
-                 ("review", "Review"), ("act", "Act"))
-    current_index = next(
-        (index for index, (key, _label) in enumerate(steps) if key == stage), 0)
-    units = []
-    for index, (_key, label) in enumerate(steps):
-        label = label.replace(" ", "\u00a0")
-        if index < current_index:
-            units.append("✓\u00a0%s" % label)
-        elif index == current_index:
-            units.append("●\u00a0%s" % label)
-        else:
-            units.append(label)
-    return "%s\n%s" % (
-        "  →  ".join(units[:2]), "  →  ".join(units[2:]))
+        return (("start", "Start\ndrawing"), ("draw", "Draw"),
+                ("recognize", "Auto-\nrecognize"), ("review", "Review"),
+                ("act", "Act"))
+    return (("draw", "Draw"), ("recognize", "Recognize"),
+            ("review", "Review"), ("act", "Act"))
+
+
+def workflow_step_index(stage, steps):
+    """Index of ``stage`` in ``steps``; unknown stages map to the first step."""
+    return next((index for index, (key, _label) in enumerate(steps) if key == stage), 0)
 
 
 def format_operator_candidate_rows(candidate_rows, status="", sample_ready=False):
@@ -372,6 +403,29 @@ def format_operator_action_status(
     if sample_ready:
         return "Hover B Recognize"
     return "Draw a character in the center"
+
+
+def operator_action_tone(
+    interaction_state="",
+    confirmed_label="",
+    top_candidate_label="",
+    sample_ready=False,
+):
+    """Status-card tone for the same state as :func:`format_operator_action_status`."""
+    interaction = str(interaction_state or "").strip()
+    if interaction == "rejected":
+        return "danger"
+    if interaction == "cleared":
+        return "neutral"
+    if interaction in ("recognizing", "symbol_capture_published"):
+        return "info"
+    if interaction == "preview_confirmed" and confirmed_label:
+        return "success"
+    if top_candidate_label:
+        return "accent"
+    if sample_ready:
+        return "info"
+    return "neutral"
 
 
 def operator_action_status_text(state):

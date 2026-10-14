@@ -11,7 +11,8 @@ from colmag_ros.dashboard_candidate_display import (
     format_candidate_rows_for_display,
     format_operator_action_status,
     format_operator_recognition_view,
-    format_operator_workflow,
+    operator_action_tone,
+    operator_top_candidate,
     preview_candidate_ui_texts,
     summarize_candidates,
 )
@@ -266,25 +267,35 @@ class DashboardPreviewControlsMixin:
         self.root.after(0, lambda t=view["mapping"]: mapping_var.set(t))
         for index, text in enumerate(view["rows"]):
             self.root.after(0, lambda i=index, t=text: row_vars[i].set(t))
+        top = operator_top_candidate(payload)
+        if top is not None:
+            visual = (top["label"], "success" if top["accepted"] else "warning", top["confidence"])
+        elif status in ("recognizing", "symbol_capture_published", "RECOGNIZING"):
+            visual = ("\u2026", "info", None)
+        else:
+            visual = ("?", "neutral", None)
+        self.root.after(0, lambda v=visual: self._show_recognition_visual(*v))
 
     def _refresh_operator_status(self):
         sample_ready = self._drawing_sample_ready()
         top_candidate = self._top_preview_candidate_label()
         interaction_state = self.preview_interaction.state
-        text = format_operator_action_status(
-            interaction_state=interaction_state,
-            confirmed_label=self.preview_interaction.confirmed_label,
-            top_candidate_label=top_candidate,
-            sample_ready=sample_ready,
-        )
+        status_state = {
+            "interaction_state": interaction_state,
+            "confirmed_label": self.preview_interaction.confirmed_label,
+            "top_candidate_label": top_candidate,
+            "sample_ready": sample_ready,
+        }
+        text = format_operator_action_status(**status_state)
+        tone = operator_action_tone(**status_state)
         self.root.after(0, lambda t=text: self.traj_operator_status_var.set(t))
+        self.root.after(0, lambda t=tone: self._show_status_tone(t))
         stage = derive_operator_workflow_stage(
             interaction_state=interaction_state,
             has_sample=sample_ready,
             has_candidate=bool(top_candidate),
         )
-        workflow = format_operator_workflow(stage, self.config.interaction_profile)
-        self.root.after(0, lambda t=workflow: self.traj_workflow_var.set(t))
+        self.root.after(0, lambda s=stage: self._show_workflow_stage(s))
         self._set_operator_recognition_view(
             self.current_candidate_payload,
             interaction_state,
@@ -422,23 +433,21 @@ class DashboardPreviewControlsMixin:
                 has_candidate=bool(tops),
             )
         if self.ocr_panel_state == "BLOCKED":
-            status = "Stopped"
+            status, tone = "Stopped", "danger"
         elif self.ocr_panel_state == "CONFIRM_PENDING" and tops:
-            status = "Review the result, then choose C / A / X"
+            status, tone = "Review the result, then choose C / A / X", "accent"
         elif self.ocr_panel_state == "RECOGNIZING":
-            status = "Wait for recognition"
+            status, tone = "Wait for recognition", "info"
         elif self.ocr_panel_state == "DRAWING":
-            status = "Draw a character in the center."
+            status, tone = "Draw a character in the center.", "info"
         elif self.last_confirmed_label:
-            status = "Confirmed: %s" % self.last_confirmed_label
+            status, tone = "Confirmed: %s" % self.last_confirmed_label, "success"
         else:
-            status = "Hover B to start drawing"
+            status, tone = "Hover B to start drawing", "neutral"
         self.root.after(0, lambda t=mode: self.mouse_mode_var.set("Mode: %s" % t))
-        self.root.after(
-            0,
-            lambda t=format_operator_workflow(stage, "mouse"): self.mouse_workflow_var.set(t),
-        )
+        self.root.after(0, lambda s=stage: self._show_workflow_stage(s))
         self.root.after(0, lambda t=status: self.mouse_operator_status_var.set(t))
+        self.root.after(0, lambda t=tone: self._show_status_tone(t))
         self._set_operator_recognition_view(
             self.current_candidate_payload,
             self.ocr_panel_state,

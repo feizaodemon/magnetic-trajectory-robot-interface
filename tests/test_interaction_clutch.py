@@ -1,13 +1,16 @@
 from colmag_ros import dashboard_controller_input as controls
 from colmag_ros import dashboard_geometry as geometry
 from colmag_ros import dashboard_sample_lifecycle as lifecycle
+from colmag_ros import dashboard_theme
 from colmag_ros.dashboard_confirm_publisher import build_mouse_toolbar_stop_payload
 from colmag_ros.dashboard_dwell_timer import DwellTimer
 import magnetic_trajectory_dashboard_node as dashboard
 from magnetic_trajectory_dashboard_node import (
     MagneticTrajectoryDashboardNode,
 )
-from dashboard_harness import SAMPLE_CAPTURE, DashboardHarness, default_config
+from dashboard_harness import (
+    SAMPLE_CAPTURE, DashboardHarness, FakeCanvas, FakeWidget, default_config,
+)
 
 CONFIRM_PARAMS = {
     "integrated_dashboard_confirm_enabled": True,
@@ -347,7 +350,7 @@ def test_responsive_operator_shell_enforces_accepted_minimum_and_expands_cards(m
 
     assert harness.root.window["minsize"] == geometry.dashboard_minimum_window_size()
     assert main_frame.pack_options == {"fill": "both", "expand": True}
-    assert harness.card_titles() == ["Interaction", "Progress", "Recognition", "Status"]
+    assert harness.card_titles() == ["Status", "Progress", "Recognition"]
     assert harness.card("Recognition").pack_options["expand"] is True
 
 
@@ -413,7 +416,10 @@ def test_mouse_confirmed_progress_advances_to_act_without_republishing_or_cleari
     node.dwell_timer = DwellTimer()
     node.all_strokes = []
     node.mouse_mode_var = Variable()
-    node.mouse_workflow_var = Variable()
+    node.config = default_config(interaction_profile="mouse")
+    node.workflow_canvas = FakeCanvas()
+    node.status_tone_bar = FakeWidget()
+    node.recognition_tile = None
     node.mouse_operator_status_var = Variable()
     node.mouse_operator_result_var = Variable()
     node.mouse_operator_mapping_var = Variable()
@@ -446,10 +452,10 @@ def test_mouse_confirmed_progress_advances_to_act_without_republishing_or_cleari
     assert node.last_confirmed_label == "2"
     assert node.current_candidate_payload is candidate
     assert node.mouse_operator_status_var.value == "Confirmed: 2"
-    assert node.mouse_workflow_var.value == (
-        "✓\u00a0Start\u00a0drawing  →  ✓\u00a0Draw\n"
-        "✓\u00a0Auto-recognize  →  ✓\u00a0Review  →  ●\u00a0Act"
-    )
+    assert node.workflow_stage == "act"
+    stepper_marks = [item["text"] for item in node.workflow_canvas.drawn("text")][::2]
+    assert stepper_marks == ["\u2713"] * 4 + ["5"]
+    assert node.status_tone_bar.options["bg"] == dashboard_theme.tone_colors("success")[0]
     assert events == ["confirm:1"]
 
     node._handle_ocr_action("C")

@@ -15,12 +15,14 @@ from colmag_ros.dashboard_confirm_publisher import PreviewConfirmPublisher
 from colmag_ros.dashboard_candidate_display import (
     backend_display_name,
     candidate_backend_status_text,
-    format_operator_workflow,
     format_rank_rows,
+    format_task_command,
     recognizer_status_texts,
     summarize_candidates,
+    task_execution_view,
 )
 from colmag_ros import control_mode
+from colmag_ros import dashboard_theme
 from colmag_ros.dashboard_config import DashboardConfig
 from colmag_ros.dashboard_dwell_timer import DwellTimer
 from colmag_ros.dashboard_controller_input import (
@@ -200,7 +202,7 @@ class MagneticTrajectoryDashboardNode(
         self.root.geometry("1060x760")
         min_width, min_height = dashboard_minimum_window_size()
         self.root.minsize(min_width, min_height)
-        self.root.configure(bg="#F0F0F0")
+        self.root.configure(bg=dashboard_theme.APP_BG)
         self.root.protocol("WM_DELETE_WINDOW", self._close)
 
         self.ui_state_var = tk.StringVar(value="WAITING")
@@ -223,8 +225,8 @@ class MagneticTrajectoryDashboardNode(
             initial_hint = "WAITING | Hover B to start drawing"
         self.ocr_hint_var = tk.StringVar(value=initial_hint)
         self.confirm_var = tk.StringVar(value="-")
-        self.task_var = tk.StringVar(value="-")
-        self.gazebo_var = tk.StringVar(value="-")
+        self.task_var = tk.StringVar(value="No task sent yet")
+        self.gazebo_var = tk.StringVar(value=task_execution_view(None)[0])
 
         # Trajectory-preview status (trajectory mode only).
         if self.config.traj_scale_mode == "auto":
@@ -244,8 +246,6 @@ class MagneticTrajectoryDashboardNode(
         self.traj_input_gate_var = tk.StringVar(
             value="Input: active - | drawing - | control - | reason -")
         self.traj_clutch_mode_var = tk.StringVar(value="Mode: NAVIGATE")
-        self.traj_workflow_var = tk.StringVar(
-            value=format_operator_workflow("draw", self.config.interaction_profile))
         self.traj_operator_status_var = tk.StringVar(
             value="Draw a character in the center")
 
@@ -278,8 +278,6 @@ class MagneticTrajectoryDashboardNode(
             for i in range(3)
         ]
         self.mouse_mode_var = tk.StringVar(value="Mode: IDLE")
-        self.mouse_workflow_var = tk.StringVar(
-            value=format_operator_workflow("start", "mouse"))
         self.mouse_operator_status_var = tk.StringVar(value="Hover B to start drawing")
         self.mouse_operator_result_var = tk.StringVar(value="No candidates yet")
         self.mouse_operator_mapping_var = tk.StringVar(value="")
@@ -555,16 +553,14 @@ class MagneticTrajectoryDashboardNode(
     def _handle_task(self, msg):
         data = safe_json_loads(msg.data)
         if data:
-            task = data.get("task", "-")
-            self.root.after(0, lambda: self.task_var.set(f"Command: {task}"))
+            self.root.after(0, lambda t=format_task_command(data): self.task_var.set(t))
 
     def _handle_gazebo(self, msg):
         data = safe_json_loads(msg.data)
         if data:
-            phase = data.get("phase", "-")
-            status = data.get("status", "-")
-            text = f"Gazebo: {status} [{phase}]"
+            text, tone = task_execution_view(data)
             self.root.after(0, lambda: self.gazebo_var.set(text))
+            self.root.after(0, lambda: self._show_robot_state_tone(tone))
 
     def _close(self):
         self.rospy.signal_shutdown("dashboard closed")

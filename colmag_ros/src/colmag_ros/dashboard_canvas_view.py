@@ -2,6 +2,7 @@
 
 import math
 
+from colmag_ros import dashboard_theme as theme
 from colmag_ros.dashboard_geometry import (
     BOARD_CONTROL_LAYOUT_CANVAS_REACHABLE,
     build_canvas_reachable_drawing_zone,
@@ -17,6 +18,7 @@ from colmag_ros.dashboard_trajectory_processing import (
     compute_trajectory_bounds,
     split_trail_segments,
 )
+from colmag_ros.dashboard_widgets import draw_control_button
 
 
 class DashboardCanvasViewMixin:
@@ -107,12 +109,17 @@ class DashboardCanvasViewMixin:
         if self.config.demo_input_mode == "ocr_canvas" and self._ocr_draw_area:
             x0, y0, x1, y1 = self._ocr_draw_area
             zone_style = drawing_zone_style()
+            self.canvas.create_rectangle(x0, y0, x1, y1, fill=theme.SURFACE_MUTED, outline="")
+            for index in range(1, 6):
+                x = x0 + (x1 - x0) * index / 6.0
+                y = y0 + (y1 - y0) * index / 6.0
+                self.canvas.create_line(x, y0, x, y1, fill=theme.BORDER)
+                self.canvas.create_line(x0, y, x1, y, fill=theme.BORDER)
             self.canvas.create_rectangle(
-                x0, y0, x1, y1, fill="#FFFFFF",
-                outline=zone_style["outline"], width=2, dash=(5, 4))
+                x0, y0, x1, y1, outline=zone_style["outline"], width=2, dash=(6, 4))
             self.canvas.create_text(
-                self.canvas_width / 2, y0 + 18, text="Drawing zone",
-                fill=zone_style["text"], font=("TkDefaultFont", 10, "bold"),
+                self.canvas_width / 2, y0 - 11, text="Drawing zone",
+                fill=zone_style["text"], font=theme.font(9, bold=True),
             )
         elif self.config.is_trajectory_mode:
             # Draw x/y axes through the mapped world origin so orientation and
@@ -160,8 +167,13 @@ class DashboardCanvasViewMixin:
                     cx, cy = map_world_to_canvas(
                         x, y, self.config.bounds, self.canvas_width, self.canvas_height, self.config.padding)
                 pts.extend([cx, cy])
-            self.canvas.create_line(*pts, fill="#F59E0B", width=6, smooth=True)
-            self.canvas.create_line(*pts, fill="#FEF3C7", width=2, smooth=True)
+            if self.config.demo_input_mode == "ocr_canvas":
+                # The mouse strokes are drawn on top; the sent sample is a soft halo.
+                self.canvas.create_line(*pts, fill=theme.STROKE_HALO, width=10, smooth=True,
+                                        capstyle="round", joinstyle="round")
+            else:
+                self.canvas.create_line(*pts, fill="#F59E0B", width=6, smooth=True)
+                self.canvas.create_line(*pts, fill="#FEF3C7", width=2, smooth=True)
             if self.config.dashboard_debug_sample_panel:
                 label = "Captured sample"
                 if self.captured_sample_point_count:
@@ -179,7 +191,8 @@ class DashboardCanvasViewMixin:
                 for x, y in stroke:
                     cx, cy = map_world_to_canvas(x, y, self.config.bounds, self.canvas_width, self.canvas_height, self.config.padding)
                     pts.extend([cx, cy])
-                self.canvas.create_line(*pts, fill="#8E44AD", width=3, smooth=True)
+                self.canvas.create_line(*pts, fill=theme.STROKE, width=4, smooth=True,
+                                        capstyle="round", joinstyle="round")
 
     def _draw_current_point(self):
         """Current point marker, grey when gated as non-writing or invalid."""
@@ -209,16 +222,9 @@ class DashboardCanvasViewMixin:
             cx = float(zone["cx"])
             cy = float(zone["cy"])
             style = preview_button_style(button_id, enabled, active=active)
-            self.canvas.create_oval(cx - radius, cy - radius, cx + radius, cy + radius,
-                                    fill=style["fill"], outline=style["outline"], width=style["width"])
-            self.canvas.create_text(cx, cy, text=zone.get("label", button_id),
-                                    font=("TkDefaultFont", max(8, int(radius * 0.34)), "bold"),
-                                    justify=self.tk.CENTER, fill=style["text"])
-            if active and enabled and progress > 0.0 and self.config.hover_progress_enabled:
-                self.canvas.create_arc(cx - radius + 3, cy - radius + 3,
-                                       cx + radius - 3, cy + radius - 3,
-                                       start=90, extent=-360 * progress,
-                                       style=self.tk.ARC, outline=style["ring"], width=4)
+            ring = progress if active and enabled and self.config.hover_progress_enabled else 0.0
+            draw_control_button(self.canvas, cx, cy, radius, zone.get("label", button_id),
+                                style, ring)
 
     def _active_trajectory_bounds(self):
         if self.config.is_trajectory_mode and self.config.traj_scale_mode in ("auto", "fixed_symmetric"):

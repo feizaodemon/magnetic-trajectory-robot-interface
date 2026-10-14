@@ -10,6 +10,7 @@ from colmag_ros.dashboard_confirm_publisher import (
 )
 from colmag_ros.dashboard_controller_input import cancelled_preview_hover_state
 from colmag_ros.dashboard_geometry import preview_button_style
+from colmag_ros.dashboard_widgets import draw_control_button
 
 
 class DashboardOcrPanelMixin:
@@ -70,57 +71,27 @@ class DashboardOcrPanelMixin:
         self._refresh_dwell_status()
 
     def _update_ocr_toolbar_visuals(self):
+        dwell_buttons = self.config.demo_input_mode == "ocr_canvas" or (
+            self.config.is_trajectory_mode and self.config.candidate_preview_enabled)
         for button_id, widgets in self.ocr_button_widgets.items():
             canvas = widgets["canvas"]
-            base_text = widgets["base_text"]
             size = widgets.get("size", 82)
-            pad = 2
-
-            fill = "#F8FAFC"
-            outline = "#94A3B8"
-            text_fg = "#1F2937"
-
-            if self.config.demo_input_mode == "ocr_canvas":
-                enabled = button_id != "C" or self._ocr_confirm_enabled()
+            progress = 0.0
+            if dwell_buttons:
+                if self.config.demo_input_mode == "ocr_canvas":
+                    enabled = button_id != "C" or self._ocr_confirm_enabled()
+                else:
+                    enabled = self._preview_button_enabled(button_id)
                 active = button_id == self.dwell_timer.button
                 style = preview_button_style(button_id, enabled, active=active)
-                fill = style["fill"]
-                outline = style["outline"]
-                text_fg = style["text"]
-            elif self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
-                enabled = self._preview_button_enabled(button_id)
-                active = button_id == self.dwell_timer.button
-                style = preview_button_style(button_id, enabled, active=active)
-                fill = style["fill"]
-                outline = style["outline"]
-                text_fg = style["text"]
+                if active and enabled and self.config.hover_progress_enabled:
+                    progress = self.dwell_timer.progress
             else:
-                fill = {
-                    "X": "#FFD700",
-                    "A": "#FF6B6B",
-                    "C": "#4CAF50",
-                    "B": "#87CEEB",
-                    "CLEAR": "#DDDDDD",
-                }.get(button_id, fill)
-                outline = "black"
+                style = preview_button_style(button_id, True)
 
             canvas.delete("all")
-            canvas.create_oval(pad, pad, size-pad, size-pad, fill=fill, outline=outline, width=2)
-            canvas.create_text(size/2, size/2, text=base_text, font=("TkDefaultFont", max(8, int(size*0.12)), "bold"), justify=self.tk.CENTER, fill=text_fg)
-
-            if (
-                (self.config.demo_input_mode == "ocr_canvas" or (self.config.is_trajectory_mode and self.config.candidate_preview_enabled))
-                and button_id == self.dwell_timer.button
-                and enabled
-                and self.dwell_timer.progress > 0
-                and self.config.hover_progress_enabled
-            ):
-                pct = self.dwell_timer.progress
-                arc_extent = -360 * pct
-                canvas.create_arc(
-                    pad+2, pad+2, size-pad-2, size-pad-2,
-                    start=90, extent=arc_extent, style=self.tk.ARC,
-                    outline=style["ring"], width=4)
+            draw_control_button(canvas, size / 2.0, size / 2.0, size / 2.0 - 2,
+                                widgets["base_text"], style, progress)
 
     def _handle_ocr_action(self, button_id):
         button_id = str(button_id or "").upper()
