@@ -17,6 +17,7 @@ from colmag_ros.param_utils import bool_param, finite_float
 _C4_CONTRACT = execution_semantics.validated_execution_contract()
 C4_LABEL_TO_TASK = _C4_CONTRACT["label_to_task"]
 C4_SAFE_GAZEBO_TASKS = set(_C4_CONTRACT["safe_tasks"])
+C4_MAPPING_NAME = "m104c4_8symbol_gazebo"
 
 REVIEW_TASKS = {
     "PICK_PLACE",
@@ -103,7 +104,15 @@ def parse_mapping(mapping_text):
 
 
 def label_to_task_mapping_for_name(mapping_name):
-    # The C4 mapping is the only one; any other name falls back to it.
+    """Return the mapping that ~dispatcher_mapping_name selects.
+
+    The C4 mapping is the only one. Any other name raises ValueError, so a typo
+    stops the dispatcher instead of sending C4 tasks under the wrong name.
+    """
+    if mapping_name != C4_MAPPING_NAME:
+        raise ValueError(
+            "~dispatcher_mapping_name must be %r, got %r" % (C4_MAPPING_NAME, mapping_name)
+        )
     return dict(C4_LABEL_TO_TASK)
 
 
@@ -112,14 +121,15 @@ def build_task_command(
     label_to_task=None,
     min_confidence=0.0,
     gazebo_only=True,
-    dispatcher_mapping_name="m104c4_8symbol_gazebo",
+    dispatcher_mapping_name=C4_MAPPING_NAME,
     command_id=None,
     issued_at=None,
     source_id="task_dispatcher_node",
     schema_version=1,
     target_adapter_session_id="",
 ):
-    label_to_task = label_to_task or label_to_task_mapping_for_name(dispatcher_mapping_name)
+    if label_to_task is None:
+        label_to_task = label_to_task_mapping_for_name(dispatcher_mapping_name)
     label = str(confirmed_payload.get("label", "")).strip().upper()
     confirmed = bool_param(confirmed_payload.get("confirmed", False))
     confidence = finite_float(confirmed_payload.get("confidence"), 0.0)
@@ -182,7 +192,7 @@ class TaskDispatcherNode:
         self.latch_task_command = bool_param(
             rospy.get_param("~latch_task_command", True)
         )
-        self.dispatcher_mapping_name = rospy.get_param("~dispatcher_mapping_name", "m104c4_8symbol_gazebo")
+        self.dispatcher_mapping_name = rospy.get_param("~dispatcher_mapping_name", C4_MAPPING_NAME)
         self.allowed_task_set = normalize_allowed_task_set(rospy.get_param("~allowed_task_set", "all_legacy"))
         self.allow_critical_tasks = bool_param(rospy.get_param("~allow_critical_tasks", True))
         self.source_id = str(rospy.get_param("~source_id", "task_dispatcher_node"))
