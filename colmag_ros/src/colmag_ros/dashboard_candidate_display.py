@@ -521,10 +521,10 @@ def recognizer_status_texts(payload):
         status = "Uncertain / redraw (%s)" % reason
     else:
         status = str(payload.get("status") or "unknown")
+    bank_name = str(payload.get("template_bank_name") or "").strip() or "n/a"
     return {
         "mode": "Mode: %s" % mode,
-        # The recognizer payload names no model, so this line is fixed.
-        "model": "Model: n/a",
+        "model": "Model: %s" % bank_name,
         "status": "Status: %s" % status,
         "labels": format_recognition_labels(payload.get("recognition_labels")),
     }

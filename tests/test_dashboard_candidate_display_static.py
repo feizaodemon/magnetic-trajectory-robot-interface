@@ -146,6 +146,15 @@ class CandidateDisplayHelperTests(unittest.TestCase):
         self.assertEqual(texts["status"], "Status: ready")
         self.assertEqual(texts["labels"], "Labels: 1, 2, 3, V, O, X, A, C")
 
+    def test_recognizer_model_line_shows_template_bank_name(self):
+        texts = display.recognizer_status_texts({
+            "backend": "dtw_template_bank",
+            "template_bank_name": "bank_a",
+        })
+        self.assertEqual(texts["model"], "Model: bank_a")
+        texts = display.recognizer_status_texts({"template_bank_name": "  "})
+        self.assertEqual(texts["model"], "Model: n/a")
+
     def test_preview_candidate_ui_texts_preserve_legacy_strings(self):
         texts = display.preview_candidate_ui_texts(
             display.PreviewCandidateDisplayState(
