@@ -2,6 +2,8 @@ import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 def load_task_dispatcher_module():
     path = (
@@ -35,6 +37,20 @@ def test_task_dispatcher_maps_current_direction_labels():
     assert dispatcher.build_task_command(confirmed("3"))["task"] == "MOVE_RIGHT"
     assert dispatcher.build_task_command(confirmed("V"))["task"] == "HOVER_APPROACH"
     assert dispatcher.build_task_command(confirmed("O"))["task"] == "ORBIT_SMALL"
+
+
+def test_parse_mapping_accepts_json_object_or_dict():
+    assert dispatcher.parse_mapping('{"a": "HOME_OR_READY", "1": "MOVE_LEFT"}') == {
+        "A": "HOME_OR_READY",
+        "1": "MOVE_LEFT",
+    }
+    assert dispatcher.parse_mapping({"x": "STOP_OR_CANCEL"}) == {"X": "STOP_OR_CANCEL"}
+
+
+@pytest.mark.parametrize("bad", ['{"A": "HOME_OR_READY"', "A=HOME", '["A"]', "42", 42, None])
+def test_parse_mapping_rejects_invalid_value_instead_of_using_default(bad):
+    with pytest.raises(ValueError, match="label_to_task_json"):
+        dispatcher.parse_mapping(bad)
 
 
 def test_unknown_or_unconfirmed_label_maps_to_no_op():
