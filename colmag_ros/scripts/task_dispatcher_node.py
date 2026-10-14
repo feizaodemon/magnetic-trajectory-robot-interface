@@ -83,14 +83,22 @@ def should_publish_task_command(command, allowed_task_set="all_legacy", allow_cr
 
 
 def parse_mapping(mapping_text):
+    """Parse ~label_to_task_json into {LABEL: task}.
+
+    A value that is not a JSON object raises ValueError, so a typo stops the
+    dispatcher at startup instead of silently dispatching the default mapping.
+    """
     if isinstance(mapping_text, dict):
-        return {str(k).upper(): str(v) for k, v in mapping_text.items()}
-    try:
-        parsed = json.loads(mapping_text)
-    except Exception:
-        return dict(C4_LABEL_TO_TASK)
-    if not isinstance(parsed, dict):
-        return dict(C4_LABEL_TO_TASK)
+        parsed = mapping_text
+    else:
+        try:
+            parsed = json.loads(mapping_text)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("~label_to_task_json is not valid JSON: %s" % exc) from exc
+        if not isinstance(parsed, dict):
+            raise ValueError(
+                "~label_to_task_json must be a JSON object, got %s" % type(parsed).__name__
+            )
     return {str(k).upper(): str(v) for k, v in parsed.items()}
 
 
@@ -277,7 +285,7 @@ class TaskDispatcherNode:
             issued_at=self.rospy.Time.now().to_sec(),
             source_id=self.source_id,
             schema_version=self.schema_version,
-            target_adapter_session_id=getattr(self, "adapter_session_id", ""),
+            target_adapter_session_id=self.adapter_session_id,
         )
         should_publish, safety_reason = should_publish_task_command(
             command,
