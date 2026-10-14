@@ -21,7 +21,7 @@ Magnetic Trajectory Robot Interface 是一个基于 ROS1 的机器人交互系�
 
 ![TELEOP 模式：Gazebo 中的键盘夹取放置](docs/media/teleop_pick_and_place.gif)
 
-两段视频都是 headless Docker Gazebo 的实时录屏。鼠标和键盘输入由 `xdotool` 脚本产生；夹取放置脚本根据测得的法兰位置决定何时松键。录制时的版本见英文 README 的说明。这些不是真机画面。录制脚本在 [scripts/demo](scripts/demo/README.md)。
+两段视频都是 headless Docker Gazebo 的实时录屏。鼠标和键盘输入由 `xdotool` 脚本产生；夹取放置脚本根据测得的法兰位置决定何时松键。`TASK` 录制于 `cef908c`（参数 `visible_bridge_motion_scale:=3.0 visible_bridge_motion_duration_sec:=4.0`），`TELEOP` 录制于 `35df0ec`（参数 `spawn_pick_objects:=true`，使用 [scripts/demo](scripts/demo/README.md) 中的脚本）。这些不是真机画面。
 
 ## 架构概览
 

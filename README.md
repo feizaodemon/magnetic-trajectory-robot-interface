@@ -27,8 +27,8 @@ Both clips are real-time screen recordings of headless Docker Gazebo. Mouse and
 key input is scripted with `xdotool`; the pick-and-place script releases each
 key from the measured flange position. Recorded at `cef908c` (`TASK`, with
 `visible_bridge_motion_scale:=3.0 visible_bridge_motion_duration_sec:=4.0`)
-and `1d57dd1` (`TELEOP`, `spawn_pick_objects:=true`). Not real-hardware footage.
-The pick-and-place recording scripts are in [scripts/demo](scripts/demo/README.md).
+and `35df0ec` (`TELEOP`, `spawn_pick_objects:=true`, recorded with the scripts in
+[scripts/demo](scripts/demo/README.md)). Not real-hardware footage.
 
 ## Architecture at a glance
 
