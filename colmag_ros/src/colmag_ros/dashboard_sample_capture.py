@@ -259,9 +259,9 @@ class DashboardSampleCaptureMixin:
             self._sync_drawing_sample_buffers()
             if writing and inside_drawing_zone and not prev_frozen:
                 self.drawing_zone_trail.append(pt)
-            elif prev_was_inside and not inside_drawing_zone and not prev_frozen:
-                if self.drawing_zone_trail and self.drawing_zone_trail[-1] is not None:
-                    self.drawing_zone_trail.append(None)
+            elif (prev_was_inside and not inside_drawing_zone and not prev_frozen
+                    and self.drawing_zone_trail and self.drawing_zone_trail[-1] is not None):
+                self.drawing_zone_trail.append(None)
         else:
             prev_was_inside = bool(self.drawing_sample_state.get("was_inside"))
             self.drawing_sample_state = update_drawing_zone_sample_state(

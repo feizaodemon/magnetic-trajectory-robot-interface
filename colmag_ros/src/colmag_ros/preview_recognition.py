@@ -59,10 +59,10 @@ def confidence_from_distances(distance, worst_distance):
 def recognize_top3(points, labels=DEFAULT_LABELS, resample_length=64):
     normalized = normalize_points(points, resample_length)
     templates = build_builtin_templates(labels, resample_length)
-    distances = []
-    for template in templates:
-        distances.append((dtw_distance(normalized, template["points"]), template))
-    distances.sort(key=lambda item: item[0])
+    distances = sorted(
+        ((dtw_distance(normalized, template["points"]), template) for template in templates),
+        key=lambda item: item[0],
+    )
 
     top = distances[:3]
     worst_distance = distances[-1][0] if distances else float("inf")

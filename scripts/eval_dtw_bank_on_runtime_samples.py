@@ -25,6 +25,7 @@ if str(PACKAGE_SRC) not in sys.path:
 from colmag_ros.dtw_dataset_io import (  # noqa: E402
     ensure_output_dir,
     load_runtime_sample,
+    resolve_repo_path,
     write_csv,
     write_json,
 )
@@ -64,11 +65,6 @@ def build_parser():
     parser.add_argument("--include-invalid-sessions", action="store_true",
                         help="Include session dirs whose name contains INVALID (default: skipped)")
     return parser
-
-
-def _repo_path(path):
-    value = Path(path)
-    return value if value.is_absolute() else REPO / value
 
 
 def collect_runtime_sample_files(root, include_invalid_sessions=False):
@@ -214,15 +210,15 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     labels = parse_labels_csv(args.labels)
     out_dir = ensure_output_dir(
-        _repo_path(args.out_dir or (DEFAULT_EVAL_DIR / time.strftime("eval_%Y%m%d_%H%M%S"))),
+        resolve_repo_path(args.out_dir or (DEFAULT_EVAL_DIR / time.strftime("eval_%Y%m%d_%H%M%S")), REPO),
         [REPO / "outputs"],
     )
     try:
-        bank = load_template_bank(_repo_path(args.template_bank))
+        bank = load_template_bank(resolve_repo_path(args.template_bank, REPO))
     except Exception as exc:
         print("ERROR: failed to load template bank: %s" % exc, file=sys.stderr)
         return 2
-    samples_root = _repo_path(args.runtime_samples_root)
+    samples_root = resolve_repo_path(args.runtime_samples_root, REPO)
     if not samples_root.is_dir():
         print("ERROR: runtime samples root not found: %s" % samples_root, file=sys.stderr)
         return 2
@@ -251,7 +247,7 @@ def main(argv=None):
 
     summary = summarize_rows(rows, labels)
     summary.update({
-        "template_bank": str(_repo_path(args.template_bank)),
+        "template_bank": str(resolve_repo_path(args.template_bank, REPO)),
         "bank_y_flip": bool(bank["preprocess"].get("y_flip")),
         "bank_profile": str(bank["preprocess"].get("profile", "")),
         "labels": labels,

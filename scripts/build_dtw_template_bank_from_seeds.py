@@ -12,7 +12,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from urllib.parse import quote
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE_SRC = REPO / "colmag_ros" / "src"
@@ -22,6 +21,8 @@ if str(PACKAGE_SRC) not in sys.path:
 from colmag_ros.dtw_dataset_io import (  # noqa: E402
     ensure_output_dir,
     load_standalone_seed,
+    resolve_repo_path,
+    seed_files_by_label,
     write_json,
 )
 from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
@@ -56,30 +57,14 @@ def build_parser():
     return parser
 
 
-def _repo_path(path):
-    value = Path(path)
-    return value if value.is_absolute() else REPO / value
-
-
-def collect_seed_files(seeds_root, labels):
-    """Return sorted (label, path) pairs restricted to the requested labels."""
-    root = Path(seeds_root)
-    pairs = []
-    for label in labels:
-        label_dir = root / quote(label, safe="-_.~")
-        if not label_dir.is_dir():
-            continue
-        for path in sorted(label_dir.glob("*.json")):
-            pairs.append((label, path))
-    return pairs
-
-
 def build_bank_from_seeds(args):
     labels = parse_labels_csv(args.labels)
     templates = []
     per_label_index = {label: 0 for label in labels}
     skipped = []
-    for label, path in collect_seed_files(_repo_path(args.seeds_root), labels):
+    seed_files = seed_files_by_label(resolve_repo_path(args.seeds_root, REPO), labels)
+    seed_pairs = [(label, path) for label, paths in seed_files.items() for path in paths]
+    for label, path in seed_pairs:
         if args.max_per_label > 0 and per_label_index[label] >= args.max_per_label:
             continue
         try:
@@ -113,7 +98,7 @@ def build_bank_from_seeds(args):
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
-    out_path = _repo_path(args.out)
+    out_path = resolve_repo_path(args.out, REPO)
     ensure_output_dir(out_path.parent, [REPO / "outputs"])
     try:
         bank, per_label_counts, skipped = build_bank_from_seeds(args)

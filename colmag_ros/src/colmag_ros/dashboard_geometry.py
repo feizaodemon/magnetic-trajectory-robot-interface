@@ -185,7 +185,7 @@ def build_canvas_reachable_preview_hit_zones(width, height, padding, button_size
     if reach_rect is None:
         x1, y1, x2, y2 = padding, padding, width - padding, height - padding
     else:
-        x1, y1, x2, y2 = [float(v) for v in reach_rect]
+        x1, y1, x2, y2 = (float(v) for v in reach_rect)
         x1 = max(padding, min(width - padding, x1))
         x2 = max(padding, min(width - padding, x2))
         y1 = max(padding, min(height - padding, y1))
@@ -257,7 +257,7 @@ def build_canvas_reachable_drawing_zone(width, height, padding, reach_rect=None)
     if reach_rect is None:
         x1, y1, x2, y2 = padding, padding, width - padding, height - padding
     else:
-        x1, y1, x2, y2 = [float(v) for v in reach_rect]
+        x1, y1, x2, y2 = (float(v) for v in reach_rect)
     if x2 < x1:
         x1, x2 = x2, x1
     if y2 < y1:
