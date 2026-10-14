@@ -912,10 +912,6 @@ def _ros_bool(value: bool) -> str:
     return "true" if value else "false"
 
 
-def _format_float(value: float) -> str:
-    return "{:.6g}".format(value)
-
-
 def _unquote(value: str) -> str:
     return value.strip().strip('"\'')
 
