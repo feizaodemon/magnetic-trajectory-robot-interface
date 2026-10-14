@@ -32,6 +32,11 @@ from colmag_ros.dashboard_controller_input import (
     update_dwell_state,
 )
 from colmag_ros.dashboard_geometry import dashboard_minimum_window_size
+from colmag_ros.dashboard_teleop_view import (
+    input_direction,
+    teleop_backend_text,
+    teleop_state_view,
+)
 from colmag_ros.dashboard_points import (
     extract_single_point,
     extract_xy_points,
@@ -122,6 +127,10 @@ class MagneticTrajectoryDashboardNode(
         self._prev_sample = None  # (x, y, timestamp) for speed gating
         self.current_control_mode = control_mode.TASK
         self.control_mode_observed = False
+        self.teleop_state = None
+        self.teleop_direction = None
+        self.teleop_active_direction = None
+        self._teleop_view = None
 
         trail_maxlen = config.traj_trace_window_points if config.is_trajectory_mode else config.trail_size
         self.trail = deque(maxlen=trail_maxlen)
@@ -227,6 +236,10 @@ class MagneticTrajectoryDashboardNode(
         self.confirm_var = tk.StringVar(value="-")
         self.task_var = tk.StringVar(value="No task sent yet")
         self.gazebo_var = tk.StringVar(value=task_execution_view(None)[0])
+        teleop_headline, teleop_detail, _tone = teleop_state_view(None)
+        self.teleop_headline_var = tk.StringVar(value=teleop_headline)
+        self.teleop_detail_var = tk.StringVar(value=teleop_detail)
+        self.teleop_backend_var = tk.StringVar(value="")
 
         # Trajectory-preview status (trajectory mode only).
         if self.config.traj_scale_mode == "auto":
@@ -310,6 +323,11 @@ class MagneticTrajectoryDashboardNode(
                 self._handle_control_mode,
                 queue_size=1,
             )
+            if self.config.demo_input_mode == "ocr_canvas":
+                rospy.Subscriber(self.config.cartesian_input_topic, String,
+                                 self._handle_cartesian_input, queue_size=1)
+                rospy.Subscriber(self.config.cartesian_teleop_state_topic, String,
+                                 self._handle_cartesian_teleop_state, queue_size=1)
         self.confirm_pub = None
         self.dashboard_state_pub = None
         self.symbol_capture_pub = rospy.Publisher(self.config.symbol_capture_topic, String, queue_size=10, latch=True)
@@ -536,6 +554,7 @@ class MagneticTrajectoryDashboardNode(
             self.control_mode_observed = False
             self.root.after(0, lambda: self.control_mode_var.set("Mode: INVALID — blocked"))
             self.root.after(0, lambda: self.control_mode_button_var.set("Request TASK"))
+            self.root.after(0, self._show_control_mode)
             return
         self.current_control_mode = selected
         self.control_mode_observed = True
@@ -549,6 +568,31 @@ class MagneticTrajectoryDashboardNode(
             0,
             lambda m=next_mode: self.control_mode_button_var.set("Switch to %s" % m),
         )
+        self.root.after(0, self._show_control_mode)
+
+    def _teleop_active(self):
+        return self.current_control_mode == control_mode.TELEOP
+
+    def _handle_cartesian_input(self, msg):
+        self.teleop_direction = input_direction(safe_json_loads(msg.data))
+        self._show_teleop_view()
+
+    def _handle_cartesian_teleop_state(self, msg):
+        data = safe_json_loads(msg.data)
+        if data:
+            self.teleop_state = data
+            self._show_teleop_view()
+
+    def _show_teleop_view(self):
+        # Both topics arrive at ~30 Hz; only a changed view reaches Tk.
+        moving = (self.teleop_state or {}).get("state") == "COMMAND_PUBLISHED"
+        active = self.teleop_direction if moving else None
+        view = teleop_state_view(self.teleop_state, active) + (
+            teleop_backend_text(self.teleop_state), active)
+        if view == self._teleop_view:
+            return
+        self._teleop_view = view
+        self.root.after(0, lambda v=view: self._apply_teleop_view(*v))
 
     def _handle_task(self, msg):
         data = safe_json_loads(msg.data)

@@ -1,4 +1,4 @@
-"""Canvas-drawn dashboard widgets: progress stepper, symbol tile, confidence meter.
+"""Canvas-drawn dashboard widgets: progress stepper, notice card, symbol tile, confidence meter.
 
 Each function clears and redraws one Tk canvas. They hold no state and publish
 nothing.
@@ -79,6 +79,53 @@ def draw_workflow_stepper(canvas, width, steps, current_index):
         canvas.create_text(x, cy, text=mark, fill=mark_color, font=theme.font(9, bold=True))
         canvas.create_text(x, cy + radius + 9, text=label, fill=label_color,
                            font=theme.font(9, bold=bold), anchor="n", justify="center")
+
+
+def draw_notice_card(canvas, cx, cy, width, height, title, body, tone):
+    """Centered rounded card: tone-colored title over secondary body text."""
+    strong, _soft = theme.tone_colors(tone)
+    x1, y1 = cx - width / 2.0, cy - height / 2.0
+    rounded_rect(canvas, x1, y1, x1 + width, y1 + height, 12,
+                 fill=theme.SURFACE, outline=strong, width=2)
+    canvas.create_text(cx, y1 + 28, text=title, fill=strong, font=theme.font(15, bold=True))
+    canvas.create_text(cx, y1 + 50, text=body, fill=theme.TEXT_SECONDARY, font=theme.font(10),
+                       anchor="n", justify="center", width=width - 32)
+
+
+# Keycap grid cells (column, row): a WASD cluster and a Q/E column beside it.
+PAD_CELLS = {"W": (1, 0), "A": (0, 1), "S": (1, 1), "D": (2, 1), "Q": (3.5, 0), "E": (3.5, 1)}
+
+
+def draw_teleop_pad(canvas, width, height, keys, active, caption):
+    """Keycaps for the Cartesian keys; the key whose direction is ``active`` lights up.
+
+    ``keys`` is ``[(letter, (x, y, z), axis_label)]``; letters without a cell are skipped.
+    """
+    canvas.delete("all")
+    cap, gap = 64, 10
+    cluster_w = 4.5 * cap + 3 * gap
+    block_h = 2 * cap + gap + 34
+    x0 = (width - cluster_w) / 2.0
+    top = max(8.0, (height - block_h) / 2.0)
+    canvas.create_text(width / 2.0, top + 2 * cap + gap + 18, text=caption, anchor="n",
+                       fill=theme.TEXT_MUTED, font=theme.font(10))
+    for letter, vector, axis_label in keys:
+        cell = PAD_CELLS.get(letter)
+        if cell is None:
+            continue
+        x = x0 + cell[0] * (cap + gap)
+        y = top + cell[1] * (cap + gap)
+        lit = active is not None and tuple(active) == tuple(vector)
+        rounded_rect(canvas, x, y + 3, x + cap, y + cap + 3, 10, fill=theme.BORDER, outline="")
+        rounded_rect(canvas, x, y, x + cap, y + cap, 10,
+                     fill=theme.ACCENT if lit else theme.SURFACE,
+                     outline=theme.ACCENT if lit else theme.BORDER_STRONG, width=2)
+        canvas.create_text(x + cap / 2.0, y + cap * 0.40, text=letter,
+                           fill=theme.SURFACE if lit else theme.TEXT,
+                           font=theme.font(18, bold=True))
+        canvas.create_text(x + cap / 2.0, y + cap * 0.76, text=axis_label,
+                           fill=theme.STROKE_HALO if lit else theme.TEXT_MUTED,
+                           font=theme.font(9, bold=True))
 
 
 def draw_symbol_tile(canvas, size, label, tone):

@@ -13,6 +13,7 @@ from colmag_ros.dashboard_geometry import (
 )
 from colmag_ros.dashboard_texts import (
     HEADER_TITLE,
+    TELEOP_PANEL_TITLE,
     TRAJECTORY_MODE,
     default_header_subtitle,
     default_main_panel_title,
@@ -24,6 +25,14 @@ from colmag_ros.dashboard_widgets import (
 )
 
 RECOGNITION_TILE_SIZE = 84
+TELEOP_TERMINAL_KEYS = "SPACE pauses · ESC quits (teleop terminal)"
+
+
+def _draw_state_dot(canvas, tone):
+    if canvas is None:
+        return
+    canvas.delete("all")
+    canvas.create_oval(2, 2, 11, 11, fill=theme.tone_colors(tone)[0], outline="")
 
 
 class DashboardLayoutMixin:
@@ -99,10 +108,12 @@ class DashboardLayoutMixin:
 
         right_frame = tk.Frame(header, bg=theme.HEADER_BG)
         right_frame.pack(side=tk.RIGHT, padx=18, pady=12)
+        self.control_mode_chip = None
         if self.config.control_mode_enabled:
-            tk.Label(right_frame, textvariable=self.control_mode_var, bg=theme.HEADER_CHIP,
-                     fg=theme.HEADER_TEXT, font=theme.font(10, bold=True),
-                     padx=10, pady=5).pack(side=tk.LEFT, padx=(0, 8))
+            self.control_mode_chip = tk.Label(
+                right_frame, textvariable=self.control_mode_var, bg=theme.HEADER_CHIP,
+                fg=theme.HEADER_TEXT, font=theme.font(10, bold=True), padx=10, pady=5)
+            self.control_mode_chip.pack(side=tk.LEFT, padx=(0, 8))
             self.control_mode_button = ttk.Button(
                 right_frame,
                 textvariable=self.control_mode_button_var,
@@ -305,6 +316,11 @@ class DashboardLayoutMixin:
         self.recognition_tile = None
         self.confidence_meter = None
         self.robot_state_dot = None
+        self.status_card = None
+        self.task_flow_cards = ()
+        self.teleop_card = None
+        self.teleop_card_shown = False
+        self.teleop_state_dot = None
 
         if self.config.is_trajectory_mode:
             self._build_trajectory_status_cards(parent)
@@ -361,10 +377,14 @@ class DashboardLayoutMixin:
 
     def _build_mouse_status_cards(self, parent):
         self._build_status_card(parent, self.mouse_operator_status_var, self.mouse_mode_var)
-        self._build_workflow_card(parent, "start")
-        self._build_recognition_card(
-            parent, self.mouse_operator_result_var, self.mouse_operator_mapping_var,
-            self.mouse_operator_candidate_vars)
+        self.task_flow_cards = (
+            self._build_workflow_card(parent, "start"),
+            self._build_recognition_card(
+                parent, self.mouse_operator_result_var, self.mouse_operator_mapping_var,
+                self.mouse_operator_candidate_vars),
+        )
+        if self.config.control_mode_enabled:
+            self._build_teleop_card(parent)
         self._build_robot_card(parent)
         if self.config.dashboard_debug_sample_panel:
             self._build_debug_card(parent, "Mouse Diagnostics", (
@@ -378,6 +398,7 @@ class DashboardLayoutMixin:
         """Next-step instruction with a tone stripe, and the pointer mode as a chip."""
         tk = self.tk
         card = self._card(parent, "Status")
+        self.status_card = card
         row = tk.Frame(card, bg=theme.SURFACE)
         row.pack(fill=tk.X)
         self.status_tone_bar = tk.Frame(row, bg=theme.tone_colors("neutral")[0], width=4)
@@ -399,6 +420,7 @@ class DashboardLayoutMixin:
         self.workflow_canvas = tk.Canvas(card, height=74, bg=theme.SURFACE, highlightthickness=0)
         self.workflow_canvas.pack(fill=tk.X)
         self.workflow_canvas.bind("<Configure>", lambda _event: self._draw_workflow())
+        return card
 
     def _build_recognition_card(self, parent, result_var, mapping_var, row_vars):
         tk = self.tk
@@ -424,6 +446,27 @@ class DashboardLayoutMixin:
             self._card_label(card, var, size=10, color=theme.TEXT_SECONDARY, pady=(8, 0))
         self.recognition_visual = {"label": "?", "tone": "neutral", "fraction": None}
         self._draw_recognition_visual()
+        return card
+
+    def _build_teleop_card(self, parent):
+        """Cartesian adapter state for TELEOP; packed only while TELEOP is selected."""
+        tk = self.tk
+        card = self._card(parent, "Teleoperation", expand=True)
+        row = tk.Frame(card, bg=theme.SURFACE)
+        row.pack(fill=tk.X)
+        self.teleop_state_dot = tk.Canvas(row, width=12, height=12, bg=theme.SURFACE,
+                                          highlightthickness=0)
+        self.teleop_state_dot.pack(side=tk.LEFT)
+        self._card_label(row, self.teleop_headline_var, size=14, bold=True, inset=64, padx=(8, 0))
+        self._card_label(card, self.teleop_detail_var, size=10, color=theme.TEXT_SECONDARY,
+                         pady=(6, 0))
+        self._card_label(card, self.teleop_backend_var, size=10, color=theme.TEXT_SECONDARY,
+                         pady=(4, 0))
+        self._card_label(card, text=TELEOP_TERMINAL_KEYS, size=9, color=theme.TEXT_MUTED,
+                         pady=(12, 0))
+        _draw_state_dot(self.teleop_state_dot, "neutral")
+        card.pack_forget()
+        self.teleop_card = card
 
     def _build_robot_card(self, parent):
         """Last task command and backend execution state; shown when confirms can dispatch."""
@@ -447,6 +490,27 @@ class DashboardLayoutMixin:
             self._card_label(card, var, size=9, color=theme.TEXT_SECONDARY)
 
     # -- Card updates -------------------------------------------------------
+
+    def _show_control_mode(self):
+        """Mode chip color, TELEOP cards, operator status, and the canvas view."""
+        if self.control_mode_chip is not None:
+            if self.current_control_mode is None:
+                chip_bg = theme.tone_colors("danger")[0]
+            elif self._teleop_active():
+                chip_bg = theme.tone_colors("info")[0]
+            else:
+                chip_bg = theme.HEADER_CHIP
+            self.control_mode_chip.configure(bg=chip_bg)
+        self._show_teleop_cards(self._teleop_active())
+        if self.config.demo_input_mode == "ocr_canvas":
+            self.ocr_title_label.configure(
+                text=TELEOP_PANEL_TITLE if self._teleop_active()
+                else default_main_panel_title(self.config.demo_input_mode))
+            self.ocr_hint_var.set(self._ocr_state_hint_text())
+            self._refresh_mouse_operator_presentation()
+        elif self.config.is_trajectory_mode and self.config.candidate_preview_enabled:
+            self._refresh_operator_status()
+        self._schedule_ui_refresh()
 
     def _show_status_tone(self, tone):
         if self.status_tone_bar is not None:
@@ -478,10 +542,32 @@ class DashboardLayoutMixin:
                               visual["fraction"], visual["tone"])
 
     def _show_robot_state_tone(self, tone):
-        if self.robot_state_dot is None:
+        _draw_state_dot(self.robot_state_dot, tone)
+
+    def _show_teleop_cards(self, teleop):
+        """Swap Progress and Recognition for the Teleoperation card, or back."""
+        if self.teleop_card is None or teleop == self.teleop_card_shown:
             return
-        self.robot_state_dot.delete("all")
-        self.robot_state_dot.create_oval(2, 2, 11, 11, fill=theme.tone_colors(tone)[0], outline="")
+        self.teleop_card_shown = teleop
+        workflow, recognition = self.task_flow_cards
+        if teleop:
+            workflow.pack_forget()
+            recognition.pack_forget()
+            self.teleop_card.pack(fill=self.tk.BOTH, expand=True, pady=(0, 10),
+                                  after=self.status_card)
+        else:
+            self.teleop_card.pack_forget()
+            workflow.pack(fill=self.tk.X, pady=(0, 10), after=self.status_card)
+            recognition.pack(fill=self.tk.BOTH, expand=True, pady=(0, 10), after=workflow)
+
+    def _apply_teleop_view(self, headline, detail, tone, backend, active):
+        self.teleop_headline_var.set(headline)
+        self.teleop_detail_var.set(detail)
+        self.teleop_backend_var.set(backend)
+        _draw_state_dot(self.teleop_state_dot, tone)
+        if active != self.teleop_active_direction:
+            self.teleop_active_direction = active
+            self._schedule_ui_refresh()
 
     def _build_safety_footer(self, parent):
         if not self.config.footer_text:

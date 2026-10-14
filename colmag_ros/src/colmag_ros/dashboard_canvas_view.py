@@ -18,7 +18,13 @@ from colmag_ros.dashboard_trajectory_processing import (
     compute_trajectory_bounds,
     split_trail_segments,
 )
-from colmag_ros.dashboard_widgets import draw_control_button
+from colmag_ros.dashboard_teleop_view import pad_keys
+from colmag_ros.dashboard_texts import (
+    TELEOP_NOTICE_BODY,
+    TELEOP_NOTICE_TITLE,
+    TELEOP_PAD_CAPTION,
+)
+from colmag_ros.dashboard_widgets import draw_control_button, draw_notice_card, draw_teleop_pad
 
 
 class DashboardCanvasViewMixin:
@@ -94,6 +100,11 @@ class DashboardCanvasViewMixin:
 
         # Layers are drawn back to front.
         ocr_mode = self.config.demo_input_mode == "ocr_canvas"
+        if ocr_mode and self._teleop_active():
+            # Mouse drawing is paused in TELEOP; the stage shows the Cartesian keys.
+            draw_teleop_pad(self.canvas, self.canvas_width, self.canvas_height,
+                            pad_keys(), self.teleop_active_direction, TELEOP_PAD_CAPTION)
+            return
         self._draw_canvas_guides()
         if not ocr_mode:
             self._draw_trail(self.drawing_zone_trail, fill="#16A34A", width=4)
@@ -103,6 +114,16 @@ class DashboardCanvasViewMixin:
         self._draw_ocr_strokes()
         self._draw_current_point()
         self._draw_canvas_reachable_preview_buttons()
+        if self._teleop_active():
+            self._draw_teleop_notice()
+
+    def _draw_teleop_notice(self):
+        """Dim the input stage and say that TELEOP owns the robot."""
+        width, height = self.canvas_width, self.canvas_height
+        self.canvas.create_rectangle(0, 0, width, height, fill=theme.SURFACE,
+                                     stipple="gray50", outline="")
+        draw_notice_card(self.canvas, width / 2.0, height / 2.0, min(420, width - 40), 120,
+                         TELEOP_NOTICE_TITLE, TELEOP_NOTICE_BODY, "info")
 
     def _draw_canvas_guides(self):
         """Drawing-zone frame, axes, or grid lines behind everything else."""
@@ -318,7 +339,7 @@ class DashboardCanvasViewMixin:
         return x0 <= x <= x1 and y0 <= y <= y1
 
     def _on_canvas_press(self, event):
-        if self.ocr_panel_state != "DRAWING":
+        if self.ocr_panel_state != "DRAWING" or self._teleop_active():
             return
         if not self._is_in_draw_area(event.x, event.y):
             return

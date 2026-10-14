@@ -413,6 +413,7 @@ def test_mouse_confirmed_progress_advances_to_act_without_republishing_or_cleari
     node.ocr_panel_state = "CONFIRM_PENDING"
     node.current_candidate_payload = candidate
     node.last_confirmed_label = ""
+    node.current_control_mode = "TASK"
     node.dwell_timer = DwellTimer()
     node.all_strokes = []
     node.mouse_mode_var = Variable()

@@ -31,7 +31,7 @@ class DashboardOcrPanelMixin:
         now = time.time()
         timer = self.dwell_timer
         button_id = timer.button
-        enabled = bool(button_id) and (button_id != "C" or self._ocr_confirm_enabled())
+        enabled = bool(button_id) and self._ocr_button_enabled(button_id)
         self.hover_source = "mouse" if button_id else "none"
         if not enabled:
             # Unlike the preview loop, a disabled button restarts its dwell.
@@ -42,6 +42,12 @@ class DashboardOcrPanelMixin:
         self._refresh_dwell_status()
         self._update_ocr_toolbar_visuals()
         self._publish_dashboard_state()
+
+    def _ocr_button_enabled(self, button_id):
+        """Mouse buttons are off in TELEOP; C also needs a result to confirm."""
+        if self._teleop_active():
+            return False
+        return button_id != "C" or self._ocr_confirm_enabled()
 
     def _set_ocr_hover_button(self, button_id):
         button_id = str(button_id or "").upper()
@@ -79,7 +85,7 @@ class DashboardOcrPanelMixin:
             progress = 0.0
             if dwell_buttons:
                 if self.config.demo_input_mode == "ocr_canvas":
-                    enabled = button_id != "C" or self._ocr_confirm_enabled()
+                    enabled = self._ocr_button_enabled(button_id)
                 else:
                     enabled = self._preview_button_enabled(button_id)
                 active = button_id == self.dwell_timer.button
@@ -95,6 +101,8 @@ class DashboardOcrPanelMixin:
 
     def _handle_ocr_action(self, button_id):
         button_id = str(button_id or "").upper()
+        if self.config.demo_input_mode == "ocr_canvas" and self._teleop_active():
+            return  # Mouse actions are paused while TELEOP owns the robot.
         if button_id == "B":
             if should_publish_mouse_toolbar_stop(self.ocr_panel_state):
                 self._start_ocr_drawing("Drawing mode started")
