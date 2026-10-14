@@ -21,6 +21,7 @@ STATE_VIEWS = {
 }
 
 NO_STATE_VIEW = ("No adapter state yet", "Is the Cartesian teleop adapter running?", "neutral")
+KEY_HINT = "Hold a direction key in the teleop terminal"
 
 
 def input_direction(payload):
@@ -99,10 +100,13 @@ def teleop_state_view(state_payload, direction=None):
         detail = "Key released, braking to rest"
     elif state == "WAITING_FOR_INPUT":
         detail = (
-            "Hold a direction key in the teleop terminal"
+            KEY_HINT
             if state_payload.get("input_mode") == "normalized_cartesian"
             else "Waiting for board input"
         )
+    elif state == "PAUSED" and state_payload.get("reason") == "stale_cartesian_input":
+        # Keyboard input stops between key holds; at rest this is idle, not a fault.
+        headline, detail, tone = "Idle", KEY_HINT, "neutral"
     else:
         detail = str(state_payload.get("reason") or "").replace("_", " ").capitalize()
     return headline, detail, tone

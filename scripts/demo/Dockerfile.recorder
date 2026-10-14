@@ -1,0 +1,14 @@
+# Demo recorder: the Gazebo image plus a virtual display, xdotool and ffmpeg.
+# Build the Gazebo image first (see scripts/demo/README.md).
+ARG GAZEBO_IMAGE=magnetic-trajectory-interface:gazebo-noetic
+FROM ${GAZEBO_IMAGE}
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    fonts-dejavu-core \
+    x11-utils \
+    x11-xserver-utils \
+    xdotool \
+    xterm \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*

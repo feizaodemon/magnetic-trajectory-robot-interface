@@ -115,3 +115,20 @@ jobs:
           test -x install/lib/colmag_ros/colmag_fr3_task_trajectory_adapter
           test -x install/lib/colmag_ros/colmag_fr3_cartesian_teleop_adapter
           python3 -c "import colmag_ros.execution_semantics, colmag_gazebo_stub"
+
+  gazebo-smoke:
+    # Builds the Gazebo image and runs the keyboard TELEOP profile with
+    # headless Gazebo: mode gating, Cartesian motion and the gripper bridge.
+    # Gazebo only: no FR3 launch, controller or hardware.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build Gazebo image
+        run: |
+          docker build -f docker/Dockerfile.noetic-gazebo \
+            --build-arg COLMAG_GIT_SHA="$GITHUB_SHA" -t colmag-gazebo-smoke .
+      - name: Run Gazebo smoke test
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE/scripts/ci:/ci:ro" \
+            colmag-gazebo-smoke bash /ci/gazebo_smoke.sh
