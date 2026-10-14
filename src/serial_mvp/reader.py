@@ -128,7 +128,7 @@ class SerialPacketReader:
 
     def _available_bytes(self) -> int | None:
         try:
-            return int(getattr(self.byte_source, "in_waiting"))
+            return int(self.byte_source.in_waiting)
         except AttributeError:
             return None
 

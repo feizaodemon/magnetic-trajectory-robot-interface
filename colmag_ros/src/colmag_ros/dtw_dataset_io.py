@@ -7,6 +7,8 @@ import json
 import math
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+from urllib.parse import quote
+
 from colmag_ros.trajectory_strokes import flatten_strokes
 
 
@@ -115,6 +117,22 @@ def load_runtime_sample(path: Any) -> Dict[str, Any]:
         "points": flatten_strokes(strokes),
         "raw": data,
     }
+
+
+def resolve_repo_path(path: Any, repo: Any) -> Path:
+    """Return ``path`` unchanged when absolute, else relative to ``repo``."""
+    value = Path(path)
+    return value if value.is_absolute() else Path(repo) / value
+
+
+def seed_files_by_label(seeds_root: Any, labels: Sequence[str]) -> Dict[str, List[Path]]:
+    """Return ``{label: sorted seed JSON paths}`` from ``<seeds_root>/<quoted label>/``."""
+    root = Path(seeds_root)
+    per_label = {}
+    for label in labels:
+        label_dir = root / quote(label, safe="-_.~")
+        per_label[label] = sorted(label_dir.glob("*.json")) if label_dir.is_dir() else []
+    return per_label
 
 
 def ensure_output_dir(path: Any, allowed_prefixes: Sequence[Any]) -> Path:

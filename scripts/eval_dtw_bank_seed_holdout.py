@@ -23,7 +23,6 @@ import sys
 import time
 from collections import Counter
 from pathlib import Path
-from urllib.parse import quote
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE_SRC = REPO / "colmag_ros" / "src"
@@ -33,6 +32,8 @@ if str(PACKAGE_SRC) not in sys.path:
 from colmag_ros.dtw_dataset_io import (  # noqa: E402
     ensure_output_dir,
     load_standalone_seed,
+    resolve_repo_path,
+    seed_files_by_label,
     write_csv,
     write_json,
 )
@@ -81,21 +82,6 @@ def build_parser():
     return parser
 
 
-def _repo_path(path):
-    value = Path(path)
-    return value if value.is_absolute() else REPO / value
-
-
-def collect_label_seeds(seeds_root, labels):
-    """Return {label: [sorted seed paths]} restricted to requested labels."""
-    root = _repo_path(seeds_root)
-    per_label = {}
-    for label in labels:
-        label_dir = root / quote(label, safe="-_.~")
-        per_label[label] = sorted(label_dir.glob("*.json")) if label_dir.is_dir() else []
-    return per_label
-
-
 def split_templates_and_queries(seed_paths, holdout_fraction):
     """Deterministic split: earlier seeds are templates, later seeds are queries.
 
@@ -123,11 +109,10 @@ def build_bank(template_pairs, args):
             index=per_label_index[label],
         ))
         per_label_index[label] += 1
-    bank = build_template_bank(
+    return build_template_bank(
         templates, labels=labels, profile=args.preprocess_profile, y_flip=args.y_flip,
         generated_by="scripts/eval_dtw_bank_seed_holdout.py",
     )
-    return bank
 
 
 def score_query(path, intended, bank, args):
@@ -142,7 +127,7 @@ def score_query(path, intended, bank, args):
                              top1_confidence=confidence, min_confidence=args.min_confidence)
     predicted = ranking["best_label"]
     correct = bool(predicted == intended)
-    row = {
+    return {
         "file": str(path),
         "intended_label": intended,
         "predicted_label": predicted,
@@ -158,7 +143,6 @@ def score_query(path, intended, bank, args):
         "uncertainty_reason": gate["uncertainty_reason"],
         "false_accepted": bool(gate["accepted"] and not correct),
     }
-    return row
 
 
 def summarize(rows, labels, template_counts, query_counts):
@@ -197,7 +181,7 @@ def summarize(rows, labels, template_counts, query_counts):
 def main(argv=None):
     args = build_parser().parse_args(argv)
     labels = parse_labels_csv(args.labels)
-    per_label_seeds = collect_label_seeds(args.seeds_root, labels)
+    per_label_seeds = seed_files_by_label(resolve_repo_path(args.seeds_root, REPO), labels)
 
     missing = [label for label in labels if not per_label_seeds[label]]
     if missing:
@@ -237,7 +221,7 @@ def main(argv=None):
     summary["preprocess_profile"] = args.preprocess_profile
 
     out_dir = ensure_output_dir(
-        _repo_path(args.out_dir or (HOLDOUT_EVAL_DIR / time.strftime("eval_%Y%m%d_%H%M%S"))),
+        resolve_repo_path(args.out_dir or (HOLDOUT_EVAL_DIR / time.strftime("eval_%Y%m%d_%H%M%S")), REPO),
         [REPO / "outputs"],
     )
     write_csv(out_dir / "eval_rows.csv", rows)
