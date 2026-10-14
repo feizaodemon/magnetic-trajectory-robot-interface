@@ -1,12 +1,14 @@
 """Static contracts for the two supported DTW demo systems."""
 
-import importlib.util
 import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
+
+from colmag_ros import adapter as colmag_adapter
+from launch_xml import arg_defaults, param_values
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -20,13 +22,6 @@ BOARD_FRONTEND = LAUNCH / "dtw_real_board_demo_frontend.launch"
 ADAPTER = REPO / "colmag_ros" / "src" / "colmag_ros" / "adapter.py"
 SERIAL_NODE = REPO / "colmag_ros" / "scripts" / "serial_packet_publisher_node.py"
 FR3_DOCKERFILE = REPO / "docker" / "Dockerfile.noetic-fr3"
-
-
-def load_adapter():
-    spec = importlib.util.spec_from_file_location("colmag_portability_adapter", ADAPTER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def directives(path):
@@ -75,19 +70,10 @@ def test_frontends_are_dtw_only():
 
 def test_real_board_frontend_disables_legacy_controls_and_owns_one_visible_dwell():
     root = ET.parse(BOARD_FRONTEND).getroot()
-    args = {
-        node.attrib["name"]: node.attrib.get("default", "")
-        for node in root.findall("arg")
-    }
+    args = arg_defaults(root)
     nodes = {node.attrib["name"]: node for node in root.findall("node")}
-    legacy_params = {
-        node.attrib["name"]: node.attrib.get("value", "")
-        for node in nodes["magnetic_ui_state_node"].findall("param")
-    }
-    dashboard_params = {
-        node.attrib["name"]: node.attrib.get("value", "")
-        for node in nodes["magnetic_trajectory_dashboard_node"].findall("param")
-    }
+    legacy_params = param_values(nodes["magnetic_ui_state_node"])
+    dashboard_params = param_values(nodes["magnetic_trajectory_dashboard_node"])
 
     assert args["enable_legacy_control_zones"] == "false"
     assert legacy_params["enable_legacy_control_zones"] == "$(arg enable_legacy_control_zones)"
@@ -107,14 +93,8 @@ def test_frontends_select_source_specific_presentation_profiles_on_shared_dashbo
             node for node in root.findall("node")
             if node.attrib.get("type") == "magnetic_trajectory_dashboard_node.py"
         )
-        params = {
-            param.attrib["name"]: param.attrib.get("value", "")
-            for param in dashboard.findall("param")
-        }
-        args = {
-            arg.attrib["name"]: arg.attrib.get("default", "")
-            for arg in root.findall("arg")
-        }
+        params = param_values(dashboard)
+        args = arg_defaults(root)
         profiles[name] = args["interaction_profile"]
         modes[name] = params["demo_input_mode"]
         assert params["interaction_profile"] == "$(arg interaction_profile)"
@@ -127,20 +107,14 @@ def test_frontends_select_source_specific_presentation_profiles_on_shared_dashbo
 def test_frontend_audit_decorations_are_optional_and_clean_by_default():
     for path in (MOUSE_FRONTEND, BOARD_FRONTEND):
         root = ET.parse(path).getroot()
-        args = {
-            arg.attrib["name"]: arg.attrib.get("default", "")
-            for arg in root.findall("arg")
-        }
+        args = arg_defaults(root)
         assert args["safety_badge"] == ""
         assert args["footer_text"] == ""
         dashboard = next(
             node for node in root.findall("node")
             if node.attrib.get("type") == "magnetic_trajectory_dashboard_node.py"
         )
-        params = {
-            param.attrib["name"]: param.attrib.get("value", "")
-            for param in dashboard.findall("param")
-        }
+        params = param_values(dashboard)
         assert params["safety_badge"] == "$(arg safety_badge)"
         assert params["footer_text"] == "$(arg footer_text)"
 
@@ -148,13 +122,13 @@ def test_frontend_audit_decorations_are_optional_and_clean_by_default():
 @pytest.mark.parametrize("value", [None, "", "   "])
 def test_missing_direct_project_src_path_is_rejected(value):
     with pytest.raises(ValueError, match="missing_project_src_path"):
-        load_adapter().ensure_project_src_path(value)
+        colmag_adapter.ensure_project_src_path(value)
 
 
 def test_invalid_direct_project_src_path_is_rejected(tmp_path):
     missing = tmp_path / "missing"
     with pytest.raises(ValueError, match="invalid_project_src_path"):
-        load_adapter().ensure_project_src_path(str(missing))
+        colmag_adapter.ensure_project_src_path(str(missing))
 
 
 def test_explicit_repository_or_src_path_is_accepted(tmp_path, monkeypatch):
@@ -163,7 +137,7 @@ def test_explicit_repository_or_src_path_is_accepted(tmp_path, monkeypatch):
     (project_src / "serial_mvp").mkdir(parents=True)
     monkeypatch.setattr(sys, "path", list(sys.path))
 
-    load_adapter().ensure_project_src_path(str(repository))
+    colmag_adapter.ensure_project_src_path(str(repository))
 
     assert sys.path[0] == str(project_src)
 

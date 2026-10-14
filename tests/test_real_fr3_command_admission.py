@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from cpp_harness import compile_and_run
+from launch_xml import arg_defaults
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -52,14 +53,10 @@ def test_policy_is_ros_free_and_installed_as_one_canonical_library():
     assert "install(DIRECTORY include/${PROJECT_NAME}/" in cmake_text
 
 
-def _top_level_args(path):
-    return {element.attrib["name"]: element.attrib.get("default") for element in ET.parse(path).getroot().findall("arg")}
-
-
 def test_official_fr3_dry_run_defaults_remain_unchanged():
-    mouse = _top_level_args(MOUSE_DRY_RUN)
-    board = _top_level_args(BOARD_DRY_RUN)
-    entrypoint = _top_level_args(ADAPTER_ENTRYPOINT)
+    mouse = arg_defaults(ET.parse(MOUSE_DRY_RUN).getroot())
+    board = arg_defaults(ET.parse(BOARD_DRY_RUN).getroot())
+    entrypoint = arg_defaults(ET.parse(ADAPTER_ENTRYPOINT).getroot())
 
     expected_joint_names = "$(arg arm_id)_joint1, $(arg arm_id)_joint2, $(arg arm_id)_joint3, $(arg arm_id)_joint4, $(arg arm_id)_joint5, $(arg arm_id)_joint6, $(arg arm_id)_joint7"
     for route in (mouse, board):

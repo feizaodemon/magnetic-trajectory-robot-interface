@@ -1,21 +1,4 @@
-import importlib.util
-from pathlib import Path
-
-
-def load_state_module():
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "colmag_ros"
-        / "scripts"
-        / "magnetic_ui_state_node.py"
-    )
-    spec = importlib.util.spec_from_file_location("magnetic_ui_state_node", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-state_node = load_state_module()
+import magnetic_ui_state_node as state_node
 
 
 def sample(timestamp, x=0.048, y=0.030, valid=True, sequence_id=1):

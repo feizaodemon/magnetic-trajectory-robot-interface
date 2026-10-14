@@ -1,24 +1,10 @@
-import importlib.util
 import json
 import sys
 from pathlib import Path
 
 
-def load_recognizer_module():
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "colmag_ros"
-        / "scripts"
-        / "trajectory_symbol_top3_recognizer_node.py"
-    )
-    spec = importlib.util.spec_from_file_location("trajectory_symbol_top3_recognizer_node", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-recognizer = load_recognizer_module()
-from colmag_ros import preview_recognition  # noqa: E402
+import trajectory_symbol_top3_recognizer_node as recognizer
+from colmag_ros import preview_recognition
 
 
 class CallbackString:

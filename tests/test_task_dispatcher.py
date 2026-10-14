@@ -1,24 +1,8 @@
-import importlib.util
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-
-def load_task_dispatcher_module():
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "colmag_ros"
-        / "scripts"
-        / "task_dispatcher_node.py"
-    )
-    spec = importlib.util.spec_from_file_location("task_dispatcher_node", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-dispatcher = load_task_dispatcher_module()
+import task_dispatcher_node as dispatcher
 
 
 def confirmed(label, confidence=0.9):

@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import yaml
+from launch_xml import arg_defaults, param_values
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -17,17 +18,9 @@ TASK_ADAPTER = COLMAG / "src" / "colmag_fr3_task_trajectory_adapter.cpp"
 CMAKE = COLMAG / "CMakeLists.txt"
 
 
-def _args(root):
-    return {item.attrib["name"]: item.attrib.get("default") for item in root.findall("arg")}
-
-
-def _params(node):
-    return {item.attrib["name"]: item.attrib.get("value") for item in node.findall("param")}
-
-
 def test_launch_defaults_open_no_hardware_or_serial_path():
     root = ET.parse(LAUNCH).getroot()
-    args = _args(root)
+    args = arg_defaults(root)
     assert args["initial_mode"] == "TASK"
     assert args["board_source"] == "none"
     assert args["start_fr3_hardware"] == "false"
@@ -59,7 +52,7 @@ def test_route_has_exactly_one_continuous_controller_command_producer():
         if node.attrib.get("type") == "colmag_fr3_cartesian_teleop_adapter"
     ]
     assert len(adapters) == 1
-    params = _params(adapters[0])
+    params = param_values(adapters[0])
     assert params["command_topic"] == "$(arg command_topic)"
     assert params["input_mode"] == "magnetic_board"
     assert params["simulation_commands_enabled"] == "false"

@@ -12,6 +12,7 @@ if str(PACKAGE_SRC) not in sys.path:
 
 from colmag_ros import control_mode
 from dashboard_harness import DashboardHarness
+from launch_xml import arg_defaults, arg_values, param_values
 
 
 SCRIPTS = REPO / "colmag_ros" / "scripts"
@@ -28,14 +29,6 @@ GAZEBO_BRIDGE = (
     / "scripts"
     / "fr3_gazebo_visible_task_bridge_node.py"
 )
-
-
-def _args(root):
-    return {item.attrib["name"]: item.attrib.get("default") for item in root.findall("arg")}
-
-
-def _params(node):
-    return {item.attrib["name"]: item.attrib.get("value") for item in node.findall("param")}
 
 
 def test_mode_contract_has_exactly_two_values_and_fails_closed_to_task():
@@ -102,7 +95,7 @@ def test_dashboard_contains_only_small_mode_request_and_status_wiring(monkeypatc
 
 def test_final_gazebo_profile_owns_one_mode_source_and_both_capabilities():
     root = ET.parse(FINAL_GAZEBO).getroot()
-    assert _args(root)["initial_control_mode"] == "TASK"
+    assert arg_defaults(root)["initial_control_mode"] == "TASK"
     mode_nodes = [node for node in root.findall("node") if node.attrib.get("type") == "control_mode_node.py"]
     assert len(mode_nodes) == 1
 
@@ -110,7 +103,7 @@ def test_final_gazebo_profile_owns_one_mode_source_and_both_capabilities():
         include for include in root.findall("include")
         if include.attrib["file"].endswith("/dtw_mouse_demo_frontend.launch")
     )
-    frontend_args = {item.attrib["name"]: item.attrib.get("value") for item in frontend.findall("arg")}
+    frontend_args = arg_values(frontend)
     assert frontend_args["required_control_mode"] == "TASK"
     assert frontend_args["control_mode_enabled"] == "true"
     assert frontend_args["latch_task_command"] == "false"
@@ -119,14 +112,14 @@ def test_final_gazebo_profile_owns_one_mode_source_and_both_capabilities():
         node for node in root.findall("node")
         if node.attrib.get("name") == "keyboard_manual_task_dispatcher"
     )
-    assert _params(manual_tasks)["required_control_mode"] == "TASK"
-    assert _params(manual_tasks)["latch_task_command"] == "false"
+    assert param_values(manual_tasks)["required_control_mode"] == "TASK"
+    assert param_values(manual_tasks)["latch_task_command"] == "false"
 
     continuous = next(
         node for node in root.findall("node")
         if node.attrib.get("name") == "colmag_gazebo_cartesian_teleop_adapter"
     )
-    continuous_params = _params(continuous)
+    continuous_params = param_values(continuous)
     assert continuous_params["input_mode"] == "normalized_cartesian"
     assert continuous_params["control_mode_topic"] == "$(arg control_mode_topic)"
     assert continuous_params["simulation_commands_enabled"] == "true"
@@ -135,12 +128,12 @@ def test_final_gazebo_profile_owns_one_mode_source_and_both_capabilities():
         node for node in root.findall("node")
         if node.attrib.get("name") == "fr3_gazebo_visible_task_bridge_node"
     )
-    assert _params(bridge)["required_control_mode"] == "TASK"
+    assert param_values(bridge)["required_control_mode"] == "TASK"
 
 
 def test_real_profile_owns_one_mode_source_and_both_capabilities():
     root = ET.parse(REAL_PROFILE).getroot()
-    assert _args(root)["initial_mode"] == "TASK"
+    assert arg_defaults(root)["initial_mode"] == "TASK"
     mode_nodes = [
         node for node in root.findall("node")
         if node.attrib.get("type") == "control_mode_node.py"
@@ -151,10 +144,7 @@ def test_real_profile_owns_one_mode_source_and_both_capabilities():
         include for include in root.findall("include")
         if include.attrib["file"].endswith("/dtw_real_board_demo_frontend.launch")
     )
-    frontend_args = {
-        item.attrib["name"]: item.attrib.get("value")
-        for item in frontend.findall("arg")
-    }
+    frontend_args = arg_values(frontend)
     assert frontend_args["required_control_mode"] == "TASK"
     assert frontend_args["control_mode_enabled"] == "true"
     assert frontend_args["latch_task_command"] == "false"
@@ -165,10 +155,7 @@ def test_real_profile_owns_one_mode_source_and_both_capabilities():
             "/colmag_fr3_task_trajectory_adapter.launch"
         )
     )
-    discrete_args = {
-        item.attrib["name"]: item.attrib.get("value")
-        for item in discrete.findall("arg")
-    }
+    discrete_args = arg_values(discrete)
     assert discrete_args["required_control_mode"] == "TASK"
     assert discrete_args["control_mode_topic"] == "$(arg control_mode_topic)"
 
@@ -176,7 +163,7 @@ def test_real_profile_owns_one_mode_source_and_both_capabilities():
         node for node in root.findall("node")
         if node.attrib.get("type") == "colmag_fr3_cartesian_teleop_adapter"
     )
-    continuous_params = _params(continuous)
+    continuous_params = param_values(continuous)
     assert continuous_params["input_mode"] == "magnetic_board"
     assert continuous_params["simulation_commands_enabled"] == "false"
 
@@ -202,6 +189,6 @@ def test_task_dispatcher_keeps_legacy_compatibility_but_gates_managed_routes():
         node for node in root.findall("group/node")
         if node.attrib.get("type") == "task_dispatcher_node.py"
     )
-    params = _params(dispatcher)
+    params = param_values(dispatcher)
     assert params["required_control_mode"] == "$(arg required_control_mode)"
     assert params["control_mode_topic"] == "$(arg control_mode_topic)"

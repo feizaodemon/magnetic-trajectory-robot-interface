@@ -1,4 +1,3 @@
-import importlib.util
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -12,15 +11,8 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 import fr3_lab_runtime as runtime
+import task_dispatcher_node as dispatcher
 from cpp_harness import compile_and_run
-
-
-def _load_dispatcher():
-    path = REPO / "colmag_ros/scripts/task_dispatcher_node.py"
-    spec = importlib.util.spec_from_file_location("f3d_task_dispatcher", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_production_hexagon_geometry_is_closed_and_bounded(tmp_path):
@@ -69,7 +61,6 @@ def test_gate_c_route_reuses_one_timeout_and_stays_one_shot():
 
 
 def test_existing_label_2_semantic_mapping_is_reused_without_changing_label_3():
-    dispatcher = _load_dispatcher()
     confirmed = {"confirmed": True, "confidence": 1.0}
     assert dispatcher.build_task_command(dict(confirmed, label="2"))["task"] == \
         "HEXAGON_TRAJECTORY"
