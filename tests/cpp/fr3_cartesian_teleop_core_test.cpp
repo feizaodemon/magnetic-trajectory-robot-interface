@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <limits>
@@ -24,6 +25,89 @@ colmag_ros::MagneticBoardSample engagedCenter()
   sample.interaction_engaged = true;
   return sample;
 }
+
+// Drives the normalized input at 30 Hz and tracks the shaped target's
+// finite-difference acceleration and jerk.
+struct KeyboardRun
+{
+  KeyboardRun(colmag_ros::Fr3CartesianTeleopCore& core_ref,
+              const colmag_ros::Fr3CartesianTeleopConfig& config_ref)
+    : core(core_ref), config(config_ref), joints(home())
+  {
+  }
+
+  void step(const colmag_ros::CartesianVector& direction)
+  {
+    colmag_ros::NormalizedCartesianInput input;
+    input.direction = direction;
+    input.interaction_engaged = true;
+    const colmag_ros::Fr3CartesianTeleopStep result =
+        core.stepNormalizedCartesian(input, joints, dt);
+    assert(result.accepted);
+    for (std::size_t axis = 0; axis < 3; ++axis)
+    {
+      assert(result.shaped_target[axis] >= config.workspace_min[axis] - 1e-12);
+      assert(result.shaped_target[axis] <= config.workspace_max[axis] + 1e-12);
+    }
+    joints = result.joint_positions;
+    colmag_ros::CartesianVector velocity{{0.0, 0.0, 0.0}};
+    colmag_ros::CartesianVector acceleration{{0.0, 0.0, 0.0}};
+    double acceleration_squared = 0.0;
+    double jerk_squared = 0.0;
+    for (std::size_t axis = 0; axis < 3; ++axis)
+    {
+      velocity[axis] = (result.shaped_target[axis] - position[axis]) / dt;
+      acceleration[axis] = (velocity[axis] - this->velocity[axis]) / dt;
+      acceleration_squared += acceleration[axis] * acceleration[axis];
+      const double jerk = (acceleration[axis] - this->acceleration[axis]) / dt;
+      jerk_squared += jerk * jerk;
+    }
+    // The first samples difference against the uninitialized pose.
+    if (samples >= 2)
+    {
+      max_acceleration =
+          std::max(max_acceleration, std::sqrt(acceleration_squared));
+    }
+    if (samples >= 3)
+    {
+      max_jerk = std::max(max_jerk, std::sqrt(jerk_squared));
+    }
+    position = result.shaped_target;
+    this->velocity = velocity;
+    this->acceleration = acceleration;
+    ++samples;
+  }
+
+  void hold(const colmag_ros::CartesianVector& direction, int ticks)
+  {
+    for (int tick = 0; tick < ticks; ++tick)
+    {
+      step(direction);
+    }
+  }
+
+  int release(int max_ticks)
+  {
+    int ticks = 0;
+    while (core.isMoving() && ticks < max_ticks)
+    {
+      step(colmag_ros::CartesianVector{{0.0, 0.0, 0.0}});
+      ++ticks;
+    }
+    return ticks;
+  }
+
+  colmag_ros::Fr3CartesianTeleopCore& core;
+  const colmag_ros::Fr3CartesianTeleopConfig& config;
+  const double dt = 1.0 / 30.0;
+  colmag_ros::Fr3JointVector joints;
+  colmag_ros::CartesianVector position{{0.0, 0.0, 0.0}};
+  colmag_ros::CartesianVector velocity{{0.0, 0.0, 0.0}};
+  colmag_ros::CartesianVector acceleration{{0.0, 0.0, 0.0}};
+  double max_acceleration = 0.0;
+  double max_jerk = 0.0;
+  int samples = 0;
+};
 
 }  // namespace
 
@@ -74,6 +158,38 @@ int main()
   out_of_range.direction[0] = 1.1;
   assert(core.stepNormalizedCartesian(out_of_range, home(), 1.0 / 30.0).reason ==
          "normalized_input_out_of_range");
+
+  // A held key is a velocity command: it cruises at max_linear_speed_m_s,
+  // a direction change and a release stay inside the acceleration and jerk
+  // limits, and holding toward a bound brakes inside the workspace.
+  core.reset();
+  KeyboardRun run(core, config);
+  run.hold({{1.0, 0.0, 0.0}}, 60);
+  const double cruise_start = run.position[0];
+  run.hold({{1.0, 0.0, 0.0}}, 15);
+  const double held_speed = (run.position[0] - cruise_start) / (15 * run.dt);
+  assert(held_speed >= 0.95 * config.max_linear_speed_m_s);
+  assert(held_speed <= config.max_linear_speed_m_s + 1e-9);
+
+  const double turn_x = run.position[0];
+  run.hold({{0.0, 1.0, 0.0}}, 60);
+  assert(run.position[0] - turn_x <= 0.05);
+
+  const int stop_ticks = run.release(90);
+  assert(stop_ticks < 60);
+  assert(!core.isMoving());
+  assert(run.max_acceleration <= config.max_linear_acceleration_m_s2 + 1e-6);
+  assert(run.max_jerk <= config.max_linear_jerk_m_s3 + 1e-6);
+
+  // A fresh run: the settle-to-rest snap followed by a restart is a
+  // sub-millimetre-per-second step that the finite-difference jerk exaggerates.
+  core.reset();
+  KeyboardRun climb(core, config);
+  climb.hold({{0.0, 0.0, 1.0}}, 300);
+  assert(climb.position[2] <= config.workspace_max[2] + 1e-12);
+  assert(climb.position[2] >= config.workspace_max[2] - 0.005);
+  assert(climb.max_acceleration <= config.max_linear_acceleration_m_s2 + 1e-6);
+  assert(climb.max_jerk <= config.max_linear_jerk_m_s3 + 1e-6);
 
   colmag_ros::Fr3CartesianTeleopConfig invalid_config = config;
   invalid_config.workspace_min[0] = invalid_config.workspace_max[0];

@@ -95,6 +95,33 @@ def test_continuous_keyboard_mapping_is_normalized_cartesian_not_task_labels():
     assert cartesian_keyboard_input.build_cartesian_input_payload(
         " ", sequence_id=5
     )["engaged"] is False
+    release = cartesian_keyboard_input.build_release_payload(sequence_id=6, timestamp=13.0)
+    assert (release["x"], release["y"], release["z"]) == (0.0, 0.0, 0.0)
+    assert release["engaged"] is True
+
+
+def test_key_hold_tracker_bridges_the_first_repeat_delay_and_detects_release():
+    tracker = cartesian_keyboard_input.KeyHoldTracker(
+        first_repeat_window_sec=0.6, repeat_window_sec=0.12
+    )
+    hold, release = cartesian_keyboard_input.HOLD, cartesian_keyboard_input.RELEASE
+    assert tracker.poll(0.0) is None
+    assert tracker.press("w", 0.0) is True
+    # The terminal's first repeat arrives about 0.5 s after the press.
+    assert tracker.poll(0.5) == hold
+    assert tracker.press("w", 0.5) is False
+    assert tracker.poll(0.55) == hold
+    assert tracker.press("w", 0.54) is False
+    # Repeats stop: released one repeat window after the last one.
+    assert tracker.poll(0.65) == hold
+    assert tracker.poll(0.67) == release
+    assert tracker.poll(0.7) is None
+    # A different key starts a new hold at once; clear() drops it silently.
+    assert tracker.press("w", 1.0) is True
+    assert tracker.press("a", 1.1) is True
+    assert tracker.key == "a"
+    tracker.clear()
+    assert tracker.poll(1.2) is None
 
 
 def test_launch_wraps_the_dual_mode_existing_gazebo_backend():

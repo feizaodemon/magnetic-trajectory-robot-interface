@@ -11,6 +11,7 @@ AXES = ("x", "y", "z")
 # Adapter state -> (headline, tone). Unknown states are shown as-is, neutral.
 STATE_VIEWS = {
     "COMMAND_PUBLISHED": ("Moving", "success"),
+    "STOPPING": ("Stopping", "neutral"),
     "WAITING_FOR_INPUT": ("Waiting for input", "neutral"),
     "PAUSED": ("Paused", "warning"),
     "REJECTED": ("Target rejected", "danger"),
@@ -63,6 +64,8 @@ def teleop_state_view(state_payload, direction=None):
         if direction is not None:
             headline = "Moving %s" % direction_label(direction)
         detail = "Bounded Cartesian target sent"
+    elif state == "STOPPING":
+        detail = "Key released, braking to rest"
     elif state == "WAITING_FOR_INPUT":
         detail = (
             "Hold a direction key in the teleop terminal"

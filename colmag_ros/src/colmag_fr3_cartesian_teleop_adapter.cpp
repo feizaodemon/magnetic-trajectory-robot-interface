@@ -30,6 +30,9 @@ constexpr const char* kTeleopMode = "TELEOP";
 constexpr const char* kActiveHardwareProfile = "fr3-hardware-active";
 constexpr const char* kMagneticBoardInput = "magnetic_board";
 constexpr const char* kNormalizedCartesianInput = "normalized_cartesian";
+// Upper bound on braking after normalized input goes stale. The shaper stops
+// from max_linear_speed_m_s in about 1.5 s with the default limits.
+constexpr double kMaxStoppingSec = 2.0;
 
 std::string normalizedMode(const std::string& value)
 {
@@ -417,6 +420,12 @@ private:
                     "stale_magnetic_input" : "stale_cartesian_input";
       return false;
     }
+    return jointsFresh(reason, joint_age);
+  }
+
+  bool jointsFresh(std::string* reason, double* joint_age) const
+  {
+    const ros::WallTime wall_now = ros::WallTime::now();
     if (!joint_after_mode_change_)
     {
       *reason = "new_joint_state_required";
@@ -461,15 +470,42 @@ private:
     std::string freshness_reason;
     if (!inputsFresh(&freshness_reason, &input_age, &joint_age))
     {
+      // Normalized input is a velocity command. When it goes stale with fresh
+      // joint states, brake to rest through the shaper (bounded in time)
+      // instead of dropping the command stream mid-motion.
+      std::string joint_reason;
+      if (input_mode_ == kNormalizedCartesianInput &&
+          freshness_reason == "stale_cartesian_input" && core_->isMoving() &&
+          stopping_ticks_ * command_period_sec_ < kMaxStoppingSec &&
+          jointsFresh(&joint_reason, &joint_age))
+      {
+        ++stopping_ticks_;
+        NormalizedCartesianInput release = latest_normalized_input_;
+        release.direction.fill(0.0);
+        publishStep(core_->stepNormalizedCartesian(
+                        release, latest_joints_, command_period_sec_),
+                    "STOPPING", freshness_reason, input_age, joint_age);
+        return;
+      }
       core_->reset();
       publishState("PAUSED", freshness_reason, false, input_age, joint_age);
       return;
     }
-    const Fr3CartesianTeleopStep result =
-        input_mode_ == kMagneticBoardInput ?
-            core_->step(latest_sample_, latest_joints_, command_period_sec_) :
-            core_->stepNormalizedCartesian(
-                latest_normalized_input_, latest_joints_, command_period_sec_);
+    stopping_ticks_ = 0;
+    publishStep(input_mode_ == kMagneticBoardInput ?
+                    core_->step(latest_sample_, latest_joints_, command_period_sec_) :
+                    core_->stepNormalizedCartesian(
+                        latest_normalized_input_, latest_joints_, command_period_sec_),
+                "COMMAND_PUBLISHED", "bounded_cartesian_target",
+                input_age, joint_age);
+  }
+
+  void publishStep(const Fr3CartesianTeleopStep& result,
+                   const std::string& published_state,
+                   const std::string& published_reason,
+                   double input_age,
+                   double joint_age)
+  {
     if (!result.accepted)
     {
       publishState("REJECTED", result.reason, false, input_age, joint_age);
@@ -491,8 +527,7 @@ private:
     point.time_from_start = ros::Duration(command_time_sec_);
     command.points.push_back(point);
     command_publisher_.publish(command);
-    publishState("COMMAND_PUBLISHED", "bounded_cartesian_target", true,
-                 input_age, joint_age);
+    publishState(published_state, published_reason, true, input_age, joint_age);
   }
 
   void publishState(const std::string& state,
@@ -565,6 +600,7 @@ private:
   bool have_input_identity_ = false;
   long long last_sequence_id_ = 0;
   long long last_sample_index_ = 0;
+  int stopping_ticks_ = 0;
 };
 
 }  // namespace colmag_ros
