@@ -79,6 +79,9 @@ class FakeWidget:
     def pack(self, **options):
         self.pack_options = options
 
+    def pack_forget(self):
+        self.pack_options = None
+
     def pack_propagate(self, _flag):
         pass
 

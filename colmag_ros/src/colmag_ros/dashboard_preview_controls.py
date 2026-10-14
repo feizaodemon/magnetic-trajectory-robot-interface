@@ -25,6 +25,7 @@ from colmag_ros.dashboard_controller_input import (
 from colmag_ros.dashboard_dwell_status import format_interaction_instruction
 from colmag_ros.dashboard_points import build_ocr_stroke_points, clean_stroke_points
 from colmag_ros.dashboard_sample_lifecycle import cleanup_drawing_sample_points
+from colmag_ros.dashboard_texts import TELEOP_MOUSE_HINT, TELEOP_STATUS
 from colmag_ros.semantic_library import preview_line
 
 
@@ -288,6 +289,8 @@ class DashboardPreviewControlsMixin:
         }
         text = format_operator_action_status(**status_state)
         tone = operator_action_tone(**status_state)
+        if self._teleop_active():
+            text, tone = TELEOP_STATUS, "info"
         self.root.after(0, lambda t=text: self.traj_operator_status_var.set(t))
         self.root.after(0, lambda t=tone: self._show_status_tone(t))
         stage = derive_operator_workflow_stage(
@@ -411,11 +414,15 @@ class DashboardPreviewControlsMixin:
         return self.ocr_panel_state == "CONFIRM_PENDING" and bool(summarize_candidates(self.current_candidate_payload))
 
     def _ocr_state_hint_text(self):
+        if self._teleop_active():
+            return TELEOP_MOUSE_HINT
         return format_interaction_instruction(self.config.interaction_profile)
 
     def _refresh_mouse_operator_presentation(self):
         hover_button = str(self.dwell_timer.button or "").upper()
-        if hover_button in ("B", "C", "A", "X"):
+        if self._teleop_active():
+            mode = "TELEOP"
+        elif hover_button in ("B", "C", "A", "X"):
             mode = "HOVER — %s" % hover_button
         elif self.ocr_panel_state == "DRAWING":
             mode = "DRAW"
@@ -432,7 +439,9 @@ class DashboardPreviewControlsMixin:
                 has_sample=bool(self._collect_ocr_points()),
                 has_candidate=bool(tops),
             )
-        if self.ocr_panel_state == "BLOCKED":
+        if self._teleop_active():
+            status, tone = TELEOP_STATUS, "info"
+        elif self.ocr_panel_state == "BLOCKED":
             status, tone = "Stopped", "danger"
         elif self.ocr_panel_state == "CONFIRM_PENDING" and tops:
             status, tone = "Review the result, then choose C / A / X", "accent"

@@ -142,6 +142,8 @@
     <arg name="control_mode_enabled" value="true" />
     <arg name="control_mode_topic" value="$(arg control_mode_topic)" />
     <arg name="control_mode_request_topic" value="$(arg control_mode_request_topic)" />
+    <arg name="cartesian_input_topic" value="$(arg cartesian_input_topic)" />
+    <arg name="cartesian_teleop_state_topic" value="$(arg cartesian_teleop_state_topic)" />
     <arg name="required_control_mode" value="TASK" />
     <arg name="latch_task_command" value="false" />
     <arg name="recognizer_backend" value="$(arg recognizer_backend)" />

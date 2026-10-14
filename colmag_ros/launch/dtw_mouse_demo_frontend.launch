@@ -13,6 +13,9 @@
   <arg name="control_mode_topic" default="/colmag/control_mode" />
   <arg name="control_mode_request_topic" default="/colmag/control_mode/request" />
   <arg name="required_control_mode" default="" />
+  <!-- Read-only inputs for the dashboard TELEOP view (control mode only). -->
+  <arg name="cartesian_input_topic" default="/colmag/teleop/cartesian_input" />
+  <arg name="cartesian_teleop_state_topic" default="/colmag/gazebo_cartesian_teleop_state" />
 
   <arg name="recognizer_backend" default="dtw_template_bank" />
   <arg name="dtw_template_bank_path"
@@ -61,6 +64,8 @@
     <param name="control_mode_enabled" value="$(arg control_mode_enabled)" />
     <param name="control_mode_topic" value="$(arg control_mode_topic)" />
     <param name="control_mode_request_topic" value="$(arg control_mode_request_topic)" />
+    <param name="cartesian_input_topic" value="$(arg cartesian_input_topic)" />
+    <param name="cartesian_teleop_state_topic" value="$(arg cartesian_teleop_state_topic)" />
     <param name="integrated_dashboard_confirm_enabled" value="$(arg integrated_dashboard_confirm_enabled)" />
     <param name="publish_confirmed_label" value="$(arg publish_confirmed_label)" />
     <param name="publish_task_command" value="$(arg publish_task_command)" />
