@@ -66,6 +66,8 @@ These checks ran by hand when the public portfolio edition was exported. CI repe
 | Gazebo evidence | only the exact recorded simulation run | real hardware behavior |
 | FR3 evidence | only an explicitly authorized, bounded run | certification or arbitrary motion |
 
+The README demo GIFs are real-time screen captures of headless Gazebo in Docker, with mouse and key input from `xdotool` scripts. The `TASK` clip was recorded at `cef908c` with `visible_bridge_motion_scale:=3.0 visible_bridge_motion_duration_sec:=4.0`. The `TELEOP` clip was recorded at `35df0ec` with `spawn_pick_objects:=true`, using [scripts/demo](../scripts/demo/README.md); the script releases each key based on the measured flange position.
+
 ## Tests removed at export
 
 The source snapshot had twelve test files that only checked the wording of internal process documents. Those documents are not part of the public edition, so the tests were removed at export and never existed in this repository. Each one was removed only where focused implementation tests still cover the technical behavior. A repository-wide link and exact-case check replaced the old Markdown closure test.
