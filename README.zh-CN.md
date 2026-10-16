@@ -16,7 +16,7 @@
 - **确认门控的指令通路。** 识别、确认、分发和执行是彼此独立的 ROS node。屏幕上的候选不能让机器人运动：只有 dispatcher 会发布 `/colmag/task_command`，并且必须先显式按下 `C Confirm`。
 - **共享的笛卡尔遥操作核心。** 一个 C++ 核心（`Fr3CartesianTeleopCore`）用阻尼最小二乘（DLS）逆运动学，把键盘或画板输入换算成有界的关节目标，同时驱动 Gazebo Panda 和真机 FR3 adapter。
 - **防御式硬件层。** 每条 FR3 轨迹前面都有不依赖 ROS 的 C++ 安全模块（指令重放保护、单次运动门、ROS 时间回退保护、goal 生命周期跟踪），并有独立的单元测试。
-- **CI 端到端验证。** 约 495 个 pytest 用例加 C++ 测试、ruff、mypy、识别准确率门限、catkin 构建，以及一个 headless Gazebo 冒烟测试，每个 pull request 都会检查模式门控、笛卡尔运动和夹爪开合。
+- **CI 端到端验证。** 约 590 个 pytest 用例加 C++ 测试、ruff、mypy、识别准确率门限、catkin 构建，以及一个 headless Gazebo 冒烟测试，每个 pull request 都会检查模式门控、笛卡尔运动和夹爪开合。
 
 ## 结果
 
@@ -25,7 +25,7 @@
 | 符号识别：在已提交的 124 条模板（8 个符号）上做留一法 | Top-1 100%，Top-3 100% |
 | 被运行时置信度和间隔门限接受的查询 | 100%，全部正确 |
 | 每次识别耗时：纯 Python DTW，对比 123 条模板 | 中位数 83 ms，p95 118 ms（单个 CPU 核） |
-| 自动化检查 | 约 495 个 pytest 测试、7 个不依赖 ROS 的 C++ 测试程序、8 个 CI job |
+| 自动化检查 | 约 590 个 pytest 测试、7 个不依赖 ROS 的 C++ 测试程序、8 个 CI job |
 
 所有模板都是同一个人用鼠标画的，所以这些数字说明的是：在同一个人的数据里，8 个符号能被清楚地区分开。它们是上限，不是对新用户或磁性画板实测的准确率。不需要 ROS，大约 10 秒即可复现：
 
@@ -39,7 +39,7 @@ CI job `dtw-eval` 在每个 pull request 上运行同一条命令，把完整报
 
 ### 识别方法对比
 
-在干净数据上所有方法都是 100%，拉不开差距，所以我在同样的留一法查询上加了带随机种子的合成扰动（噪声、旋转、提前截断、拉伸），把 DTW 和另外四种单笔画识别方法做了对比：Derivative DTW、Protractor（$1）、$P，以及手工特征加 k-NN。
+在干净数据上所有方法都是 100%，拉不开差距，所以我在同样的留一法查询上加了带随机种子的合成扰动（噪声、旋转、提前截断、拉伸），把 DTW 和五种替代方法做了对比：DTW 自己的 Sakoe-Chiba 加窗版本，以及另外四种单笔画识别方法 Derivative DTW、Protractor（$1）、$P、手工特征加 k-NN。
 
 ![各识别方法在合成扰动下的 Top-1 准确率](docs/media/recognizer_robustness.svg)
 
@@ -142,12 +142,12 @@ web/recognizer/            识别器的浏览器移植版（GitHub Pages 演示�
 docker/                    Gazebo 和 FR3 的构建与运行 profile
 tests/                     pytest 测试集、headless dashboard harness、C++ 测试
 docs/                      架构、运行、验证、识别方法对比和边界文档
-.github/workflows/         CI：pytest（有 ROS 和无 ROS）、ruff、mypy、DTW 评估、catkin 构建、Gazebo 冒烟测试
+.github/workflows/         CI：pytest（有 ROS 和无 ROS）、ruff、mypy、DTW 评估、识别方法对比、catkin 构建、Gazebo 冒烟测试
 ```
 
 ## 测试与 CI
 
-每个 pull request 和每次推送到 `main` 都会运行七个 job：
+每个 pull request 和每次推送到 `main` 都会运行八个 job：
 
 - `ruff check`；
 - `mypy` 检查 `mypy.ini` 中列出的核心无 ROS 识别和轨迹模块；
@@ -155,7 +155,8 @@ docs/                      架构、运行、验证、识别方法对比和边�
 - ROS Noetic 容器里的 pytest，然后解析不需要 Gazebo 或 FR3 包的 launch 文件；
 - 两个 ROS 包的 `catkin_make install`；
 - Gazebo 冒烟测试：构建镜像，用 headless Gazebo 运行键盘 `TELEOP` profile，检查模式门控、笛卡尔运动和夹爪开合；
-- DTW 模板库的留一法评估，Top-1 低于 95% 时失败。
+- DTW 模板库的留一法评估，Top-1 低于 95% 时失败；
+- 合成扰动下的识别方法对比，只输出表格，不会让构建失败。
 
 另有一个 `recognizer demo` workflow 构建浏览器演示，并从 `main` 部署到 GitHub Pages。pytest job 还会检查 `web/recognizer` 里的 JavaScript 移植版和 Python 识别器给出相同的排序和门限判定。
 

@@ -16,7 +16,7 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 - **Confirmation-gated command path.** Recognition, confirmation, dispatch and execution are separate ROS nodes. A candidate on screen cannot move the robot: only the dispatcher publishes `/colmag/task_command`, and only after an explicit `C Confirm`.
 - **Shared Cartesian teleoperation core.** One C++ core (`Fr3CartesianTeleopCore`) turns keyboard or board input into bounded joint targets with damped-least-squares inverse kinematics. It drives both the Gazebo Panda and the Real-FR3 adapter.
 - **Defensive hardware layer.** ROS-free C++ safety helpers (command replay guard, one-shot motion gate, ROS-time rollback guard, goal lifecycle tracking) sit in front of every FR3 trajectory and have their own unit tests.
-- **Tested end to end in CI.** About 495 pytest cases plus C++ tests, ruff, mypy, a recognition-accuracy gate, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
+- **Tested end to end in CI.** About 590 pytest cases plus C++ tests, ruff, mypy, a recognition-accuracy gate, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
 
 ## Results
 
@@ -25,7 +25,7 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 | Symbol recognition, leave-one-out over the 124 tracked templates (8 symbols) | Top-1 100%, Top-3 100% |
 | Queries accepted by the runtime confidence and margin gates | 100%, all of them correct |
 | Recognition time per query, pure-Python DTW against 123 templates | 83 ms median, 118 ms p95 on one CPU core |
-| Automated checks | about 495 pytest tests, 7 ROS-free C++ test programs, 8 CI jobs |
+| Automated checks | about 590 pytest tests, 7 ROS-free C++ test programs, 8 CI jobs |
 
 All templates were drawn with a mouse by one person, so these numbers show that the 8 symbols separate cleanly within one writer's data. They are an upper bound, not a measured accuracy for new users or for the magnetic board. Reproduce them without ROS in about 10 seconds:
 
@@ -39,7 +39,7 @@ Recognition uses the full DTW search by default. An optional Sakoe-Chiba window 
 
 ### Comparing recognizers
 
-Because every method scores 100% on the clean bank, I also compared DTW with four other single-stroke recognizers (Derivative DTW, Protractor/$1, $P, and hand-crafted features with k-NN) on the same leave-one-out queries after seeded synthetic noise, rotation, early truncation and stretching.
+Because every method scores 100% on the clean bank, I also compared DTW with five alternatives: its own Sakoe-Chiba window variant and four other single-stroke recognizers (Derivative DTW, Protractor/$1, $P, and hand-crafted features with k-NN) on the same leave-one-out queries after seeded synthetic noise, rotation, early truncation and stretching.
 
 ![Top-1 accuracy of each recognizer under synthetic perturbations](docs/media/recognizer_robustness.svg)
 
@@ -142,12 +142,12 @@ web/recognizer/            Browser port of the recognizer (the GitHub Pages demo
 docker/                    Gazebo and FR3 build and runtime profiles
 tests/                     pytest suite, headless dashboard harness, C++ tests
 docs/                      Architecture, running, validation, recognizer comparison, and boundary docs
-.github/workflows/         CI: pytest (with and without ROS), ruff, mypy, DTW evaluation, catkin build, Gazebo smoke
+.github/workflows/         CI: pytest (with and without ROS), ruff, mypy, DTW evaluation, recognizer comparison, catkin build, Gazebo smoke
 ```
 
 ## Testing and CI
 
-Every pull request and push to `main` runs seven jobs:
+Every pull request and push to `main` runs eight jobs:
 
 - `ruff check`;
 - `mypy` on the core ROS-free recognition and trajectory modules listed in `mypy.ini`;
@@ -155,7 +155,8 @@ Every pull request and push to `main` runs seven jobs:
 - pytest in a ROS Noetic container, plus a parse of the launch files that need no Gazebo or FR3 packages;
 - `catkin_make install` for both ROS packages;
 - the Gazebo smoke test: build the image, run the keyboard `TELEOP` profile headless, and check mode gating, Cartesian motion and gripper open/close;
-- the leave-one-out evaluation of the DTW bank, which fails below 95% Top-1.
+- the leave-one-out evaluation of the DTW bank, which fails below 95% Top-1;
+- the recognizer comparison under synthetic perturbations, which reports its tables but never fails the build.
 
 A separate `recognizer demo` workflow builds the browser demo and deploys it to GitHub Pages from `main`. The pytest job also checks that the JavaScript port in `web/recognizer` returns the same rankings and gate decisions as the Python recognizer.
 
