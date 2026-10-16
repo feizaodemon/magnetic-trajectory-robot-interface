@@ -61,6 +61,27 @@ jobs:
           name: dtw-loo-eval
           path: outputs/dtw_eval/loo.json
 
+  recognizer-compare:
+    # Leave-one-out comparison of the alternative recognizers, clean and under
+    # synthetic perturbations: the tables in docs/RECOGNIZER_COMPARISON.md.
+    # Reported only; the accuracy gate lives in dtw-eval.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+      - name: Compare recognizers
+        run: |
+          python scripts/compare_recognizers.py --jobs 4 \
+            --svg-out outputs/recognizer_compare/recognizer_robustness.svg \
+            --json-out outputs/recognizer_compare/rows.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recognizer-compare
+          path: outputs/recognizer_compare/
+
   mypy:
     runs-on: ubuntu-22.04
     steps:
