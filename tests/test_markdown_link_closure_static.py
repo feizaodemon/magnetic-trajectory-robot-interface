@@ -16,6 +16,7 @@ EXPECTED_READER_DOCS = {
     "docker/README.md",
     "docker/README_FR3_HARDWARE.md",
     "docs/ARCHITECTURE.md",
+    "docs/DESIGN_DECISIONS.md",
     "docs/DUAL_MODE_TELEOPERATION.md",
     "docs/GLOSSARY.md",
     "docs/HARDWARE_BOUNDARIES.md",
