@@ -10,11 +10,28 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 
 ## Highlights
 
-- **Gesture-to-task pipeline.** Pen or mouse strokes are normalized and ranked against a tracked DTW bank of 124 handwritten templates over 8 symbols (`1,2,3,V,O,X,A,C`). Confidence and margin gates reject unclear samples. The recognition code is plain Python with no ROS dependency.
+- **Gesture-to-task pipeline.** Pen or mouse strokes are normalized and ranked against a tracked DTW bank of 124 handwritten templates over 8 symbols (`1,2,3,V,O,X,A,C`). Leave-one-out Top-1 accuracy on that bank is 100% at about 83 ms per query ([Results](#results)). Confidence and margin gates reject unclear samples. The recognition code is plain Python with no ROS dependency.
 - **Confirmation-gated command path.** Recognition, confirmation, dispatch and execution are separate ROS nodes. A candidate on screen cannot move the robot: only the dispatcher publishes `/colmag/task_command`, and only after an explicit `C Confirm`.
 - **Shared Cartesian teleoperation core.** One C++ core (`Fr3CartesianTeleopCore`) turns keyboard or board input into bounded joint targets with damped-least-squares inverse kinematics. It drives both the Gazebo Panda and the Real-FR3 adapter.
 - **Defensive hardware layer.** ROS-free C++ safety helpers (command replay guard, one-shot motion gate, ROS-time rollback guard, goal lifecycle tracking) sit in front of every FR3 trajectory and have their own unit tests.
-- **Tested end to end in CI.** About 460 pytest cases plus C++ tests, ruff, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
+- **Tested end to end in CI.** About 470 pytest cases plus C++ tests, ruff, a recognition-accuracy gate, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
+
+## Results
+
+| Measure | Result |
+| --- | --- |
+| Symbol recognition, leave-one-out over the 124 tracked templates (8 symbols) | Top-1 100%, Top-3 100% |
+| Queries accepted by the runtime confidence and margin gates | 100%, all of them correct |
+| Recognition time per query, pure-Python DTW against 123 templates | 83 ms median, 118 ms p95 on one CPU core |
+| Automated checks | about 470 pytest tests, 7 ROS-free C++ test programs, 6 CI jobs |
+
+All templates were drawn with a mouse by one person, so these numbers show that the 8 symbols separate cleanly within one writer's data. They are an upper bound, not a measured accuracy for new users or for the magnetic board. Reproduce them without ROS in about 10 seconds:
+
+```bash
+python3 scripts/eval_dtw_bank_loo.py
+```
+
+The CI job `dtw-eval` runs the same command on every pull request, puts the full report and confusion matrix in the job summary, and fails if Top-1 drops below 95%. Latency depends on the machine, so CI reports it without gating on it.
 
 ## Demo (Gazebo)
 
@@ -104,7 +121,7 @@ scripts/                   Offline DTW tools and guarded FR3 operator helpers
 docker/                    Gazebo and FR3 build and runtime profiles
 tests/                     pytest suite, headless dashboard harness, C++ tests
 docs/                      Architecture, running, validation, and boundary docs
-.github/workflows/         CI: pytest (with and without ROS), ruff, catkin build, Gazebo smoke
+.github/workflows/         CI: pytest (with and without ROS), ruff, DTW evaluation, catkin build, Gazebo smoke
 ```
 
 ## Testing and CI
@@ -115,7 +132,8 @@ Every pull request and push to `main` runs five jobs:
 - pytest on Python 3.10 without ROS;
 - pytest in a ROS Noetic container, plus a parse of the launch files that need no Gazebo or FR3 packages;
 - `catkin_make install` for both ROS packages;
-- the Gazebo smoke test: build the image, run the keyboard `TELEOP` profile headless, and check mode gating, Cartesian motion and gripper open/close.
+- the Gazebo smoke test: build the image, run the keyboard `TELEOP` profile headless, and check mode gating, Cartesian motion and gripper open/close;
+- the leave-one-out evaluation of the DTW bank, which fails below 95% Top-1.
 
 The suite covers Python unit and static contracts, the C++ safety helpers, launch-file XML and route isolation, Docker profiles, and Markdown link integrity. [Validation](docs/VALIDATION.md) lists the commands and what each layer does not prove.
 
@@ -137,7 +155,7 @@ This repository is my portfolio copy of a collaborative project. My parts:
 
 - Research and demo stack, not a certified robot product. The board clutch is an application convention, not a safety-rated sensor.
 - Gazebo `TELEOP` has run end to end and is rechecked in CI. The Real-FR3 adapters compile and are in the launch graph, but physical Real-FR3 `TELEOP` has not been run, and there is no Real-FR3 gripper route.
-- DTW quality depends on trajectory quality and template coverage; the tracked bank was built from user-handwritten mouse seeds.
+- DTW quality depends on trajectory quality and template coverage; the tracked bank was built from one person's mouse-drawn seeds, so the [Results](#results) do not measure other writers or the board.
 - The Gazebo smoke test is one short scripted run. It does not cover the GUI, timing under load, or grasp quality.
 
 ## Provenance and license
