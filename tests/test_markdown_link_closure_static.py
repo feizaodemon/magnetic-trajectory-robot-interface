@@ -8,6 +8,7 @@ from urllib.parse import unquote
 REPO = Path(__file__).resolve().parents[1]
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 EXPECTED_READER_DOCS = {
+    "CHANGELOG.md",
     "CREDITS.md",
     "NOTICE.md",
     "README.md",
