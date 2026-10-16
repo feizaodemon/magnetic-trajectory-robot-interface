@@ -16,6 +16,7 @@ Point2D = Tuple[float, float]
 
 
 def normalize_point(point: Any) -> Optional[Point2D]:
+    """Return a finite ``(x, y)`` from a pair or an ``x``/``y`` (or ``u``/``v``) dict, or ``None``."""
     if point is None:
         return None
     try:
@@ -38,9 +39,10 @@ def normalize_point(point: Any) -> Optional[Point2D]:
 
 
 def normalize_points(points: Any) -> List[Point2D]:
+    """Return the valid points of a point list or of a payload dict's point list."""
     if isinstance(points, dict):
         points = extract_points_payload(points)
-    result = []
+    result: List[Point2D] = []
     for point in points or []:
         normalized = normalize_point(point)
         if normalized is not None:
@@ -49,6 +51,7 @@ def normalize_points(points: Any) -> List[Point2D]:
 
 
 def extract_points_payload(payload: Dict[str, Any]) -> Any:
+    """Return the first list under ``points``/``trajectory``/``path``/``points_2d``, else ``[]``."""
     for key in ("points", "trajectory", "path", "points_2d"):
         value = payload.get(key)
         if isinstance(value, list):
@@ -57,16 +60,17 @@ def extract_points_payload(payload: Dict[str, Any]) -> Any:
 
 
 def normalize_strokes(payload: Any) -> List[List[Point2D]]:
+    """Return strokes from ``strokes``, or split a flat point list at invalid points."""
     if isinstance(payload, dict) and isinstance(payload.get("strokes"), list):
-        result = []
+        result: List[List[Point2D]] = []
         for stroke in payload["strokes"]:
-            normalized = normalize_points(stroke)
-            if normalized:
-                result.append(normalized)
+            stroke_points = normalize_points(stroke)
+            if stroke_points:
+                result.append(stroke_points)
         return result
     points = extract_points_payload(payload) if isinstance(payload, dict) else payload
     result = []
-    current = []
+    current: List[Point2D] = []
     for point in points or []:
         normalized = normalize_point(point)
         if normalized is None:
@@ -81,6 +85,7 @@ def normalize_strokes(payload: Any) -> List[List[Point2D]]:
 
 
 def parse_json_text(text: Any) -> Dict[str, Any]:
+    """Parse JSON text (or copy a dict); return ``{}`` unless it is a JSON object."""
     if isinstance(text, dict):
         return dict(text)
     try:
@@ -91,6 +96,7 @@ def parse_json_text(text: Any) -> Dict[str, Any]:
 
 
 def load_standalone_seed(path: Any) -> Dict[str, Any]:
+    """Load a standalone seed JSON file as a labeled sample record."""
     data = parse_json_text(Path(path).read_text())
     strokes = normalize_strokes(data)
     return {
@@ -105,6 +111,7 @@ def load_standalone_seed(path: Any) -> Dict[str, Any]:
 
 
 def load_runtime_sample(path: Any) -> Dict[str, Any]:
+    """Load a recorded runtime sample, preferring its raw symbol capture."""
     data = parse_json_text(Path(path).read_text())
     capture = data.get("raw_symbol_capture")
     if not isinstance(capture, dict):
@@ -128,7 +135,7 @@ def resolve_repo_path(path: Any, repo: Any) -> Path:
 def seed_files_by_label(seeds_root: Any, labels: Sequence[str]) -> Dict[str, List[Path]]:
     """Return ``{label: sorted seed JSON paths}`` from ``<seeds_root>/<quoted label>/``."""
     root = Path(seeds_root)
-    per_label = {}
+    per_label: Dict[str, List[Path]] = {}
     for label in labels:
         label_dir = root / quote(label, safe="-_.~")
         per_label[label] = sorted(label_dir.glob("*.json")) if label_dir.is_dir() else []
@@ -136,6 +143,7 @@ def seed_files_by_label(seeds_root: Any, labels: Sequence[str]) -> Dict[str, Lis
 
 
 def ensure_output_dir(path: Any, allowed_prefixes: Sequence[Any]) -> Path:
+    """Create and return ``path``; raise ``ValueError`` unless it is under an allowed prefix."""
     resolved = Path(path).resolve()
     allowed = [Path(prefix).resolve() for prefix in allowed_prefixes]
     if not any(resolved == prefix or prefix in resolved.parents for prefix in allowed):
@@ -145,6 +153,7 @@ def ensure_output_dir(path: Any, allowed_prefixes: Sequence[Any]) -> Path:
 
 
 def write_csv(path: Any, rows: Sequence[Dict[str, Any]]) -> Path:
+    """Write ``rows`` as CSV with sorted union-of-keys columns."""
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = sorted({key for row in rows for key in row})
@@ -156,6 +165,7 @@ def write_csv(path: Any, rows: Sequence[Dict[str, Any]]) -> Path:
 
 
 def write_json(path: Any, data: Any) -> Path:
+    """Write ``data`` as indented, key-sorted JSON."""
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")

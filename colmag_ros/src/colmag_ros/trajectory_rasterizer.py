@@ -27,6 +27,8 @@ Image = List[List[int]]
 
 @dataclass(frozen=True)
 class RasterizerConfig:
+    """Output image size, margin, stroke thickness, and polarity."""
+
     image_size: int = DEFAULT_IMAGE_SIZE
     margin: int = DEFAULT_MARGIN
     line_thickness: int = DEFAULT_LINE_THICKNESS

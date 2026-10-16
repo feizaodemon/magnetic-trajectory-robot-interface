@@ -1,8 +1,14 @@
 """Pure trajectory display bounds and writing-gate decisions."""
 
+from __future__ import annotations
+
+from typing import Any, Iterable, Optional, Sequence, Tuple
+
+Bounds = Tuple[float, float, float, float]
 
 
-def robust_min_max(values):
+def robust_min_max(values: Iterable[float]) -> tuple[float, float]:
+    """Return the min/max, trimmed to the 2nd/98th percentile from 20 values up."""
     values = sorted(values)
     count = len(values)
     if count == 0:
@@ -14,14 +20,15 @@ def robust_min_max(values):
     return values[low], values[high]
 
 
-def enforce_min_span(low, high, min_span):
+def enforce_min_span(low: float, high: float, min_span: float) -> tuple[float, float]:
+    """Widen ``[low, high]`` around its midpoint to at least ``min_span``."""
     if high - low >= min_span:
         return low, high
     midpoint = (low + high) / 2.0
     return midpoint - min_span / 2.0, midpoint + min_span / 2.0
 
 
-def normalize_scale_mode(value):
+def normalize_scale_mode(value: Any) -> str:
     """Return fixed, fixed_symmetric, or auto for the public aliases."""
     mode = str(value or "fixed").strip().lower()
     if mode == "fixed_symmetric":
@@ -31,7 +38,8 @@ def normalize_scale_mode(value):
     return "fixed"
 
 
-def normalize_stroke_gate_mode(value):
+def normalize_stroke_gate_mode(value: Any) -> str:
+    """Return off, z_range, speed, or legacy_like; anything else is off."""
     mode = str(value or "off").strip().lower()
     if mode in ("off", "z_range", "speed", "legacy_like"):
         return mode
@@ -39,20 +47,20 @@ def normalize_stroke_gate_mode(value):
 
 
 def stroke_gate_pass(
-    mode,
-    z,
-    speed,
-    z_min=None,
-    z_max=None,
-    min_speed=0.0,
-    max_speed=0.0,
-):
+    mode: Any,
+    z: Optional[float],
+    speed: Optional[float],
+    z_min: Optional[float] = None,
+    z_max: Optional[float] = None,
+    min_speed: float = 0.0,
+    max_speed: float = 0.0,
+) -> bool:
     """Return whether a sample extends the preview stroke."""
     mode = normalize_stroke_gate_mode(mode)
     if mode == "off":
         return True
 
-    def speed_allowed():
+    def speed_allowed() -> bool:
         if speed is None:
             return True
         if speed < min_speed:
@@ -61,7 +69,7 @@ def stroke_gate_pass(
             return False
         return True
 
-    def z_allowed():
+    def z_allowed() -> bool:
         if z_min is None or z_max is None or z is None:
             return True
         return z_min <= z <= z_max
@@ -76,15 +84,15 @@ def stroke_gate_pass(
 
 
 def compute_trajectory_bounds(
-    points,
-    fixed_bounds,
-    scale_mode="fixed",
-    auto_center=False,
-    padding_ratio=0.12,
-    min_span=0.01,
-    window_points=None,
-    projection_extent=0.06,
-):
+    points: Sequence[Sequence[float]],
+    fixed_bounds: Bounds,
+    scale_mode: Any = "fixed",
+    auto_center: bool = False,
+    padding_ratio: float = 0.12,
+    min_span: float = 0.01,
+    window_points: Optional[int] = None,
+    projection_extent: Optional[float] = 0.06,
+) -> Bounds:
     """Return fixed or robust auto-fit world bounds for trajectory display."""
     mode = normalize_scale_mode(scale_mode)
     if mode == "fixed_symmetric":
@@ -128,10 +136,10 @@ def compute_trajectory_bounds(
     )
 
 
-def split_trail_segments(trail):
+def split_trail_segments(trail: Iterable[Any]) -> list[list[Any]]:
     """Split points around None stroke breaks and drop single-point runs."""
-    segments = []
-    current = []
+    segments: list[list[Any]] = []
+    current: list[Any] = []
     for point in trail:
         if point is None:
             if len(current) >= 2:
