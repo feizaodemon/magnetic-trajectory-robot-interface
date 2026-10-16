@@ -17,8 +17,9 @@ HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_points.py"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from colmag_ros import dashboard_points as points  # noqa: E402
-from dashboard_harness import DashboardHarness  # noqa: E402
+from colmag_ros import dashboard_points as points
+from colmag_ros.trajectory_strokes import flatten_strokes
+from dashboard_harness import DashboardHarness
 
 
 class DashboardPointHelperBehaviorTests(unittest.TestCase):
@@ -59,12 +60,12 @@ class DashboardPointHelperBehaviorTests(unittest.TestCase):
 
     def test_flatten_strokes_preserves_order(self):
         self.assertEqual(
-            points.flatten_strokes([[(0, 0), (1, 1)], [(2, 2)]]),
+            flatten_strokes([[(0, 0), (1, 1)], [(2, 2)]]),
             [(0, 0), (1, 1), (2, 2)],
         )
 
 
-def test_dashboard_flattens_strokes_through_helper(monkeypatch):
+def test_dashboard_flattens_ocr_strokes_in_order(monkeypatch):
     harness = DashboardHarness(monkeypatch, demo_input_mode="ocr_canvas")
     node = harness.node
     harness.fire(node.ocr_button_widgets["B"]["canvas"], "<Button-1>")
@@ -74,7 +75,7 @@ def test_dashboard_flattens_strokes_through_helper(monkeypatch):
 
     [capture] = harness.published_json(node.config.symbol_capture_topic)
     assert [len(stroke) for stroke in node.all_strokes] == [3, 2]
-    assert capture["points"] == [list(p) for p in points.flatten_strokes(node.all_strokes)]
+    assert capture["points"] == [list(p) for p in flatten_strokes(node.all_strokes)]
 
 
 class DashboardPointExtractionStaticTests(unittest.TestCase):

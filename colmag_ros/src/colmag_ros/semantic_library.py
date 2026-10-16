@@ -46,15 +46,14 @@ def _task(title, description, description_zh, safety_class,
 
 
 # Data-driven visible-task catalog. Neutral task ids; no person names.
+# Only rows some label can reach are kept (tests/test_semantic_library.py).
+# The task safety tiers live in task_dispatcher_node, not here.
 VISIBLE_TASKS = {
     "DRAW_HEXAGON": _task(
         "Draw Hexagon", "Trace a hexagon outline.", "绘制六边形轮廓。",
         SAFE, dispatchable_future=True),
     "DRAW_STAR": _task(
         "Draw Star", "Trace a five-point star.", "绘制五角星。", SAFE),
-    "TRACE_LETTER": _task(
-        "Trace Letter", "Trace the recognized letter shape.", "描摹识别到的字母。",
-        SAFE),
     "FOLLOW_PATH": _task(
         "Follow Path", "Follow the drawn free path.", "沿绘制的自由路径运动。", SAFE),
     "WAVE": _task(
@@ -73,32 +72,15 @@ VISIBLE_TASKS = {
     "STOP_OR_CANCEL": _task(
         "Stop or Cancel", "Cancel the current task without moving.", "取消当前任务，不产生运动。",
         SAFE),
-    "PICK_PLACE": _task(
-        "Pick & Place", "Pick an object and place it at the target.",
-        "抓取物体并放置到目标处。", REVIEW),
-    "SORT_OBJECTS": _task(
-        "Sort Objects", "Sort objects by class into bins.", "按类别将物体分拣入槽。",
-        REVIEW),
     "STACK_BLOCKS": _task(
         "Stack Blocks", "Stack blocks into a tower.", "将积木堆叠成塔。", REVIEW),
-    "OPEN_DRAWER": _task(
-        "Open Drawer", "Open a drawer handle.", "打开抽屉把手。", REVIEW),
     "PRESS_BUTTON": _task(
         "Press Button", "Press a physical button.", "按下一个物理按钮。", REVIEW),
     "INSPECT_OBJECT": _task(
         "Inspect Object", "Move the camera to inspect an object.",
         "移动相机以检查物体。", REVIEW),
-    "AVOID_OBSTACLE": _task(
-        "Avoid Obstacle", "Plan a motion that avoids an obstacle.",
-        "规划避开障碍物的运动。", REVIEW),
-    "COMPLIANT_TOUCH": _task(
-        "Compliant Touch", "Switch to a compliant, force-limited touch.",
-        "切换到柔顺、限力的接触模式。", CRITICAL),
     "STOP": _task(
         "Stop", "Stop all motion immediately.", "立即停止所有运动。", CRITICAL),
-    "CLEAR": _task(
-        "Clear", "Clear the current segment and candidates.",
-        "清除当前轨迹段与候选。", CRITICAL),
     "UNKNOWN": _task(
         "Unknown", "No known visible task for this symbol.",
         "该符号没有已知的可见任务。", REVIEW),
@@ -107,13 +89,9 @@ VISIBLE_TASKS = {
 # Bridge symbol_semantics task tags -> visible task ids.
 _SEMANTIC_TASK_TO_VISIBLE = {
     "HEXAGON_TRAJECTORY": "DRAW_HEXAGON",
-    "PICK_PLACE": "PICK_PLACE",
-    "COMPLIANT_CONTROL": "COMPLIANT_TOUCH",
-    "AVOID_OBSTACLE": "AVOID_OBSTACLE",
     "STOP": "STOP",
     "MOVE_LEFT": "FOLLOW_PATH",
     "MOVE_RIGHT": "FOLLOW_PATH",
-    "MOVE_UP": "FOLLOW_PATH",
     "MOVE_DOWN": "FOLLOW_PATH",
     "NEUTRAL": "UNKNOWN",
     "HOVER_APPROACH": "HOVER_APPROACH",
@@ -131,7 +109,6 @@ _LABEL_TO_VISIBLE = {
     "H": "HOME_PREVIEW",
     "W": "WAVE",
     "P": "PRESS_BUTTON",
-    "O": "OPEN_DRAWER",
     "I": "INSPECT_OBJECT",
 }
 

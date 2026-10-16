@@ -652,7 +652,6 @@ class MagneticUIStateNode:
                 self.capture_pub.publish(msg)
 
 
-# Backward compatibility aliases for tests and legacy imports
 def main():
     import rospy
 

@@ -3,7 +3,6 @@
 import json
 import time
 
-from colmag_ros import dashboard_points as _dashboard_points
 from colmag_ros.dashboard_confirm_publisher import (
     build_mouse_toolbar_stop_payload,
     should_publish_mouse_toolbar_stop,
@@ -11,6 +10,7 @@ from colmag_ros.dashboard_confirm_publisher import (
 from colmag_ros.dashboard_controller_input import cancelled_preview_hover_state
 from colmag_ros.dashboard_geometry import preview_button_style
 from colmag_ros.dashboard_widgets import draw_control_button
+from colmag_ros.trajectory_strokes import flatten_strokes
 
 
 class DashboardOcrPanelMixin:
@@ -151,7 +151,7 @@ class DashboardOcrPanelMixin:
         self.root.after(0, lambda: self.capture_var.set("Draw a symbol, then release"))
 
     def _collect_ocr_points(self):
-        return _dashboard_points.flatten_strokes(self.all_strokes)
+        return flatten_strokes(self.all_strokes)
 
     def _cancel_ocr_auto_recognize(self):
         if self.ocr_auto_recognize_job is None:

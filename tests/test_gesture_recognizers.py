@@ -26,7 +26,7 @@ SCRIPTS = REPO / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-import compare_recognizers  # noqa: E402
+import compare_recognizers
 
 
 @pytest.fixture(scope="module")

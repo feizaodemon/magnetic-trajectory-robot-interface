@@ -54,7 +54,7 @@ def on_gripper(message):
     latest["gripper"] = json.loads(message.data)
 
 
-def on_joints(message):
+def on_joints(_message):
     latest["joints"] += 1
 
 
