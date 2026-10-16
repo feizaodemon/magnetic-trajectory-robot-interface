@@ -225,12 +225,14 @@ def preprocess_query_for_bank(points: Sequence[Any], bank: Dict[str, Any]) -> Li
 
 def rank_labels_for_query(query_points: Sequence[Point2D], bank: Dict[str, Any],
                           top_k: int = 3,
-                          labels: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+                          labels: Optional[Sequence[str]] = None,
+                          window: Optional[int] = None) -> Dict[str, Any]:
     """Rank bank labels for one preprocessed query, deterministically.
 
     Ties break on (distance, template id); label ranking uses each label's best
     template distance. ``margin`` is the absolute distance gap between the best
-    label and the nearest different label.
+    label and the nearest different label. ``window`` is an optional
+    Sakoe-Chiba band for ``dtw_distance``; ``None`` keeps the full search.
     """
     wanted = {str(label) for label in labels} if labels else None
     scored: List[Tuple[float, str, str]] = []
@@ -238,7 +240,7 @@ def rank_labels_for_query(query_points: Sequence[Point2D], bank: Dict[str, Any],
         label = str(template.get("label", ""))
         if wanted is not None and label not in wanted:
             continue
-        distance = dtw_distance(query_points, coerce_points(template.get("points", [])))
+        distance = dtw_distance(query_points, coerce_points(template.get("points", [])), window=window)
         scored.append((float(distance), str(template.get("id", "")), label))
     scored.sort(key=lambda item: (item[0], item[1]))
 
@@ -421,8 +423,12 @@ def recognize_with_template_bank(points: Sequence[Any], state: Optional[Dict[str
                                  top_k: int = 3, max_distance: float = DEFAULT_MAX_DISTANCE,
                                  min_margin: float = DEFAULT_MIN_MARGIN,
                                  min_confidence: float = DEFAULT_MIN_CONFIDENCE,
+                                 window: Optional[int] = None,
                                  ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     """Pure opt-in runtime path: capture points -> (candidates, gate, metadata).
+
+    ``window`` is passed to ``rank_labels_for_query``; ``None`` keeps the
+    exact full DTW search.
 
     Runtime query points are never y-flipped; the y-flip decision lives in the
     bank (seed import side). A non-ready state yields an uncertain gate with no
@@ -445,7 +451,8 @@ def recognize_with_template_bank(points: Sequence[Any], state: Optional[Dict[str
 
     bank = state["bank"]
     query = preprocess_query_for_bank(points, bank)
-    ranking = rank_labels_for_query(query, bank, top_k=top_k, labels=state.get("labels"))
+    ranking = rank_labels_for_query(query, bank, top_k=top_k, labels=state.get("labels"),
+                                    window=window)
     candidates = bank_candidates_from_ranking(
         ranking, max_distance, template_bank_name=str(state.get("bank_name", "")))
     if not candidates:

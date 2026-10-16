@@ -8,7 +8,7 @@ separate.
 from __future__ import annotations
 
 import math
-from typing import Any, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple
 
 from colmag_ros.param_utils import finite_float
 
@@ -63,20 +63,31 @@ def normalize_points(points: Sequence[Any], resample_length: int = 64) -> list[P
     return resample_by_arclength(normalized, n=resample_length)
 
 
-def dtw_distance(a: Sequence[Point], b: Sequence[Point]) -> float:
-    """Return the DTW distance between two point sequences, divided by ``len(a) + len(b)``."""
+def dtw_distance(a: Sequence[Point], b: Sequence[Point], window: Optional[int] = None) -> float:
+    """Return the DTW distance between two point sequences, divided by ``len(a) + len(b)``.
+
+    ``window`` limits the warping path to a Sakoe-Chiba band of that many
+    steps (widened to ``abs(len(a) - len(b))`` so a path always exists). It
+    is faster but can only raise the distance. ``None``, the runtime default,
+    searches the full matrix.
+    """
     n, m = len(a), len(b)
     if n == 0 or m == 0:
         return float("inf")
 
     inf = float("inf")
+    band = max(n, m) if window is None else max(int(window), abs(n - m))
     prev = [inf] * (m + 1)
     curr = [inf] * (m + 1)
     prev[0] = 0.0
     for i in range(1, n + 1):
-        curr[0] = inf
+        lo, hi = max(1, i - band), min(m, i + band)
+        # Cells just outside the band may still hold values from two rows ago.
+        curr[lo - 1] = inf
+        if hi < m:
+            curr[hi + 1] = inf
         ax, ay = a[i - 1]
-        for j in range(1, m + 1):
+        for j in range(lo, hi + 1):
             bx, by = b[j - 1]
             cost = math.hypot(ax - bx, ay - by)
             curr[j] = cost + min(prev[j], curr[j - 1], prev[j - 1])

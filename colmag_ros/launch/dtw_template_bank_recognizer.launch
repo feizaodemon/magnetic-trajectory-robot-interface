@@ -19,6 +19,9 @@
   <arg name="dtw_template_max_distance" default="0.12" />
   <arg name="dtw_template_min_margin" default="0.01" />
   <arg name="dtw_template_min_confidence" default="0.30" />
+  <!-- Sakoe-Chiba band for DTW, in resampled points. 0 keeps the exact full
+       search; a small band is faster but can reorder close candidates. -->
+  <arg name="dtw_template_window" default="0" />
   <arg name="label_set" default="1,2,3,V,O,X,A,C" />
   <arg name="min_confidence" default="0.0" />
 
@@ -33,6 +36,7 @@
     <param name="dtw_template_max_distance" value="$(arg dtw_template_max_distance)" />
     <param name="dtw_template_min_margin" value="$(arg dtw_template_min_margin)" />
     <param name="dtw_template_min_confidence" value="$(arg dtw_template_min_confidence)" />
+    <param name="dtw_template_window" value="$(arg dtw_template_window)" />
     <param name="label_set" value="$(arg label_set)" />
     <param name="min_confidence" value="$(arg min_confidence)" />
   </node>

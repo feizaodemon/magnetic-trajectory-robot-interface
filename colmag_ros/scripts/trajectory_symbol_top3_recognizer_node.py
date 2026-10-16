@@ -50,6 +50,8 @@ class TrajectorySymbolTop3RecognizerNode:
         self.dtw_template_max_distance = float(rospy.get_param("~dtw_template_max_distance", DEFAULT_MAX_DISTANCE))
         self.dtw_template_min_margin = float(rospy.get_param("~dtw_template_min_margin", DEFAULT_MIN_MARGIN))
         self.dtw_template_min_confidence = float(rospy.get_param("~dtw_template_min_confidence", DEFAULT_MIN_CONFIDENCE))
+        # 0 (the default) keeps the exact full DTW search.
+        self.dtw_template_window = int(rospy.get_param("~dtw_template_window", 0)) or None
         self.dtw_template_bank_state = None
 
         requested_backend = str(rospy.get_param("~recognizer_backend", "dtw_template_bank")).strip().lower()
@@ -99,6 +101,7 @@ class TrajectorySymbolTop3RecognizerNode:
             max_distance=self.dtw_template_max_distance,
             min_margin=self.dtw_template_min_margin,
             min_confidence=self.dtw_template_min_confidence,
+            window=self.dtw_template_window,
         )
 
     def _publish_payload(self, payload):
