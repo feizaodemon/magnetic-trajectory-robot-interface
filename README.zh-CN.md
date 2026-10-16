@@ -76,6 +76,8 @@ flowchart LR
 
 识别器把画完的轨迹归一化，与 DTW 模板库比较，然后在 `/colmag/symbol_candidates` 上发布排序后的候选。只有按下 `C Confirm` 后，dashboard 才在 `/colmag/confirmed_label` 上发布标签。dispatcher 把标签映射到固定的任务词表，是 `/colmag/task_command` 唯一的发布者。组件和 topic 见 [Architecture](docs/ARCHITECTURE.md)，离线模板库工具见 [Running](docs/RUNNING.md#dtw-template-bank)。
 
+设计取舍（每个决策的备选方案与权衡）见 [Design decisions](docs/DESIGN_DECISIONS.md)。
+
 ### 两种模式，两种后端
 
 | | `TASK`：识别出的符号触发任务 | `TELEOP`：连续笛卡尔控制 |

@@ -76,6 +76,8 @@ flowchart LR
 
 The recognizer normalizes the finished trajectory, compares it with the DTW bank, and publishes ranked candidates on `/colmag/symbol_candidates`. The dashboard publishes `/colmag/confirmed_label` only after `C Confirm`. The dispatcher maps labels to a fixed task vocabulary and is the only publisher of `/colmag/task_command`. See [Architecture](docs/ARCHITECTURE.md) for components and topics, and [Running](docs/RUNNING.md#dtw-template-bank) for the offline bank tools.
 
+Why it is built this way, with the alternatives and trade-offs: [Design decisions](docs/DESIGN_DECISIONS.md).
+
 ### Two modes, two backends
 
 | | `TASK`: recognized symbol runs a task | `TELEOP`: continuous Cartesian control |
