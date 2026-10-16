@@ -10,11 +10,28 @@
 
 ## 亮点
 
-- **从手势到任务的完整链路。** 画板或鼠标笔画经过归一化，与受版本管理的 DTW 模板库排序比较。模板库有 124 条手写模板，覆盖 8 个符号（`1,2,3,V,O,X,A,C`）。置信度和间隔门限会拒绝不清楚的样本。识别代码是纯 Python，不依赖 ROS。
+- **从手势到任务的完整链路。** 画板或鼠标笔画经过归一化，与受版本管理的 DTW 模板库排序比较。模板库有 124 条手写模板，覆盖 8 个符号（`1,2,3,V,O,X,A,C`）。在这个模板库上做留一法，Top-1 准确率为 100%，每次查询约 83 ms（见[结果](#结果)）。置信度和间隔门限会拒绝不清楚的样本。识别代码是纯 Python，不依赖 ROS。
 - **确认门控的指令通路。** 识别、确认、分发和执行是彼此独立的 ROS node。屏幕上的候选不能让机器人运动：只有 dispatcher 会发布 `/colmag/task_command`，并且必须先显式按下 `C Confirm`。
 - **共享的笛卡尔遥操作核心。** 一个 C++ 核心（`Fr3CartesianTeleopCore`）用阻尼最小二乘（DLS）逆运动学，把键盘或画板输入换算成有界的关节目标，同时驱动 Gazebo Panda 和真机 FR3 adapter。
 - **防御式硬件层。** 每条 FR3 轨迹前面都有不依赖 ROS 的 C++ 安全模块（指令重放保护、单次运动门、ROS 时间回退保护、goal 生命周期跟踪），并有独立的单元测试。
-- **CI 端到端验证。** 约 460 个 pytest 用例加 C++ 测试、ruff、catkin 构建，以及一个 headless Gazebo 冒烟测试，每个 pull request 都会检查模式门控、笛卡尔运动和夹爪开合。
+- **CI 端到端验证。** 约 470 个 pytest 用例加 C++ 测试、ruff、识别准确率门限、catkin 构建，以及一个 headless Gazebo 冒烟测试，每个 pull request 都会检查模式门控、笛卡尔运动和夹爪开合。
+
+## 结果
+
+| 指标 | 结果 |
+| --- | --- |
+| 符号识别：在已提交的 124 条模板（8 个符号）上做留一法 | Top-1 100%，Top-3 100% |
+| 被运行时置信度和间隔门限接受的查询 | 100%，全部正确 |
+| 每次识别耗时：纯 Python DTW，对比 123 条模板 | 中位数 83 ms，p95 118 ms（单个 CPU 核） |
+| 自动化检查 | 约 470 个 pytest 测试、7 个不依赖 ROS 的 C++ 测试程序、6 个 CI job |
+
+所有模板都是同一个人用鼠标画的，所以这些数字说明的是：在同一个人的数据里，8 个符号能被清楚地区分开。它们是上限，不是对新用户或磁性画板实测的准确率。不需要 ROS，大约 10 秒即可复现：
+
+```bash
+python3 scripts/eval_dtw_bank_loo.py
+```
+
+CI job `dtw-eval` 在每个 pull request 上运行同一条命令，把完整报告和混淆矩阵写进 job summary，Top-1 低于 95% 时失败。耗时取决于机器，所以 CI 只报告、不设门限。
 
 ## 演示（Gazebo）
 
@@ -104,7 +121,7 @@ scripts/                   离线 DTW 工具和带门控的 FR3 操作脚本
 docker/                    Gazebo 和 FR3 的构建与运行 profile
 tests/                     pytest 测试集、headless dashboard harness、C++ 测试
 docs/                      架构、运行、验证和边界文档
-.github/workflows/         CI：pytest（有 ROS 和无 ROS）、ruff、catkin 构建、Gazebo 冒烟测试
+.github/workflows/         CI：pytest（有 ROS 和无 ROS）、ruff、DTW 评估、catkin 构建、Gazebo 冒烟测试
 ```
 
 ## 测试与 CI
@@ -115,7 +132,8 @@ docs/                      架构、运行、验证和边界文档
 - 无 ROS 的 Python 3.10 pytest；
 - ROS Noetic 容器里的 pytest，然后解析不需要 Gazebo 或 FR3 包的 launch 文件；
 - 两个 ROS 包的 `catkin_make install`；
-- Gazebo 冒烟测试：构建镜像，用 headless Gazebo 运行键盘 `TELEOP` profile，检查模式门控、笛卡尔运动和夹爪开合。
+- Gazebo 冒烟测试：构建镜像，用 headless Gazebo 运行键盘 `TELEOP` profile，检查模式门控、笛卡尔运动和夹爪开合；
+- DTW 模板库的留一法评估，Top-1 低于 95% 时失败。
 
 测试覆盖 Python 单元和静态契约、C++ 安全模块、launch 文件 XML 和路径隔离、Docker profile，以及 Markdown 链接完整性。[Validation](docs/VALIDATION.md) 列出了具体命令，也说明了每一层验证不能证明什么。
 
@@ -137,7 +155,7 @@ docs/                      架构、运行、验证和边界文档
 
 - 这是研究和演示用的系统，不是经过认证的机器人产品。画板朝向离合是应用层约定，不是安全等级的传感器。
 - Gazebo `TELEOP` 完整运行过，并在 CI 中反复验证。真机 FR3 adapter 能编译、也在 launch 图里，但真机 FR3 `TELEOP` 从未实际运行，也没有真机夹爪路径。
-- DTW 的效果取决于轨迹质量和模板覆盖范围；模板库由用户手写的鼠标样本构建。
+- DTW 的效果取决于轨迹质量和模板覆盖范围；模板库由同一个人用鼠标画的样本构建，所以[结果](#结果)不代表其他书写者或画板上的表现。
 - Gazebo 冒烟测试只是一次简短的脚本化运行，不覆盖 GUI、负载下的时序和抓取质量。
 
 ## 来源与许可

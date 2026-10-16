@@ -127,6 +127,19 @@ The recognizer launches load the tracked bank
 mouse seeds with the `mouse_centroid_maxabs_resample64` profile and y-flip.
 Each template records its source seed file.
 
+To evaluate the tracked bank with nothing but this repository, run a
+leave-one-out check: each template is ranked against the other 123 with the
+runtime gates. The CI job `dtw-eval` runs it on every pull request.
+
+```bash
+python3 scripts/eval_dtw_bank_loo.py                 # Markdown report on stdout
+python3 scripts/eval_dtw_bank_loo.py --min-top1 0.95 \
+  --json-out outputs/dtw_eval/loo.json               # CI gate plus per-query JSON
+```
+
+All templates come from one writer, so this measures how well the classes
+separate in that writer's data, not accuracy for other writers or the board.
+
 The seed JSONs are not published, so this repository alone cannot rebuild the
 bank. With seeds under `outputs/classifier_training/seeds/<label>/*.json`, the
 offline tools are:
