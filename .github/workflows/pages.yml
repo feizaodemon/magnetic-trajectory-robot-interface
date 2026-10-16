@@ -1,0 +1,57 @@
+name: recognizer demo
+
+# Builds the browser recognizer demo (web/recognizer) and publishes it to
+# GitHub Pages. Pull requests only build it; pushes to main also deploy.
+# Needs Settings > Pages > Source set to "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "scripts/build_web_demo.py"
+      - "colmag_ros/config/dtw_banks/**"
+      - "colmag_ros/src/colmag_ros/dtw_template_bank_tools.py"
+      - "colmag_ros/src/colmag_ros/symbol_semantics.py"
+      - ".github/workflows/pages.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "scripts/build_web_demo.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+      - name: Build the static site
+        run: python scripts/build_web_demo.py --out _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

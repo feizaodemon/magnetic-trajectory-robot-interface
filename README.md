@@ -8,6 +8,8 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 
 ![TASK mode: draw, recognize, confirm, Gazebo motion](docs/media/task_gazebo.gif)
 
+**Try the recognizer in your browser:** [feizaodemon.github.io/magnetic-trajectory-robot-interface/](https://feizaodemon.github.io/magnetic-trajectory-robot-interface/). Draw one of the eight symbols and see the same DTW ranking and acceptance gates the robot uses, against the same tracked templates. It runs entirely in the page and moves no robot. Source: [web/recognizer](web/recognizer/README.md).
+
 ## Highlights
 
 - **Gesture-to-task pipeline.** Pen or mouse strokes are normalized and ranked against a tracked DTW bank of 124 handwritten templates over 8 symbols (`1,2,3,V,O,X,A,C`). Leave-one-out Top-1 accuracy on that bank is 100% at about 83 ms per query ([Results](#results)). Confidence and margin gates reject unclear samples. Five alternative recognizers are benchmarked against it under synthetic noise, rotation and truncation ([Comparing recognizers](#comparing-recognizers)). The recognition code is plain Python with no ROS dependency.
@@ -136,6 +138,7 @@ src/serial_mvp/            Serial packet parser and source abstraction
 scripts/                   Offline DTW tools and guarded FR3 operator helpers
   ci/                      Gazebo runtime smoke test used by CI
   demo/                    Scripted recording of the pick-and-place GIF
+web/recognizer/            Browser port of the recognizer (the GitHub Pages demo)
 docker/                    Gazebo and FR3 build and runtime profiles
 tests/                     pytest suite, headless dashboard harness, C++ tests
 docs/                      Architecture, running, validation, recognizer comparison, and boundary docs
@@ -153,6 +156,8 @@ Every pull request and push to `main` runs seven jobs:
 - `catkin_make install` for both ROS packages;
 - the Gazebo smoke test: build the image, run the keyboard `TELEOP` profile headless, and check mode gating, Cartesian motion and gripper open/close;
 - the leave-one-out evaluation of the DTW bank, which fails below 95% Top-1.
+
+A separate `recognizer demo` workflow builds the browser demo and deploys it to GitHub Pages from `main`. The pytest job also checks that the JavaScript port in `web/recognizer` returns the same rankings and gate decisions as the Python recognizer.
 
 The suite covers Python unit and static contracts, the C++ safety helpers, launch-file XML and route isolation, Docker profiles, and Markdown link integrity. [Validation](docs/VALIDATION.md) lists the commands and what each layer does not prove.
 
