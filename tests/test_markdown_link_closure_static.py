@@ -20,6 +20,7 @@ EXPECTED_READER_DOCS = {
     "docs/GLOSSARY.md",
     "docs/HARDWARE_BOUNDARIES.md",
     "docs/INTERACTION_PROFILES.md",
+    "docs/RECOGNIZER_COMPARISON.md",
     "docs/RUNNING.md",
     "docs/VALIDATION.md",
     "scripts/demo/README.md",

@@ -1,0 +1,920 @@
+[
+  {
+    "recognizer": "DTW",
+    "family": "clean",
+    "level": 0.0,
+    "queries": 124,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 88.95976056451568
+  },
+  {
+    "recognizer": "DTW",
+    "family": "noise",
+    "level": 0.02,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 89.94491711559283
+  },
+  {
+    "recognizer": "DTW",
+    "family": "noise",
+    "level": 0.05,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 90.83004841129078
+  },
+  {
+    "recognizer": "DTW",
+    "family": "noise",
+    "level": 0.08,
+    "queries": 372,
+    "top1": 0.9865591397849462,
+    "top3": 1.0,
+    "ms_per_query": 90.56066458870882
+  },
+  {
+    "recognizer": "DTW",
+    "family": "noise",
+    "level": 0.12,
+    "queries": 372,
+    "top1": 0.9516129032258065,
+    "top3": 1.0,
+    "ms_per_query": 90.86974228763356
+  },
+  {
+    "recognizer": "DTW",
+    "family": "rotation",
+    "level": 10.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 89.00237465322746
+  },
+  {
+    "recognizer": "DTW",
+    "family": "rotation",
+    "level": 20.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 89.52903454301058
+  },
+  {
+    "recognizer": "DTW",
+    "family": "rotation",
+    "level": 30.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 87.47797338978272
+  },
+  {
+    "recognizer": "DTW",
+    "family": "rotation",
+    "level": 45.0,
+    "queries": 372,
+    "top1": 0.8413978494623656,
+    "top3": 0.9865591397849462,
+    "ms_per_query": 89.53344166935594
+  },
+  {
+    "recognizer": "DTW",
+    "family": "truncation",
+    "level": 0.1,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 88.6950056559146
+  },
+  {
+    "recognizer": "DTW",
+    "family": "truncation",
+    "level": 0.2,
+    "queries": 372,
+    "top1": 0.717741935483871,
+    "top3": 1.0,
+    "ms_per_query": 87.58817508064793
+  },
+  {
+    "recognizer": "DTW",
+    "family": "truncation",
+    "level": 0.3,
+    "queries": 372,
+    "top1": 0.3870967741935484,
+    "top3": 1.0,
+    "ms_per_query": 90.38270359408327
+  },
+  {
+    "recognizer": "DTW",
+    "family": "truncation",
+    "level": 0.4,
+    "queries": 372,
+    "top1": 0.1693548387096774,
+    "top3": 0.7741935483870968,
+    "ms_per_query": 90.32137312903252
+  },
+  {
+    "recognizer": "DTW",
+    "family": "stretch",
+    "level": 1.25,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 90.45315045430074
+  },
+  {
+    "recognizer": "DTW",
+    "family": "stretch",
+    "level": 1.5,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 90.96307577419243
+  },
+  {
+    "recognizer": "DTW",
+    "family": "stretch",
+    "level": 2.0,
+    "queries": 372,
+    "top1": 0.9973118279569892,
+    "top3": 1.0,
+    "ms_per_query": 91.3801669381704
+  },
+  {
+    "recognizer": "DTW",
+    "family": "stretch",
+    "level": 2.5,
+    "queries": 372,
+    "top1": 0.8682795698924731,
+    "top3": 1.0,
+    "ms_per_query": 91.5122198709711
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "clean",
+    "level": 0.0,
+    "queries": 124,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.47464997580719
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "noise",
+    "level": 0.02,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.668121064516521
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "noise",
+    "level": 0.05,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.533629381722305
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "noise",
+    "level": 0.08,
+    "queries": 372,
+    "top1": 0.9811827956989247,
+    "top3": 1.0,
+    "ms_per_query": 14.28814518817031
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "noise",
+    "level": 0.12,
+    "queries": 372,
+    "top1": 0.9516129032258065,
+    "top3": 1.0,
+    "ms_per_query": 14.638014715055071
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "rotation",
+    "level": 10.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.384378104836976
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "rotation",
+    "level": 20.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.568457233870216
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "rotation",
+    "level": 30.0,
+    "queries": 372,
+    "top1": 0.9973118279569892,
+    "top3": 1.0,
+    "ms_per_query": 14.37911210752605
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "rotation",
+    "level": 45.0,
+    "queries": 372,
+    "top1": 0.8360215053763441,
+    "top3": 0.9973118279569892,
+    "ms_per_query": 14.420317811828207
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "truncation",
+    "level": 0.1,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.220507854839715
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "truncation",
+    "level": 0.2,
+    "queries": 372,
+    "top1": 0.6693548387096774,
+    "top3": 1.0,
+    "ms_per_query": 14.132295704301415
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "truncation",
+    "level": 0.3,
+    "queries": 372,
+    "top1": 0.28225806451612906,
+    "top3": 0.9516129032258065,
+    "ms_per_query": 14.482007836021532
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "truncation",
+    "level": 0.4,
+    "queries": 372,
+    "top1": 0.08870967741935484,
+    "top3": 0.5,
+    "ms_per_query": 14.569776137094745
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "stretch",
+    "level": 1.25,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.827168497311478
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "stretch",
+    "level": 1.5,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 14.791308169356217
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "stretch",
+    "level": 2.0,
+    "queries": 372,
+    "top1": 0.9973118279569892,
+    "top3": 1.0,
+    "ms_per_query": 14.809557430109308
+  },
+  {
+    "recognizer": "DTW (window 4)",
+    "family": "stretch",
+    "level": 2.5,
+    "queries": 372,
+    "top1": 0.8629032258064516,
+    "top3": 1.0,
+    "ms_per_query": 14.595270427419134
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "clean",
+    "level": 0.0,
+    "queries": 124,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 89.8280884193539
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "noise",
+    "level": 0.02,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 89.27742698924334
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "noise",
+    "level": 0.05,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 90.96410986827843
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "noise",
+    "level": 0.08,
+    "queries": 372,
+    "top1": 0.9946236559139785,
+    "top3": 1.0,
+    "ms_per_query": 92.28574421235705
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "noise",
+    "level": 0.12,
+    "queries": 372,
+    "top1": 0.9811827956989247,
+    "top3": 1.0,
+    "ms_per_query": 89.43152820967714
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "rotation",
+    "level": 10.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 89.94147129838805
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "rotation",
+    "level": 20.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 90.8755859516123
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "rotation",
+    "level": 30.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 92.57643184946421
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "rotation",
+    "level": 45.0,
+    "queries": 372,
+    "top1": 0.8198924731182796,
+    "top3": 0.9973118279569892,
+    "ms_per_query": 89.60289602688015
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "truncation",
+    "level": 0.1,
+    "queries": 372,
+    "top1": 0.9919354838709677,
+    "top3": 1.0,
+    "ms_per_query": 91.1213830806424
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "truncation",
+    "level": 0.2,
+    "queries": 372,
+    "top1": 0.7741935483870968,
+    "top3": 1.0,
+    "ms_per_query": 90.30487316397911
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "truncation",
+    "level": 0.3,
+    "queries": 372,
+    "top1": 0.6129032258064516,
+    "top3": 1.0,
+    "ms_per_query": 90.31247159408525
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "truncation",
+    "level": 0.4,
+    "queries": 372,
+    "top1": 0.0967741935483871,
+    "top3": 0.7661290322580645,
+    "ms_per_query": 92.23771374462667
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "stretch",
+    "level": 1.25,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 91.04060677150322
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "stretch",
+    "level": 1.5,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 89.4923805967741
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "stretch",
+    "level": 2.0,
+    "queries": 372,
+    "top1": 0.8521505376344086,
+    "top3": 1.0,
+    "ms_per_query": 90.50646012634412
+  },
+  {
+    "recognizer": "Derivative DTW",
+    "family": "stretch",
+    "level": 2.5,
+    "queries": 372,
+    "top1": 0.7983870967741935,
+    "top3": 1.0,
+    "ms_per_query": 89.53700848386994
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "clean",
+    "level": 0.0,
+    "queries": 124,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.42355166935371635
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "noise",
+    "level": 0.02,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.4299237795708582
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "noise",
+    "level": 0.05,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.4018626263424482
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "noise",
+    "level": 0.08,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.40188140322561716
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "noise",
+    "level": 0.12,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.43437995698846243
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "rotation",
+    "level": 10.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.4116271290338587
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "rotation",
+    "level": 20.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.42137329838640786
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "rotation",
+    "level": 30.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.4376827258078441
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "rotation",
+    "level": 45.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.41263240591485667
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "truncation",
+    "level": 0.1,
+    "queries": 372,
+    "top1": 0.9919354838709677,
+    "top3": 1.0,
+    "ms_per_query": 0.40316133602142945
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "truncation",
+    "level": 0.2,
+    "queries": 372,
+    "top1": 0.5483870967741935,
+    "top3": 1.0,
+    "ms_per_query": 0.3931187204307329
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "truncation",
+    "level": 0.3,
+    "queries": 372,
+    "top1": 0.18548387096774194,
+    "top3": 0.7338709677419355,
+    "ms_per_query": 0.41017737365559354
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "truncation",
+    "level": 0.4,
+    "queries": 372,
+    "top1": 0.0967741935483871,
+    "top3": 0.3790322580645161,
+    "ms_per_query": 0.41124171236659884
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "stretch",
+    "level": 1.25,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.40721557795857966
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "stretch",
+    "level": 1.5,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.41084658064807617
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "stretch",
+    "level": 2.0,
+    "queries": 372,
+    "top1": 0.9811827956989247,
+    "top3": 1.0,
+    "ms_per_query": 0.40885326881464373
+  },
+  {
+    "recognizer": "Protractor ($1)",
+    "family": "stretch",
+    "level": 2.5,
+    "queries": 372,
+    "top1": 0.9112903225806451,
+    "top3": 1.0,
+    "ms_per_query": 0.4136303494630606
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "clean",
+    "level": 0.0,
+    "queries": 124,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 25.467715435482777
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "noise",
+    "level": 0.02,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 25.326652846774074
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "noise",
+    "level": 0.05,
+    "queries": 372,
+    "top1": 0.9919354838709677,
+    "top3": 1.0,
+    "ms_per_query": 25.469070736558443
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "noise",
+    "level": 0.08,
+    "queries": 372,
+    "top1": 0.989247311827957,
+    "top3": 0.9973118279569892,
+    "ms_per_query": 24.9922213494607
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "noise",
+    "level": 0.12,
+    "queries": 372,
+    "top1": 0.8655913978494624,
+    "top3": 0.9865591397849462,
+    "ms_per_query": 24.982540545698505
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "rotation",
+    "level": 10.0,
+    "queries": 372,
+    "top1": 0.9973118279569892,
+    "top3": 1.0,
+    "ms_per_query": 25.192927400538064
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "rotation",
+    "level": 20.0,
+    "queries": 372,
+    "top1": 0.978494623655914,
+    "top3": 1.0,
+    "ms_per_query": 25.194898846771892
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "rotation",
+    "level": 30.0,
+    "queries": 372,
+    "top1": 0.6612903225806451,
+    "top3": 0.9193548387096774,
+    "ms_per_query": 24.58778373118115
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "rotation",
+    "level": 45.0,
+    "queries": 372,
+    "top1": 0.29838709677419356,
+    "top3": 0.5376344086021505,
+    "ms_per_query": 25.261099516130315
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "truncation",
+    "level": 0.1,
+    "queries": 372,
+    "top1": 0.9919354838709677,
+    "top3": 1.0,
+    "ms_per_query": 24.982787680109734
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "truncation",
+    "level": 0.2,
+    "queries": 372,
+    "top1": 0.7096774193548387,
+    "top3": 1.0,
+    "ms_per_query": 25.163409497312788
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "truncation",
+    "level": 0.3,
+    "queries": 372,
+    "top1": 0.3951612903225806,
+    "top3": 0.9838709677419355,
+    "ms_per_query": 25.15717860483751
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "truncation",
+    "level": 0.4,
+    "queries": 372,
+    "top1": 0.23387096774193547,
+    "top3": 0.8064516129032258,
+    "ms_per_query": 25.123056857525793
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "stretch",
+    "level": 1.25,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 25.14228238172024
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "stretch",
+    "level": 1.5,
+    "queries": 372,
+    "top1": 0.989247311827957,
+    "top3": 1.0,
+    "ms_per_query": 25.157531247310803
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "stretch",
+    "level": 2.0,
+    "queries": 372,
+    "top1": 0.8064516129032258,
+    "top3": 0.9838709677419355,
+    "ms_per_query": 25.88794415053905
+  },
+  {
+    "recognizer": "$P point cloud",
+    "family": "stretch",
+    "level": 2.5,
+    "queries": 372,
+    "top1": 0.5483870967741935,
+    "top3": 0.8252688172043011,
+    "ms_per_query": 25.308863029570535
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "clean",
+    "level": 0.0,
+    "queries": 124,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.4704900483872162
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "noise",
+    "level": 0.02,
+    "queries": 372,
+    "top1": 0.8897849462365591,
+    "top3": 0.9946236559139785,
+    "ms_per_query": 0.45327724193528346
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "noise",
+    "level": 0.05,
+    "queries": 372,
+    "top1": 0.3924731182795699,
+    "top3": 0.739247311827957,
+    "ms_per_query": 0.4658164677395508
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "noise",
+    "level": 0.08,
+    "queries": 372,
+    "top1": 0.25806451612903225,
+    "top3": 0.696236559139785,
+    "ms_per_query": 0.4523969193544588
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "noise",
+    "level": 0.12,
+    "queries": 372,
+    "top1": 0.23655913978494625,
+    "top3": 0.6182795698924731,
+    "ms_per_query": 0.48950294892473456
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "rotation",
+    "level": 10.0,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.44136047849359716
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "rotation",
+    "level": 20.0,
+    "queries": 372,
+    "top1": 0.9543010752688172,
+    "top3": 0.989247311827957,
+    "ms_per_query": 0.44383065053798954
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "rotation",
+    "level": 30.0,
+    "queries": 372,
+    "top1": 0.6720430107526881,
+    "top3": 0.946236559139785,
+    "ms_per_query": 0.4367214166655815
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "rotation",
+    "level": 45.0,
+    "queries": 372,
+    "top1": 0.3118279569892473,
+    "top3": 0.5564516129032258,
+    "ms_per_query": 0.4422602822577884
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "truncation",
+    "level": 0.1,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.44212099193460835
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "truncation",
+    "level": 0.2,
+    "queries": 372,
+    "top1": 0.8225806451612904,
+    "top3": 1.0,
+    "ms_per_query": 0.44212635214844387
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "truncation",
+    "level": 0.3,
+    "queries": 372,
+    "top1": 0.6532258064516129,
+    "top3": 1.0,
+    "ms_per_query": 0.4364270779569351
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "truncation",
+    "level": 0.4,
+    "queries": 372,
+    "top1": 0.5967741935483871,
+    "top3": 0.9838709677419355,
+    "ms_per_query": 0.4315549516117285
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "stretch",
+    "level": 1.25,
+    "queries": 372,
+    "top1": 1.0,
+    "top3": 1.0,
+    "ms_per_query": 0.44429465322555944
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "stretch",
+    "level": 1.5,
+    "queries": 372,
+    "top1": 0.9811827956989247,
+    "top3": 0.9946236559139785,
+    "ms_per_query": 0.4417359677433453
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "stretch",
+    "level": 2.0,
+    "queries": 372,
+    "top1": 0.8682795698924731,
+    "top3": 0.989247311827957,
+    "ms_per_query": 0.44059568817376826
+  },
+  {
+    "recognizer": "Feature k-NN",
+    "family": "stretch",
+    "level": 2.5,
+    "queries": 372,
+    "top1": 0.5940860215053764,
+    "top3": 0.9301075268817204,
+    "ms_per_query": 0.4472131505377102
+  }
+]

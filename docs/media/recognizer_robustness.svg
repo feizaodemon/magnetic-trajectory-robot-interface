@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1064 292" width="1064" height="292" role="img" aria-labelledby="title desc">
+<title id="title">Recognizer Top-1 accuracy under synthetic perturbations</title>
+<desc id="desc">Leave-one-out on the tracked 8-symbol bank. One panel per perturbation family; x is perturbation strength, y is Top-1 accuracy from 0 to 100 percent. The same numbers are tabulated in docs/RECOGNIZER_COMPARISON.md.</desc>
+<style>.bg{fill:#fcfcfb}.t{fill:#0b0b0b}.s{fill:#52514e}.m{fill:#77766f}.grid{stroke:#e6e5e0;stroke-width:1}.axis{stroke:#bdbcb5;stroke-width:1}text{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}path.line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.l0{stroke:#2a78d6}.p0{fill:#2a78d6;stroke:#fcfcfb;stroke-width:1.5}.l1{stroke:#eb6834}.p1{fill:#eb6834;stroke:#fcfcfb;stroke-width:1.5}.l2{stroke:#1baf7a}.p2{fill:#1baf7a;stroke:#fcfcfb;stroke-width:1.5}.l3{stroke:#eda100}.p3{fill:#eda100;stroke:#fcfcfb;stroke-width:1.5}.l4{stroke:#e87ba4}.p4{fill:#e87ba4;stroke:#fcfcfb;stroke-width:1.5}.l5{stroke:#008300}.p5{fill:#008300;stroke:#fcfcfb;stroke-width:1.5}@media (prefers-color-scheme:dark){.bg{fill:#1a1a19}.t{fill:#f0efec}.s{fill:#c3c2b7}.m{fill:#9b9a92}.grid{stroke:#2e2e2c}.axis{stroke:#4a4a47}.l0{stroke:#3987e5}.p0{fill:#3987e5;stroke:#1a1a19}.l1{stroke:#d95926}.p1{fill:#d95926;stroke:#1a1a19}.l2{stroke:#199e70}.p2{fill:#199e70;stroke:#1a1a19}.l3{stroke:#c98500}.p3{fill:#c98500;stroke:#1a1a19}.l4{stroke:#d55181}.p4{fill:#d55181;stroke:#1a1a19}.l5{stroke:#008300}.p5{fill:#008300;stroke:#1a1a19}}</style>
+<rect class="bg" width="100%" height="100%" rx="6"/>
+<text class="t" x="16" y="24" font-size="15" font-weight="600">Top-1 accuracy under synthetic perturbations</text>
+<circle class="p0" cx="21.0" cy="44.0" r="4.0"/>
+<text class="s" x="30.0" y="48" font-size="12">DTW</text>
+<rect class="p1" x="64.4" y="40.4" width="7.2" height="7.2" rx="1"/>
+<text class="s" x="77.0" y="48" font-size="12">DTW (window 4)</text>
+<polygon class="p2" points="192.0,39.0 197.0,44.0 192.0,49.0 187.0,44.0"/>
+<text class="s" x="201.0" y="48" font-size="12">Derivative DTW</text>
+<polygon class="p3" points="316.0,39.2 320.6,47.6 311.4,47.6"/>
+<text class="s" x="325.0" y="48" font-size="12">Protractor ($1)</text>
+<polygon class="p4" points="447.0,48.8 451.6,40.4 442.4,40.4"/>
+<text class="s" x="456.0" y="48" font-size="12">$P point cloud</text>
+<polygon class="p5" points="569.2,38.8 572.8,38.8 572.8,42.2 576.2,42.2 576.2,45.8 572.8,45.8 572.8,49.2 569.2,49.2 569.2,45.8 565.8,45.8 565.8,42.2 569.2,42.2"/>
+<text class="s" x="580.0" y="48" font-size="12">Feature k-NN</text>
+<line class="grid" x1="44.0" x2="274.0" y1="262.0" y2="262.0"/>
+<text class="m" x="38.0" y="266.0" font-size="11" text-anchor="end">0%</text>
+<line class="grid" x1="44.0" x2="274.0" y1="219.5" y2="219.5"/>
+<text class="m" x="38.0" y="223.5" font-size="11" text-anchor="end">25%</text>
+<line class="grid" x1="44.0" x2="274.0" y1="177.0" y2="177.0"/>
+<text class="m" x="38.0" y="181.0" font-size="11" text-anchor="end">50%</text>
+<line class="grid" x1="44.0" x2="274.0" y1="134.5" y2="134.5"/>
+<text class="m" x="38.0" y="138.5" font-size="11" text-anchor="end">75%</text>
+<line class="grid" x1="44.0" x2="274.0" y1="92.0" y2="92.0"/>
+<text class="m" x="38.0" y="96.0" font-size="11" text-anchor="end">100%</text>
+<line class="axis" x1="44.0" x2="274.0" y1="262.0" y2="262.0"/>
+<text class="m" x="52.0" y="278.0" font-size="11" text-anchor="middle">clean</text>
+<text class="m" x="105.5" y="278.0" font-size="11" text-anchor="middle">σ=0.02</text>
+<text class="m" x="159.0" y="278.0" font-size="11" text-anchor="middle">σ=0.05</text>
+<text class="m" x="212.5" y="278.0" font-size="11" text-anchor="middle">σ=0.08</text>
+<text class="m" x="266.0" y="278.0" font-size="11" text-anchor="middle">σ=0.12</text>
+<text class="t" x="44.0" y="80.0" font-size="12" font-weight="600">Gaussian noise, sigma / stroke size</text>
+<path class="line l0" d="M52.0,92.0 L105.5,92.0 L159.0,92.0 L212.5,94.3 L266.0,100.2"/>
+<circle class="p0" cx="52.0" cy="92.0" r="4.0"/>
+<circle class="p0" cx="105.5" cy="92.0" r="4.0"/>
+<circle class="p0" cx="159.0" cy="92.0" r="4.0"/>
+<circle class="p0" cx="212.5" cy="94.3" r="4.0"/>
+<circle class="p0" cx="266.0" cy="100.2" r="4.0"/>
+<path class="line l1" d="M52.0,92.0 L105.5,92.0 L159.0,92.0 L212.5,95.2 L266.0,100.2"/>
+<rect class="p1" x="48.4" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="101.9" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="155.4" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="208.9" y="91.6" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="262.4" y="96.6" width="7.2" height="7.2" rx="1"/>
+<path class="line l2" d="M52.0,92.0 L105.5,92.0 L159.0,92.0 L212.5,92.9 L266.0,95.2"/>
+<polygon class="p2" points="52.0,87.0 57.0,92.0 52.0,97.0 47.0,92.0"/>
+<polygon class="p2" points="105.5,87.0 110.5,92.0 105.5,97.0 100.5,92.0"/>
+<polygon class="p2" points="159.0,87.0 164.0,92.0 159.0,97.0 154.0,92.0"/>
+<polygon class="p2" points="212.5,87.9 217.5,92.9 212.5,97.9 207.5,92.9"/>
+<polygon class="p2" points="266.0,90.2 271.0,95.2 266.0,100.2 261.0,95.2"/>
+<path class="line l3" d="M52.0,92.0 L105.5,92.0 L159.0,92.0 L212.5,92.0 L266.0,92.0"/>
+<polygon class="p3" points="52.0,87.2 56.6,95.6 47.4,95.6"/>
+<polygon class="p3" points="105.5,87.2 110.1,95.6 100.9,95.6"/>
+<polygon class="p3" points="159.0,87.2 163.6,95.6 154.4,95.6"/>
+<polygon class="p3" points="212.5,87.2 217.1,95.6 207.9,95.6"/>
+<polygon class="p3" points="266.0,87.2 270.6,95.6 261.4,95.6"/>
+<path class="line l4" d="M52.0,92.0 L105.5,92.0 L159.0,93.4 L212.5,93.8 L266.0,114.8"/>
+<polygon class="p4" points="52.0,96.8 56.6,88.4 47.4,88.4"/>
+<polygon class="p4" points="105.5,96.8 110.1,88.4 100.9,88.4"/>
+<polygon class="p4" points="159.0,98.2 163.6,89.8 154.4,89.8"/>
+<polygon class="p4" points="212.5,98.6 217.1,90.2 207.9,90.2"/>
+<polygon class="p4" points="266.0,119.6 270.6,111.2 261.4,111.2"/>
+<path class="line l5" d="M52.0,92.0 L105.5,110.7 L159.0,195.3 L212.5,218.1 L266.0,221.8"/>
+<polygon class="p5" points="50.2,86.8 53.8,86.8 53.8,90.2 57.2,90.2 57.2,93.8 53.8,93.8 53.8,97.2 50.2,97.2 50.2,93.8 46.8,93.8 46.8,90.2 50.2,90.2"/>
+<polygon class="p5" points="103.7,105.5 107.3,105.5 107.3,108.9 110.7,108.9 110.7,112.5 107.3,112.5 107.3,115.9 103.7,115.9 103.7,112.5 100.3,112.5 100.3,108.9 103.7,108.9"/>
+<polygon class="p5" points="157.2,190.1 160.8,190.1 160.8,193.5 164.2,193.5 164.2,197.1 160.8,197.1 160.8,200.5 157.2,200.5 157.2,197.1 153.8,197.1 153.8,193.5 157.2,193.5"/>
+<polygon class="p5" points="210.7,212.9 214.3,212.9 214.3,216.3 217.7,216.3 217.7,219.9 214.3,219.9 214.3,223.3 210.7,223.3 210.7,219.9 207.3,219.9 207.3,216.3 210.7,216.3"/>
+<polygon class="p5" points="264.2,216.6 267.8,216.6 267.8,220.0 271.2,220.0 271.2,223.6 267.8,223.6 267.8,227.0 264.2,227.0 264.2,223.6 260.8,223.6 260.8,220.0 264.2,220.0"/>
+<line class="grid" x1="302.0" x2="532.0" y1="262.0" y2="262.0"/>
+<line class="grid" x1="302.0" x2="532.0" y1="219.5" y2="219.5"/>
+<line class="grid" x1="302.0" x2="532.0" y1="177.0" y2="177.0"/>
+<line class="grid" x1="302.0" x2="532.0" y1="134.5" y2="134.5"/>
+<line class="grid" x1="302.0" x2="532.0" y1="92.0" y2="92.0"/>
+<line class="axis" x1="302.0" x2="532.0" y1="262.0" y2="262.0"/>
+<text class="m" x="310.0" y="278.0" font-size="11" text-anchor="middle">clean</text>
+<text class="m" x="363.5" y="278.0" font-size="11" text-anchor="middle">10°</text>
+<text class="m" x="417.0" y="278.0" font-size="11" text-anchor="middle">20°</text>
+<text class="m" x="470.5" y="278.0" font-size="11" text-anchor="middle">30°</text>
+<text class="m" x="524.0" y="278.0" font-size="11" text-anchor="middle">45°</text>
+<text class="t" x="302.0" y="80.0" font-size="12" font-weight="600">Rotation, degrees</text>
+<path class="line l0" d="M310.0,92.0 L363.5,92.0 L417.0,92.0 L470.5,92.0 L524.0,119.0"/>
+<circle class="p0" cx="310.0" cy="92.0" r="4.0"/>
+<circle class="p0" cx="363.5" cy="92.0" r="4.0"/>
+<circle class="p0" cx="417.0" cy="92.0" r="4.0"/>
+<circle class="p0" cx="470.5" cy="92.0" r="4.0"/>
+<circle class="p0" cx="524.0" cy="119.0" r="4.0"/>
+<path class="line l1" d="M310.0,92.0 L363.5,92.0 L417.0,92.0 L470.5,92.5 L524.0,119.9"/>
+<rect class="p1" x="306.4" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="359.9" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="413.4" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="466.9" y="88.9" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="520.4" y="116.3" width="7.2" height="7.2" rx="1"/>
+<path class="line l2" d="M310.0,92.0 L363.5,92.0 L417.0,92.0 L470.5,92.0 L524.0,122.6"/>
+<polygon class="p2" points="310.0,87.0 315.0,92.0 310.0,97.0 305.0,92.0"/>
+<polygon class="p2" points="363.5,87.0 368.5,92.0 363.5,97.0 358.5,92.0"/>
+<polygon class="p2" points="417.0,87.0 422.0,92.0 417.0,97.0 412.0,92.0"/>
+<polygon class="p2" points="470.5,87.0 475.5,92.0 470.5,97.0 465.5,92.0"/>
+<polygon class="p2" points="524.0,117.6 529.0,122.6 524.0,127.6 519.0,122.6"/>
+<path class="line l3" d="M310.0,92.0 L363.5,92.0 L417.0,92.0 L470.5,92.0 L524.0,92.0"/>
+<polygon class="p3" points="310.0,87.2 314.6,95.6 305.4,95.6"/>
+<polygon class="p3" points="363.5,87.2 368.1,95.6 358.9,95.6"/>
+<polygon class="p3" points="417.0,87.2 421.6,95.6 412.4,95.6"/>
+<polygon class="p3" points="470.5,87.2 475.1,95.6 465.9,95.6"/>
+<polygon class="p3" points="524.0,87.2 528.6,95.6 519.4,95.6"/>
+<path class="line l4" d="M310.0,92.0 L363.5,92.5 L417.0,95.7 L470.5,149.6 L524.0,211.3"/>
+<polygon class="p4" points="310.0,96.8 314.6,88.4 305.4,88.4"/>
+<polygon class="p4" points="363.5,97.3 368.1,88.9 358.9,88.9"/>
+<polygon class="p4" points="417.0,100.5 421.6,92.1 412.4,92.1"/>
+<polygon class="p4" points="470.5,154.4 475.1,146.0 465.9,146.0"/>
+<polygon class="p4" points="524.0,216.1 528.6,207.7 519.4,207.7"/>
+<path class="line l5" d="M310.0,92.0 L363.5,92.0 L417.0,99.8 L470.5,147.8 L524.0,209.0"/>
+<polygon class="p5" points="308.2,86.8 311.8,86.8 311.8,90.2 315.2,90.2 315.2,93.8 311.8,93.8 311.8,97.2 308.2,97.2 308.2,93.8 304.8,93.8 304.8,90.2 308.2,90.2"/>
+<polygon class="p5" points="361.7,86.8 365.3,86.8 365.3,90.2 368.7,90.2 368.7,93.8 365.3,93.8 365.3,97.2 361.7,97.2 361.7,93.8 358.3,93.8 358.3,90.2 361.7,90.2"/>
+<polygon class="p5" points="415.2,94.6 418.8,94.6 418.8,98.0 422.2,98.0 422.2,101.6 418.8,101.6 418.8,105.0 415.2,105.0 415.2,101.6 411.8,101.6 411.8,98.0 415.2,98.0"/>
+<polygon class="p5" points="468.7,142.6 472.3,142.6 472.3,146.0 475.7,146.0 475.7,149.6 472.3,149.6 472.3,153.0 468.7,153.0 468.7,149.6 465.3,149.6 465.3,146.0 468.7,146.0"/>
+<polygon class="p5" points="522.2,203.8 525.8,203.8 525.8,207.2 529.2,207.2 529.2,210.8 525.8,210.8 525.8,214.2 522.2,214.2 522.2,210.8 518.8,210.8 518.8,207.2 522.2,207.2"/>
+<line class="grid" x1="560.0" x2="790.0" y1="262.0" y2="262.0"/>
+<line class="grid" x1="560.0" x2="790.0" y1="219.5" y2="219.5"/>
+<line class="grid" x1="560.0" x2="790.0" y1="177.0" y2="177.0"/>
+<line class="grid" x1="560.0" x2="790.0" y1="134.5" y2="134.5"/>
+<line class="grid" x1="560.0" x2="790.0" y1="92.0" y2="92.0"/>
+<line class="axis" x1="560.0" x2="790.0" y1="262.0" y2="262.0"/>
+<text class="m" x="568.0" y="278.0" font-size="11" text-anchor="middle">clean</text>
+<text class="m" x="621.5" y="278.0" font-size="11" text-anchor="middle">10%</text>
+<text class="m" x="675.0" y="278.0" font-size="11" text-anchor="middle">20%</text>
+<text class="m" x="728.5" y="278.0" font-size="11" text-anchor="middle">30%</text>
+<text class="m" x="782.0" y="278.0" font-size="11" text-anchor="middle">40%</text>
+<text class="t" x="560.0" y="80.0" font-size="12" font-weight="600">Truncated stroke, fraction removed</text>
+<path class="line l0" d="M568.0,92.0 L621.5,92.0 L675.0,140.0 L728.5,196.2 L782.0,233.2"/>
+<circle class="p0" cx="568.0" cy="92.0" r="4.0"/>
+<circle class="p0" cx="621.5" cy="92.0" r="4.0"/>
+<circle class="p0" cx="675.0" cy="140.0" r="4.0"/>
+<circle class="p0" cx="728.5" cy="196.2" r="4.0"/>
+<circle class="p0" cx="782.0" cy="233.2" r="4.0"/>
+<path class="line l1" d="M568.0,92.0 L621.5,92.0 L675.0,148.2 L728.5,214.0 L782.0,246.9"/>
+<rect class="p1" x="564.4" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="617.9" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="671.4" y="144.6" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="724.9" y="210.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="778.4" y="243.3" width="7.2" height="7.2" rx="1"/>
+<path class="line l2" d="M568.0,92.0 L621.5,93.4 L675.0,130.4 L728.5,157.8 L782.0,245.5"/>
+<polygon class="p2" points="568.0,87.0 573.0,92.0 568.0,97.0 563.0,92.0"/>
+<polygon class="p2" points="621.5,88.4 626.5,93.4 621.5,98.4 616.5,93.4"/>
+<polygon class="p2" points="675.0,125.4 680.0,130.4 675.0,135.4 670.0,130.4"/>
+<polygon class="p2" points="728.5,152.8 733.5,157.8 728.5,162.8 723.5,157.8"/>
+<polygon class="p2" points="782.0,240.5 787.0,245.5 782.0,250.5 777.0,245.5"/>
+<path class="line l3" d="M568.0,92.0 L621.5,93.4 L675.0,168.8 L728.5,230.5 L782.0,245.5"/>
+<polygon class="p3" points="568.0,87.2 572.6,95.6 563.4,95.6"/>
+<polygon class="p3" points="621.5,88.6 626.1,97.0 616.9,97.0"/>
+<polygon class="p3" points="675.0,164.0 679.6,172.4 670.4,172.4"/>
+<polygon class="p3" points="728.5,225.7 733.1,234.1 723.9,234.1"/>
+<polygon class="p3" points="782.0,240.7 786.6,249.1 777.4,249.1"/>
+<path class="line l4" d="M568.0,92.0 L621.5,93.4 L675.0,141.4 L728.5,194.8 L782.0,222.2"/>
+<polygon class="p4" points="568.0,96.8 572.6,88.4 563.4,88.4"/>
+<polygon class="p4" points="621.5,98.2 626.1,89.8 616.9,89.8"/>
+<polygon class="p4" points="675.0,146.2 679.6,137.8 670.4,137.8"/>
+<polygon class="p4" points="728.5,199.6 733.1,191.2 723.9,191.2"/>
+<polygon class="p4" points="782.0,227.0 786.6,218.6 777.4,218.6"/>
+<path class="line l5" d="M568.0,92.0 L621.5,92.0 L675.0,122.2 L728.5,151.0 L782.0,160.5"/>
+<polygon class="p5" points="566.2,86.8 569.8,86.8 569.8,90.2 573.2,90.2 573.2,93.8 569.8,93.8 569.8,97.2 566.2,97.2 566.2,93.8 562.8,93.8 562.8,90.2 566.2,90.2"/>
+<polygon class="p5" points="619.7,86.8 623.3,86.8 623.3,90.2 626.7,90.2 626.7,93.8 623.3,93.8 623.3,97.2 619.7,97.2 619.7,93.8 616.3,93.8 616.3,90.2 619.7,90.2"/>
+<polygon class="p5" points="673.2,117.0 676.8,117.0 676.8,120.4 680.2,120.4 680.2,124.0 676.8,124.0 676.8,127.4 673.2,127.4 673.2,124.0 669.8,124.0 669.8,120.4 673.2,120.4"/>
+<polygon class="p5" points="726.7,145.8 730.3,145.8 730.3,149.2 733.7,149.2 733.7,152.8 730.3,152.8 730.3,156.2 726.7,156.2 726.7,152.8 723.3,152.8 723.3,149.2 726.7,149.2"/>
+<polygon class="p5" points="780.2,155.3 783.8,155.3 783.8,158.7 787.2,158.7 787.2,162.3 783.8,162.3 783.8,165.7 780.2,165.7 780.2,162.3 776.8,162.3 776.8,158.7 780.2,158.7"/>
+<line class="grid" x1="818.0" x2="1048.0" y1="262.0" y2="262.0"/>
+<line class="grid" x1="818.0" x2="1048.0" y1="219.5" y2="219.5"/>
+<line class="grid" x1="818.0" x2="1048.0" y1="177.0" y2="177.0"/>
+<line class="grid" x1="818.0" x2="1048.0" y1="134.5" y2="134.5"/>
+<line class="grid" x1="818.0" x2="1048.0" y1="92.0" y2="92.0"/>
+<line class="axis" x1="818.0" x2="1048.0" y1="262.0" y2="262.0"/>
+<text class="m" x="826.0" y="278.0" font-size="11" text-anchor="middle">clean</text>
+<text class="m" x="879.5" y="278.0" font-size="11" text-anchor="middle">1.25×</text>
+<text class="m" x="933.0" y="278.0" font-size="11" text-anchor="middle">1.5×</text>
+<text class="m" x="986.5" y="278.0" font-size="11" text-anchor="middle">2×</text>
+<text class="m" x="1040.0" y="278.0" font-size="11" text-anchor="middle">2.5×</text>
+<text class="t" x="818.0" y="80.0" font-size="12" font-weight="600">One-axis stretch, factor</text>
+<path class="line l0" d="M826.0,92.0 L879.5,92.0 L933.0,92.0 L986.5,92.5 L1040.0,114.4"/>
+<circle class="p0" cx="826.0" cy="92.0" r="4.0"/>
+<circle class="p0" cx="879.5" cy="92.0" r="4.0"/>
+<circle class="p0" cx="933.0" cy="92.0" r="4.0"/>
+<circle class="p0" cx="986.5" cy="92.5" r="4.0"/>
+<circle class="p0" cx="1040.0" cy="114.4" r="4.0"/>
+<path class="line l1" d="M826.0,92.0 L879.5,92.0 L933.0,92.0 L986.5,92.5 L1040.0,115.3"/>
+<rect class="p1" x="822.4" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="875.9" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="929.4" y="88.4" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="982.9" y="88.9" width="7.2" height="7.2" rx="1"/>
+<rect class="p1" x="1036.4" y="111.7" width="7.2" height="7.2" rx="1"/>
+<path class="line l2" d="M826.0,92.0 L879.5,92.0 L933.0,92.0 L986.5,117.1 L1040.0,126.3"/>
+<polygon class="p2" points="826.0,87.0 831.0,92.0 826.0,97.0 821.0,92.0"/>
+<polygon class="p2" points="879.5,87.0 884.5,92.0 879.5,97.0 874.5,92.0"/>
+<polygon class="p2" points="933.0,87.0 938.0,92.0 933.0,97.0 928.0,92.0"/>
+<polygon class="p2" points="986.5,112.1 991.5,117.1 986.5,122.1 981.5,117.1"/>
+<polygon class="p2" points="1040.0,121.3 1045.0,126.3 1040.0,131.3 1035.0,126.3"/>
+<path class="line l3" d="M826.0,92.0 L879.5,92.0 L933.0,92.0 L986.5,95.2 L1040.0,107.1"/>
+<polygon class="p3" points="826.0,87.2 830.6,95.6 821.4,95.6"/>
+<polygon class="p3" points="879.5,87.2 884.1,95.6 874.9,95.6"/>
+<polygon class="p3" points="933.0,87.2 937.6,95.6 928.4,95.6"/>
+<polygon class="p3" points="986.5,90.4 991.1,98.8 981.9,98.8"/>
+<polygon class="p3" points="1040.0,102.3 1044.6,110.7 1035.4,110.7"/>
+<path class="line l4" d="M826.0,92.0 L879.5,92.0 L933.0,93.8 L986.5,124.9 L1040.0,168.8"/>
+<polygon class="p4" points="826.0,96.8 830.6,88.4 821.4,88.4"/>
+<polygon class="p4" points="879.5,96.8 884.1,88.4 874.9,88.4"/>
+<polygon class="p4" points="933.0,98.6 937.6,90.2 928.4,90.2"/>
+<polygon class="p4" points="986.5,129.7 991.1,121.3 981.9,121.3"/>
+<polygon class="p4" points="1040.0,173.6 1044.6,165.2 1035.4,165.2"/>
+<path class="line l5" d="M826.0,92.0 L879.5,92.0 L933.0,95.2 L986.5,114.4 L1040.0,161.0"/>
+<polygon class="p5" points="824.2,86.8 827.8,86.8 827.8,90.2 831.2,90.2 831.2,93.8 827.8,93.8 827.8,97.2 824.2,97.2 824.2,93.8 820.8,93.8 820.8,90.2 824.2,90.2"/>
+<polygon class="p5" points="877.7,86.8 881.3,86.8 881.3,90.2 884.7,90.2 884.7,93.8 881.3,93.8 881.3,97.2 877.7,97.2 877.7,93.8 874.3,93.8 874.3,90.2 877.7,90.2"/>
+<polygon class="p5" points="931.2,90.0 934.8,90.0 934.8,93.4 938.2,93.4 938.2,97.0 934.8,97.0 934.8,100.4 931.2,100.4 931.2,97.0 927.8,97.0 927.8,93.4 931.2,93.4"/>
+<polygon class="p5" points="984.7,109.2 988.3,109.2 988.3,112.6 991.7,112.6 991.7,116.2 988.3,116.2 988.3,119.6 984.7,119.6 984.7,116.2 981.3,116.2 981.3,112.6 984.7,112.6"/>
+<polygon class="p5" points="1038.2,155.8 1041.8,155.8 1041.8,159.2 1045.2,159.2 1045.2,162.8 1041.8,162.8 1041.8,166.2 1038.2,166.2 1038.2,162.8 1034.8,162.8 1034.8,159.2 1038.2,159.2"/>
+</svg>

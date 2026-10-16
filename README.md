@@ -10,11 +10,11 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 
 ## Highlights
 
-- **Gesture-to-task pipeline.** Pen or mouse strokes are normalized and ranked against a tracked DTW bank of 124 handwritten templates over 8 symbols (`1,2,3,V,O,X,A,C`). Leave-one-out Top-1 accuracy on that bank is 100% at about 83 ms per query ([Results](#results)). Confidence and margin gates reject unclear samples. The recognition code is plain Python with no ROS dependency.
+- **Gesture-to-task pipeline.** Pen or mouse strokes are normalized and ranked against a tracked DTW bank of 124 handwritten templates over 8 symbols (`1,2,3,V,O,X,A,C`). Leave-one-out Top-1 accuracy on that bank is 100% at about 83 ms per query ([Results](#results)). Confidence and margin gates reject unclear samples. Five alternative recognizers are benchmarked against it under synthetic noise, rotation and truncation ([Comparing recognizers](#comparing-recognizers)). The recognition code is plain Python with no ROS dependency.
 - **Confirmation-gated command path.** Recognition, confirmation, dispatch and execution are separate ROS nodes. A candidate on screen cannot move the robot: only the dispatcher publishes `/colmag/task_command`, and only after an explicit `C Confirm`.
 - **Shared Cartesian teleoperation core.** One C++ core (`Fr3CartesianTeleopCore`) turns keyboard or board input into bounded joint targets with damped-least-squares inverse kinematics. It drives both the Gazebo Panda and the Real-FR3 adapter.
 - **Defensive hardware layer.** ROS-free C++ safety helpers (command replay guard, one-shot motion gate, ROS-time rollback guard, goal lifecycle tracking) sit in front of every FR3 trajectory and have their own unit tests.
-- **Tested end to end in CI.** About 470 pytest cases plus C++ tests, ruff, mypy, a recognition-accuracy gate, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
+- **Tested end to end in CI.** About 495 pytest cases plus C++ tests, ruff, mypy, a recognition-accuracy gate, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
 
 ## Results
 
@@ -23,7 +23,7 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 | Symbol recognition, leave-one-out over the 124 tracked templates (8 symbols) | Top-1 100%, Top-3 100% |
 | Queries accepted by the runtime confidence and margin gates | 100%, all of them correct |
 | Recognition time per query, pure-Python DTW against 123 templates | 83 ms median, 118 ms p95 on one CPU core |
-| Automated checks | about 470 pytest tests, 7 ROS-free C++ test programs, 7 CI jobs |
+| Automated checks | about 495 pytest tests, 7 ROS-free C++ test programs, 8 CI jobs |
 
 All templates were drawn with a mouse by one person, so these numbers show that the 8 symbols separate cleanly within one writer's data. They are an upper bound, not a measured accuracy for new users or for the magnetic board. Reproduce them without ROS in about 10 seconds:
 
@@ -34,6 +34,20 @@ python3 scripts/eval_dtw_bank_loo.py
 The CI job `dtw-eval` runs the same command on every pull request, puts the full report and confusion matrix in the job summary, and fails if Top-1 drops below 95%. Latency depends on the machine, so CI reports it without gating on it.
 
 Recognition uses the full DTW search by default. An optional Sakoe-Chiba window (`dtw_template_window` in `dtw_template_bank_recognizer.launch`) trades exactness for speed. On the same leave-one-out run, a 4-point window is about 5.7x faster (21 ms instead of 121 ms median in one benchmark run) with Top-1 still 100%, but it reorders the 2nd and 3rd candidates on about half of the queries. `python3 scripts/bench_dtw_ranking.py` reproduces the table.
+
+### Comparing recognizers
+
+Because every method scores 100% on the clean bank, I also compared DTW with four other single-stroke recognizers (Derivative DTW, Protractor/$1, $P, and hand-crafted features with k-NN) on the same leave-one-out queries after seeded synthetic noise, rotation, early truncation and stretching.
+
+![Top-1 accuracy of each recognizer under synthetic perturbations](docs/media/recognizer_robustness.svg)
+
+| Recognizer | Noise σ=0.12 | Rotation 45° | Truncation 30% | Time per query |
+| --- | --- | --- | --- | --- |
+| DTW (runtime) | 95.2% | 84.1% | 38.7% | 89 ms |
+| Protractor ($1) | 100.0% | 100.0% | 18.5% | 0.4 ms |
+| Feature k-NN | 23.7% | 31.2% | 65.3% | 0.5 ms |
+
+Protractor matches or beats DTW everywhere except truncated strokes, at about 1/200 of the cost. A stroke that ends early is the weak point of every shape matcher. The perturbations are synthetic and the data comes from one writer, so this ranks methods; it does not measure board accuracy. Full tables, method notes and limits: [Recognizer comparison](docs/RECOGNIZER_COMPARISON.md).
 
 ## Demo (Gazebo)
 
@@ -122,7 +136,7 @@ scripts/                   Offline DTW tools and guarded FR3 operator helpers
   demo/                    Scripted recording of the pick-and-place GIF
 docker/                    Gazebo and FR3 build and runtime profiles
 tests/                     pytest suite, headless dashboard harness, C++ tests
-docs/                      Architecture, running, validation, and boundary docs
+docs/                      Architecture, running, validation, recognizer comparison, and boundary docs
 .github/workflows/         CI: pytest (with and without ROS), ruff, mypy, DTW evaluation, catkin build, Gazebo smoke
 ```
 

@@ -20,7 +20,7 @@ Usage::
 
     python3 scripts/compare_recognizers.py
     python3 scripts/compare_recognizers.py --methods protractor,features --repeats 3
-    python3 scripts/compare_recognizers.py --markdown-out docs/RECOGNIZER_COMPARISON.md \\
+    python3 scripts/compare_recognizers.py --repeats 3 --jobs 4 \\
         --svg-out docs/media/recognizer_robustness.svg --json-out outputs/recognizers.json
 """
 
@@ -110,7 +110,7 @@ def _level_text(family: str, level: float) -> str:
     return "σ=%g" % level
 
 
-def format_markdown(rows: Sequence[Row], queries: int) -> str:
+def format_markdown(rows: Sequence[Row]) -> str:
     table = _lookup(rows)
     names = _recognizer_names(rows)
     families = _families(rows)
@@ -118,8 +118,9 @@ def format_markdown(rows: Sequence[Row], queries: int) -> str:
     lines = [
         "## Recognizer comparison: leave-one-out on the tracked bank",
         "",
-        "%d held-out queries per condition. Top-1 accuracy unless noted; the "
-        "perturbed columns use each family's strongest level." % queries,
+        "%d held-out queries clean and %d per perturbed condition. Top-1 accuracy "
+        "unless noted; the perturbed columns use each family's strongest level."
+        % (rows[0]["queries"], max(r["queries"] for r in rows)),
         "",
         "| Recognizer | Clean | Clean Top-3 | "
         + " | ".join("%s %s" % (family.capitalize(), _level_text(family, _levels(rows, family)[-1]))
@@ -150,9 +151,9 @@ def format_markdown(rows: Sequence[Row], queries: int) -> str:
 
 # Categorical slots 1-5 of the reference data-viz palette, light and dark.
 # Each series also has its own marker shape, so color is never the only cue.
-SERIES_LIGHT = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4")
-SERIES_DARK = ("#3987e5", "#d95926", "#199e70", "#c98500", "#d55181")
-MARKERS = ("circle", "square", "diamond", "triangle", "triangle-down")
+SERIES_LIGHT = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300")
+SERIES_DARK = ("#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300")
+MARKERS = ("circle", "square", "diamond", "triangle", "triangle-down", "plus")
 
 
 def _marker(shape: str, x: float, y: float, cls: str) -> str:
@@ -166,8 +167,13 @@ def _marker(shape: str, x: float, y: float, cls: str) -> str:
         points = [(x, y - r * 1.25), (x + r * 1.25, y), (x, y + r * 1.25), (x - r * 1.25, y)]
     elif shape == "triangle":
         points = [(x, y - r * 1.2), (x + r * 1.15, y + r * 0.9), (x - r * 1.15, y + r * 0.9)]
-    else:
+    elif shape == "triangle-down":
         points = [(x, y + r * 1.2), (x + r * 1.15, y - r * 0.9), (x - r * 1.15, y - r * 0.9)]
+    else:  # plus
+        a, b = r * 1.3, r * 0.45
+        points = [(x - b, y - a), (x + b, y - a), (x + b, y - b), (x + a, y - b), (x + a, y + b),
+                  (x + b, y + b), (x + b, y + a), (x - b, y + a), (x - b, y + b), (x - a, y + b),
+                  (x - a, y - b), (x - b, y - b)]
     return '<polygon class="%s" points="%s"/>' % (
         cls, " ".join("%.1f,%.1f" % point for point in points))
 
@@ -273,6 +279,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--markdown-out", type=Path, help="write the Markdown tables here")
     parser.add_argument("--svg-out", type=Path, help="write the robustness chart here")
     parser.add_argument("--json-out", type=Path, help="write every result row here as JSON")
+    parser.add_argument("--from-json", type=Path,
+                        help="re-render the tables and chart from a saved --json-out file instead "
+                             "of running the benchmark")
     args = parser.parse_args(argv)
 
     methods = [m for m in args.methods.split(",") if m]
@@ -281,9 +290,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if unknown:
         parser.error("unknown recognizer or perturbation: %s" % ", ".join(unknown))
 
-    templates = bank_templates(load_template_bank(args.bank), args.per_label)
-    rows = run(templates, methods, families, args.repeats, args.jobs)
-    markdown = format_markdown(rows, len(templates))
+    if args.from_json:
+        rows = json.loads(args.from_json.read_text(encoding="utf-8"))
+    else:
+        templates = bank_templates(load_template_bank(args.bank), args.per_label)
+        rows = run(templates, methods, families, args.repeats, args.jobs)
+    markdown = format_markdown(rows)
     sys.stdout.write(markdown)
 
     for path, text in ((args.markdown_out, markdown), (args.svg_out, format_svg(rows)),
