@@ -11,6 +11,7 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(_PACKAGE_SRC))
 
 from colmag_ros import keyboard_teleop
+from colmag_ros.param_utils import strict_bool_param
 
 
 class KeyboardTeleopNode:
@@ -23,8 +24,8 @@ class KeyboardTeleopNode:
         self.output_topic = rospy.get_param(
             "~confirmed_label_topic", "/colmag/teleop/confirmed_label"
         )
-        self.require_subscriber = bool(
-            rospy.get_param("~require_subscriber", True)
+        self.require_subscriber = strict_bool_param(
+            rospy.get_param("~require_subscriber", True), "~require_subscriber"
         )
         self.publisher = rospy.Publisher(
             self.output_topic, String, queue_size=10, latch=False
