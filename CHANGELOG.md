@@ -10,7 +10,7 @@ First tagged release of the portfolio edition. It covers the work merged up to p
 
 - **Gesture-to-task pipeline.** A DTW template bank with 124 mouse-drawn templates over 8 symbols ranks each stroke, and confidence and margin gates reject unclear input. Leave-one-out Top-1 accuracy on the bank is 100%, at 83 ms median per query in pure Python ([Results](README.md#results)).
 - **Confirmation-gated command path.** Recognition, confirmation, dispatch and execution run as separate ROS nodes. Only the dispatcher publishes `/colmag/task_command`, and only after an explicit `C Confirm` ([Architecture](docs/ARCHITECTURE.md)).
-- **Two modes, two backends.** `TASK` and `TELEOP` modes run against a Gazebo Panda or a Franka FR3. One C++ Cartesian core with damped-least-squares IK drives both robots ([Dual-Mode Teleoperation](docs/DUAL_MODE_TELEOPERATION.md)).
+- **Two modes, two backends.** `TASK` and `TELEOP` modes run against a Gazebo Panda or a Franka FR3. One C++ Cartesian core with damped-least-squares IK is shared by both backends ([Dual-Mode Teleoperation](docs/DUAL_MODE_TELEOPERATION.md)).
 - **Browser demo.** The recognizer is ported to the browser and deployed to GitHub Pages: [feizaodemon.github.io/magnetic-trajectory-robot-interface](https://feizaodemon.github.io/magnetic-trajectory-robot-interface/). A pytest check keeps its rankings and gate decisions identical to the Python recognizer.
 - **CI.** Eight jobs run on every pull request: ruff, mypy, pytest without ROS, pytest in ROS Noetic, a catkin build, a headless Gazebo smoke test, the DTW leave-one-out gate, and the recognizer comparison ([Validation](docs/VALIDATION.md)).
 
