@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Symbol Recognizer Demo</title>
+  <meta name="description" content="Draw a symbol and watch the robot's DTW template-bank recognizer rank it, in your browser.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <p class="eyebrow">Magnetic Trajectory Robot Interface</p>
+      <h1>Draw a symbol, see what the robot would read</h1>
+      <p class="lede">
+        This page runs the same DTW template-bank recognizer that decides which task the robot is offered,
+        against the same 124 mouse-drawn templates. Nothing is sent to a server, and nothing here moves a robot.
+      </p>
+      <p class="links">
+        <a href="https://github.com/feizaodemon/magnetic-trajectory-robot-interface">Source on GitHub</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/feizaodemon/magnetic-trajectory-robot-interface/blob/main/docs/RECOGNIZER_COMPARISON.md">Recognizer comparison</a>
+      </p>
+    </div>
+  </header>
+
+  <main class="wrap grid">
+    <section class="panel draw" aria-labelledby="draw-title">
+      <div class="panel-head">
+        <h2 id="draw-title">Draw here</h2>
+        <div class="actions">
+          <button type="button" id="undo" disabled>Undo stroke</button>
+          <button type="button" id="clear" disabled>Clear</button>
+        </div>
+      </div>
+      <canvas id="pad" width="480" height="480"
+              aria-label="Drawing area. Draw a symbol with the mouse, a finger or a pen. Or pick an example below."
+              role="img"></canvas>
+      <p class="hint" id="hint">Draw one of the eight symbols below. Direction matters: start at the dot.</p>
+    </section>
+
+    <section class="panel result" aria-labelledby="result-title" aria-live="polite">
+      <div class="panel-head">
+        <h2 id="result-title">Recognition</h2>
+        <span class="badge" id="badge" hidden></span>
+      </div>
+      <div id="status" class="status">Loading the template bank…</div>
+      <div id="best" class="best" hidden>
+        <div class="best-label" id="best-label"></div>
+        <div>
+          <div class="best-name" id="best-name"></div>
+          <div class="best-desc" id="best-desc"></div>
+        </div>
+      </div>
+      <ol class="cands" id="cands"></ol>
+      <figure class="overlay" id="overlay-fig" hidden>
+        <canvas id="overlay" width="240" height="240" aria-hidden="true"></canvas>
+        <figcaption>
+          <span class="row"><span class="key key-query"></span>your stroke, normalized</span>
+          <span class="row"><span class="key key-tmpl"></span>nearest template</span>
+          <code id="tmpl-id"></code>
+        </figcaption>
+      </figure>
+      <dl class="gate" id="gate" hidden></dl>
+    </section>
+
+    <section class="panel examples" aria-labelledby="ex-title">
+      <div class="panel-head">
+        <h2 id="ex-title">The eight symbols</h2>
+        <span class="muted">Click one to replay a stored template</span>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </section>
+
+    <section class="panel how" aria-labelledby="how-title">
+      <h2 id="how-title">How it works</h2>
+      <ol>
+        <li><strong>Normalize.</strong> All strokes are joined, centered on their centroid, scaled by the largest coordinate and resampled to 64 points by arc length.</li>
+        <li><strong>Compare.</strong> Dynamic time warping against every template; each symbol scores its closest template.</li>
+        <li><strong>Gate.</strong> The top symbol is accepted only if its distance is at most <span data-cfg="max_distance"></span>, it beats the runner-up by at least <span data-cfg="min_margin"></span>, and its confidence (1 − distance / max distance) is at least <span data-cfg="min_confidence"></span>. Otherwise the robot side shows the drawing as uncertain and offers nothing.</li>
+        <li><strong>Confirm.</strong> On the robot an accepted symbol is still only a proposal: the operator must confirm it before the matching task runs.</li>
+      </ol>
+      <p class="muted">
+        The templates come from one person's mouse drawings, so the recognizer is tuned to that writer;
+        other handwriting can be rejected more often. The JavaScript port is checked against the Python code in CI
+        (<code>tests/test_web_recognizer_parity.py</code>).
+      </p>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Bank <code id="bank-name"></code> · <span id="bank-count"></span> templates · gate values from <code>dtw_template_bank_tools.py</code></p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

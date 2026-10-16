@@ -26,6 +26,7 @@ EXPECTED_READER_DOCS = {
     "docs/VALIDATION.md",
     "scripts/demo/README.md",
     "tests/README.md",
+    "web/recognizer/README.md",
 }
 
 

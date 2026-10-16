@@ -8,6 +8,8 @@
 
 ![TASK 模式：绘制、识别、确认、Gazebo 运动](docs/media/task_gazebo.gif)
 
+**在浏览器里试识别器：** [feizaodemon.github.io/magnetic-trajectory-robot-interface/](https://feizaodemon.github.io/magnetic-trajectory-robot-interface/)。画八个符号中的任意一个，就能看到和机器人端相同的 DTW 排序和接受门限，用的也是同一份模板库。全部在网页里运行，不会让任何机器人动。源码：[web/recognizer](web/recognizer/README.md)。
+
 ## 亮点
 
 - **从手势到任务的完整链路。** 画板或鼠标笔画经过归一化，与受版本管理的 DTW 模板库排序比较。模板库有 124 条手写模板，覆盖 8 个符号（`1,2,3,V,O,X,A,C`）。在这个模板库上做留一法，Top-1 准确率为 100%，每次查询约 83 ms（见[结果](#结果)）。置信度和间隔门限会拒绝不清楚的样本。另外还有五种识别方法在合成噪声、旋转和截断下与它做了对比（见[识别方法对比](#识别方法对比)）。识别代码是纯 Python，不依赖 ROS。
@@ -136,6 +138,7 @@ src/serial_mvp/            串口数据包解析和数据源抽象
 scripts/                   离线 DTW 工具和带门控的 FR3 操作脚本
   ci/                      CI 使用的 Gazebo 运行冒烟测试
   demo/                    夹取放置 GIF 的脚本化录制
+web/recognizer/            识别器的浏览器移植版（GitHub Pages 演示）
 docker/                    Gazebo 和 FR3 的构建与运行 profile
 tests/                     pytest 测试集、headless dashboard harness、C++ 测试
 docs/                      架构、运行、验证、识别方法对比和边界文档
@@ -153,6 +156,8 @@ docs/                      架构、运行、验证、识别方法对比和边�
 - 两个 ROS 包的 `catkin_make install`；
 - Gazebo 冒烟测试：构建镜像，用 headless Gazebo 运行键盘 `TELEOP` profile，检查模式门控、笛卡尔运动和夹爪开合；
 - DTW 模板库的留一法评估，Top-1 低于 95% 时失败。
+
+另有一个 `recognizer demo` workflow 构建浏览器演示，并从 `main` 部署到 GitHub Pages。pytest job 还会检查 `web/recognizer` 里的 JavaScript 移植版和 Python 识别器给出相同的排序和门限判定。
 
 测试覆盖 Python 单元和静态契约、C++ 安全模块、launch 文件 XML 和路径隔离、Docker profile，以及 Markdown 链接完整性。[Validation](docs/VALIDATION.md) 列出了具体命令，也说明了每一层验证不能证明什么。
 

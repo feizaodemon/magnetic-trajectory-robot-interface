@@ -27,6 +27,8 @@ jobs:
         # tests must not skip: Boost and g++ are installed above.
         env:
           COLMAG_REQUIRE_CPP_DEPS: "1"
+          # The browser recognizer parity test needs Node, which the runner has.
+          COLMAG_REQUIRE_NODE: "1"
         run: python -m pytest -q -rs
 
   ruff:
