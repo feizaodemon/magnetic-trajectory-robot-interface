@@ -33,6 +33,8 @@ python3 scripts/eval_dtw_bank_loo.py
 
 The CI job `dtw-eval` runs the same command on every pull request, puts the full report and confusion matrix in the job summary, and fails if Top-1 drops below 95%. Latency depends on the machine, so CI reports it without gating on it.
 
+Recognition uses the full DTW search by default. An optional Sakoe-Chiba window (`dtw_template_window` in `dtw_template_bank_recognizer.launch`) trades exactness for speed. On the same leave-one-out run, a 4-point window is about 5.7x faster (21 ms instead of 121 ms median in one benchmark run) with Top-1 still 100%, but it reorders the 2nd and 3rd candidates on about half of the queries. `python3 scripts/bench_dtw_ranking.py` reproduces the table.
+
 ## Demo (Gazebo)
 
 `TASK` (above): a mouse-drawn `2` is recognized and confirmed on the `C` dwell button, and the robot-body bridge runs the mapped hexagon motion.

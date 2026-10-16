@@ -33,6 +33,8 @@ python3 scripts/eval_dtw_bank_loo.py
 
 CI job `dtw-eval` 在每个 pull request 上运行同一条命令，把完整报告和混淆矩阵写进 job summary，Top-1 低于 95% 时失败。耗时取决于机器，所以 CI 只报告、不设门限。
 
+识别默认使用完整的 DTW 搜索。可选的 Sakoe-Chiba 窗口（`dtw_template_bank_recognizer.launch` 中的 `dtw_template_window`）用精确性换速度。在同样的留一法测试里，4 点窗口快约 5.7 倍（一次基准测试中，中位数 21 ms，完整搜索为 121 ms），Top-1 仍是 100%，但大约一半的查询里第 2、3 名候选的顺序会变。运行 `python3 scripts/bench_dtw_ranking.py` 可复现这张表。
+
 ## 演示（Gazebo）
 
 `TASK`（上图）：用鼠标画一个 `2`，系统识别后在 `C` 停留按钮上确认，robot-body bridge 执行对应的六边形动作。
