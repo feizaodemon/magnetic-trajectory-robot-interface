@@ -24,10 +24,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
-PACKAGE_SRC = REPO / "colmag_ros" / "src"
-if str(PACKAGE_SRC) not in sys.path:
-    sys.path.insert(0, str(PACKAGE_SRC))
+from _repo import REPO  # also puts colmag_ros/src on sys.path
 
 from colmag_ros.dtw_dataset_io import (
     ensure_output_dir,
@@ -50,9 +47,11 @@ from colmag_ros.dtw_template_bank_tools import (
     preprocess_query_for_bank,
     rank_labels_for_query,
 )
+from colmag_ros.execution_semantics import C4_TARGET_LABELS
 
-# The 8-symbol vocabulary. Recognition-only; no executable semantics are bound.
-TARGET_LABELS = ["1", "2", "3", "V", "O", "X", "A", "C"]
+# The 8-symbol vocabulary. Recognition-only: only the label names are used,
+# no executable semantics are bound.
+TARGET_LABELS = list(C4_TARGET_LABELS)
 HOLDOUT_EVAL_DIR = Path("outputs") / "classifier_artifacts" / "dtw_seed_holdout_eval"
 
 # The gate defaults come from dtw_template_bank_tools so offline numbers stay

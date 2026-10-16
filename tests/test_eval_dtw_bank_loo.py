@@ -1,9 +1,13 @@
 """Leave-one-out evaluation of a DTW template bank (scripts/eval_dtw_bank_loo.py)."""
 
 import importlib.util
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+# The script imports its sibling scripts/_repo.py, as it does when run directly.
+if str(REPO / "scripts") not in sys.path:
+    sys.path.insert(0, str(REPO / "scripts"))
 SPEC = importlib.util.spec_from_file_location("eval_dtw_bank_loo", REPO / "scripts" / "eval_dtw_bank_loo.py")
 loo = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(loo)

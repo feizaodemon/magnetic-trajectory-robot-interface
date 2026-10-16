@@ -33,16 +33,13 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-REPO = Path(__file__).resolve().parents[1]
-PACKAGE_SRC = REPO / "colmag_ros" / "src"
-if str(PACKAGE_SRC) not in sys.path:
-    sys.path.insert(0, str(PACKAGE_SRC))
+from _repo import TRACKED_BANK  # also puts colmag_ros/src on sys.path
 
 from colmag_ros.dtw_template_bank_tools import coerce_points, load_template_bank
 from colmag_ros.gesture_recognizers import RECOGNIZERS, Template, make_recognizer
 from colmag_ros.recognition_benchmark import PERTURBATIONS, evaluate_leave_one_out
 
-DEFAULT_BANK = REPO / "colmag_ros" / "config" / "dtw_banks" / "m104c1_8symbol_mouse_seeded_yflip.json"
+DEFAULT_BANK = TRACKED_BANK
 
 Row = Dict[str, Any]
 
