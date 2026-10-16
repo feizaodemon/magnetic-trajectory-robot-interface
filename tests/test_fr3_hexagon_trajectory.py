@@ -84,7 +84,11 @@ def test_gate_c_plan_supports_selected_hexagon_without_motion_overrides():
 
 def test_gate_c_operator_uses_exact_label_2_instructions_and_no_direct_publish():
     operator = (REPO / "scripts/fr3_lab_operator.py").read_text()
-    runtime_source = (REPO / "scripts/fr3_lab_runtime.py").read_text()
+    # fr3_lab_runtime.py re-exports the scripts/fr3_lab package; check both.
+    runtime_source = "\n".join(
+        path.read_text()
+        for path in [REPO / "scripts/fr3_lab_runtime.py", *sorted((REPO / "scripts/fr3_lab").glob("*.py"))]
+    )
     assert "action_plan.expected_label" in operator
     assert "action_plan.expected_task" in operator
     for forbidden in (
