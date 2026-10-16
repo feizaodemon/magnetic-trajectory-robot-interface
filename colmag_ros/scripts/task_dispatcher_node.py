@@ -17,7 +17,7 @@ from colmag_ros.param_utils import bool_param, finite_float
 _C4_CONTRACT = execution_semantics.validated_execution_contract()
 C4_LABEL_TO_TASK = _C4_CONTRACT["label_to_task"]
 C4_SAFE_GAZEBO_TASKS = set(_C4_CONTRACT["safe_tasks"])
-C4_MAPPING_NAME = "m104c4_8symbol_gazebo"
+C4_MAPPING_NAME = _C4_CONTRACT["mapping_name"]
 
 REVIEW_TASKS = {
     "PICK_PLACE",

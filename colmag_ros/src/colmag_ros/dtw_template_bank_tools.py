@@ -19,13 +19,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from colmag_ros.param_utils import finite_float
+from colmag_ros.dtw_dataset_io import Point2D, normalize_point
 from colmag_ros.dtw_bank_features import (
     dtw_distance,
     normalize_points as preprocess_points,
 )
-
-
-Point2D = Tuple[float, float]
 
 
 def coerce_points(points: Any) -> List[Point2D]:
@@ -35,23 +33,13 @@ def coerce_points(points: Any) -> List[Point2D]:
             if key in points:
                 points = points[key]
                 break
+    # Unlike dtw_dataset_io.normalize_points, the first key present wins even
+    # when its value is not a list.
     out: List[Point2D] = []
     for point in points or []:
-        try:
-            if isinstance(point, dict):
-                x = point.get("x", point.get("u"))
-                y = point.get("y", point.get("v"))
-                if x is None and isinstance(point.get("position"), dict):
-                    x = point["position"].get("x", point["position"].get("u"))
-                    y = point["position"].get("y", point["position"].get("v"))
-            else:
-                x, y = point[0], point[1]
-            x = float(x)
-            y = float(y)
-        except (TypeError, ValueError, IndexError, KeyError):
-            continue
-        if math.isfinite(x) and math.isfinite(y):
-            out.append((x, y))
+        normalized = normalize_point(point)
+        if normalized is not None:
+            out.append(normalized)
     return out
 
 TEMPLATE_BANK_SCHEMA = "colmag_dtw_template_bank.v1"

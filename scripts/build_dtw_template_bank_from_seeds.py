@@ -11,12 +11,8 @@ augmentation, no executable mapping; default labels stay ``1,2,3``.
 import argparse
 import json
 import sys
-from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
-PACKAGE_SRC = REPO / "colmag_ros" / "src"
-if str(PACKAGE_SRC) not in sys.path:
-    sys.path.insert(0, str(PACKAGE_SRC))
+from _repo import REPO  # also puts colmag_ros/src on sys.path
 
 from colmag_ros.dtw_dataset_io import (
     ensure_output_dir,

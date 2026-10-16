@@ -31,10 +31,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-REPO = Path(__file__).resolve().parents[1]
-PACKAGE_SRC = REPO / "colmag_ros" / "src"
-if str(PACKAGE_SRC) not in sys.path:
-    sys.path.insert(0, str(PACKAGE_SRC))
+from _repo import TRACKED_BANK  # also puts colmag_ros/src on sys.path
 
 from colmag_ros.dtw_template_bank_tools import (
     DEFAULT_MAX_DISTANCE,
@@ -52,7 +49,7 @@ from colmag_ros.dtw_template_bank_tools import (
 # their own function to leave_one_out.
 Ranker = Callable[..., Dict[str, Any]]
 
-DEFAULT_BANK = REPO / "colmag_ros" / "config" / "dtw_banks" / "m104c1_8symbol_mouse_seeded_yflip.json"
+DEFAULT_BANK = TRACKED_BANK
 
 
 def leave_one_out(bank: Dict[str, Any],
@@ -61,7 +58,30 @@ def leave_one_out(bank: Dict[str, Any],
                   min_margin: float = DEFAULT_MIN_MARGIN,
                   min_confidence: float = DEFAULT_MIN_CONFIDENCE,
                   rank: Ranker = rank_labels_for_query) -> Dict[str, Any]:
-    """Score every template against the bank without it.
+    """Score every template against the bank without it, and summarize.
+
+    See ``score_queries`` for the per-query rows.
+    """
+    templates = list(bank.get("templates", []))
+    labels = _bank_labels(templates, labels)
+    rows = score_queries(bank, labels, max_distance, min_margin, min_confidence, rank)
+    return summarize(rows, labels, bank_templates=len(templates))
+
+
+def _bank_labels(templates: Sequence[Dict[str, Any]],
+                 labels: Optional[Sequence[str]]) -> List[str]:
+    if labels is None:
+        labels = sorted({str(t.get("label", "")) for t in templates})
+    return [str(label) for label in labels]
+
+
+def score_queries(bank: Dict[str, Any],
+                  labels: Optional[Sequence[str]] = None,
+                  max_distance: float = DEFAULT_MAX_DISTANCE,
+                  min_margin: float = DEFAULT_MIN_MARGIN,
+                  min_confidence: float = DEFAULT_MIN_CONFIDENCE,
+                  rank: Ranker = rank_labels_for_query) -> List[Dict[str, Any]]:
+    """Rank each template against the bank without it; one row per query.
 
     Template points are already preprocessed with the bank profile, so they
     go to ``rank`` unchanged, exactly as a preprocessed runtime query would.
@@ -69,9 +89,7 @@ def leave_one_out(bank: Dict[str, Any],
     ``margin`` as ``rank_labels_for_query`` does; the gates use the last two.
     """
     templates = list(bank.get("templates", []))
-    if labels is None:
-        labels = sorted({str(t.get("label", "")) for t in templates})
-    labels = [str(label) for label in labels]
+    labels = _bank_labels(templates, labels)
 
     rows: List[Dict[str, Any]] = []
     for index, template in enumerate(templates):
@@ -102,8 +120,7 @@ def leave_one_out(bank: Dict[str, Any],
             "reject_reason": gate["uncertainty_reason"],
             "latency_ms": latency_ms,
         })
-
-    return summarize(rows, labels, bank_templates=len(templates))
+    return rows
 
 
 def summarize(rows: Sequence[Dict[str, Any]], labels: Sequence[str],

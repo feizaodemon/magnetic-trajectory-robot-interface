@@ -11,40 +11,25 @@ Usage: python3 scripts/bench_dtw_ranking.py [--bank PATH] [--windows 4,8,16]
 """
 
 import argparse
+import functools
 import statistics
 import sys
-import time
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
-PACKAGE_SRC = REPO / "colmag_ros" / "src"
-if str(PACKAGE_SRC) not in sys.path:
-    sys.path.insert(0, str(PACKAGE_SRC))
+from _repo import TRACKED_BANK  # also puts colmag_ros/src on sys.path
 
-from colmag_ros.dtw_template_bank_tools import (
-    coerce_points,
-    load_template_bank,
-    rank_labels_for_query,
-)
+from colmag_ros.dtw_template_bank_tools import load_template_bank, rank_labels_for_query
+from eval_dtw_bank_loo import score_queries
 
-DEFAULT_BANK = REPO / "colmag_ros" / "config" / "dtw_banks" / "m104c1_8symbol_mouse_seeded_yflip.json"
-
-
-def leave_one_out(bank):
-    templates = bank["templates"]
-    for index, template in enumerate(templates):
-        rest = dict(bank, templates=templates[:index] + templates[index + 1:])
-        yield str(template["label"]), coerce_points(template["points"]), rest
+DEFAULT_BANK = TRACKED_BANK
 
 
 def run(bank, window):
-    latencies, top_labels, correct = [], [], 0
-    for label, query, rest in leave_one_out(bank):
-        start = time.perf_counter()
-        ranking = rank_labels_for_query(query, rest, top_k=3, window=window)
-        latencies.append((time.perf_counter() - start) * 1000.0)
-        top_labels.append([item["label"] for item in ranking["top"]])
-        correct += ranking["best_label"] == label
+    """Leave-one-out over ``bank`` with the same loop as eval_dtw_bank_loo."""
+    rows = score_queries(bank, rank=functools.partial(rank_labels_for_query, window=window))
+    latencies = [row["latency_ms"] for row in rows]
+    top_labels = [row["top3"] for row in rows]
+    correct = sum(row["predicted"] == row["label"] for row in rows)
     return {
         "top_labels": top_labels,
         "median_ms": statistics.median(latencies),

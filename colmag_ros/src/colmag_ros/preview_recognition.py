@@ -14,8 +14,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from colmag_ros.dashboard_candidate_display import backend_display_name
 from colmag_ros.dashboard_points import clean_stroke_points
 from colmag_ros.dtw_bank_features import Point, dtw_distance, normalize_points
+from colmag_ros.execution_semantics import C4_TARGET_LABELS
 
-DEFAULT_LABELS = ("1", "2", "3", "V", "O", "X", "A", "C")
+# The 8-symbol vocabulary; only the label names are used here.
+DEFAULT_LABELS = tuple(C4_TARGET_LABELS)
 
 RECOGNIZER_BACKENDS = ("dtw",)
 
