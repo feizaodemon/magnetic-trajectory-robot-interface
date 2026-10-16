@@ -23,7 +23,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run pytest
-        # Tests that need ROS Noetic packages skip themselves here.
+        # Tests that need ROS Noetic packages skip themselves here. The C++
+        # tests must not skip: Boost and g++ are installed above.
+        env:
+          COLMAG_REQUIRE_CPP_DEPS: "1"
         run: python -m pytest -q -rs
 
   ruff:
@@ -76,6 +79,8 @@ jobs:
         run: python3 -m pip install -r requirements.txt
       - name: Run pytest
         shell: bash
+        env:
+          COLMAG_REQUIRE_CPP_DEPS: "1"
         run: |
           # The container runs as root; the checkout belongs to the runner user.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
