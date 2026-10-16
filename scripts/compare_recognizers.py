@@ -175,17 +175,30 @@ def _marker(shape: str, x: float, y: float, cls: str) -> str:
         cls, " ".join("%.1f,%.1f" % point for point in points))
 
 
+# Chart geometry, in SVG user units.
+PANEL_W, PANEL_H, PANEL_GAP = 230.0, 170.0, 28.0
+PLOT_LEFT, PLOT_TOP, PLOT_BOTTOM = 44.0, 92.0, 30.0
+
+
 def format_svg(rows: Sequence[Row]) -> str:
     """Small multiples: one panel per perturbation family, Top-1 accuracy against level."""
     table = _lookup(rows)
     names = _recognizer_names(rows)
     families = _families(rows)
 
-    panel_w, panel_h, gap = 230.0, 170.0, 28.0
-    left, top, bottom = 44.0, 92.0, 30.0
-    width = left + len(families) * panel_w + (len(families) - 1) * gap + 16.0
-    height = top + panel_h + bottom
+    width = PLOT_LEFT + len(families) * PANEL_W + (len(families) - 1) * PANEL_GAP + 16.0
+    height = PLOT_TOP + PANEL_H + PLOT_BOTTOM
 
+    out = _svg_header(width, height)
+    out += _svg_legend(names)
+    for p, family in enumerate(families):
+        out += _svg_panel(rows, table, names, p, family)
+    out.append("</svg>")
+    return "\n".join(out) + "\n"
+
+
+def _svg_header(width: float, height: float) -> List[str]:
+    """Opening tag, title, description, theme styles, background and heading."""
     css = [
         ".bg{fill:#fcfcfb}.t{fill:#0b0b0b}.s{fill:#52514e}.m{fill:#77766f}",
         ".grid{stroke:#e6e5e0;stroke-width:1}.axis{stroke:#bdbcb5;stroke-width:1}",
@@ -199,7 +212,7 @@ def format_svg(rows: Sequence[Row]) -> str:
                    % (i, light_color, i, light_color))
         dark.append(".l%d{stroke:%s}.p%d{fill:%s;stroke:#1a1a19}" % (i, dark_color, i, dark_color))
 
-    out = [
+    return [
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %.0f %.0f" width="%.0f" height="%.0f"'
         ' role="img" aria-labelledby="title desc">' % (width, height, width, height),
         "<title id=\"title\">Recognizer Top-1 accuracy under synthetic perturbations</title>",
@@ -212,48 +225,57 @@ def format_svg(rows: Sequence[Row]) -> str:
         "Top-1 accuracy under synthetic perturbations</text>",
     ]
 
+
+def _svg_legend(names: Sequence[str]) -> List[str]:
+    """One marker and name per recognizer, left to right."""
+    out: List[str] = []
     legend_x = 16.0
     for i, name in enumerate(names):
         out.append(_marker(MARKERS[i % len(MARKERS)], legend_x + 5, 44, "p%d" % (i % len(MARKERS))))
         out.append('<text class="s" x="%.1f" y="48" font-size="12">%s</text>'
                    % (legend_x + 14, _escape(name)))
         legend_x += 26 + 7.0 * len(name)
+    return out
 
-    for p, family in enumerate(families):
-        x0 = left + p * (panel_w + gap)
-        levels = [0.0] + _levels(rows, family)
 
-        def px(index: int) -> float:
-            return x0 + 8 + index * (panel_w - 16) / max(1, len(levels) - 1)
+def _svg_panel(rows: Sequence[Row], table: Dict[Tuple[str, str, float], Row],
+               names: Sequence[str], p: int, family: str) -> List[str]:
+    """Panel ``p``: grid, axis labels, title and one line per recognizer for ``family``."""
+    out: List[str] = []
+    top, panel_w, panel_h = PLOT_TOP, PANEL_W, PANEL_H
+    x0 = PLOT_LEFT + p * (panel_w + PANEL_GAP)
+    levels = [0.0] + _levels(rows, family)
 
-        def py(value: float) -> float:
-            return top + panel_h - value * panel_h
+    def px(index: int) -> float:
+        return x0 + 8 + index * (panel_w - 16) / max(1, len(levels) - 1)
 
-        for tick in (0.0, 0.25, 0.5, 0.75, 1.0):
-            out.append('<line class="grid" x1="%.1f" x2="%.1f" y1="%.1f" y2="%.1f"/>'
-                       % (x0, x0 + panel_w, py(tick), py(tick)))
-            if p == 0:
-                out.append('<text class="m" x="%.1f" y="%.1f" font-size="11" text-anchor="end">'
-                           "%d%%</text>" % (x0 - 6, py(tick) + 4, int(100 * tick)))
-        out.append('<line class="axis" x1="%.1f" x2="%.1f" y1="%.1f" y2="%.1f"/>'
-                   % (x0, x0 + panel_w, py(0.0), py(0.0)))
-        for index, level in enumerate(levels):
-            label = "clean" if index == 0 else _level_text(family, level)
-            out.append('<text class="m" x="%.1f" y="%.1f" font-size="11" text-anchor="middle">%s</text>'
-                       % (px(index), py(0.0) + 16, _escape(label)))
-        out.append('<text class="t" x="%.1f" y="%.1f" font-size="12" font-weight="600">%s</text>'
-                   % (x0, top - 12, _escape(PERTURBATIONS[family][2])))
+    def py(value: float) -> float:
+        return top + panel_h - value * panel_h
 
-        for i, name in enumerate(names):
-            values = [table[(name, "clean", 0.0)]["top1"]] + [
-                table[(name, family, level)]["top1"] for level in levels[1:]]
-            d = " ".join("%s%.1f,%.1f" % ("M" if k == 0 else "L", px(k), py(v))
-                         for k, v in enumerate(values))
-            out.append('<path class="line l%d" d="%s"/>' % (i % len(MARKERS), d))
-            for k, value in enumerate(values):
-                out.append(_marker(MARKERS[i % len(MARKERS)], px(k), py(value), "p%d" % (i % len(MARKERS))))
-    out.append("</svg>")
-    return "\n".join(out) + "\n"
+    for tick in (0.0, 0.25, 0.5, 0.75, 1.0):
+        out.append('<line class="grid" x1="%.1f" x2="%.1f" y1="%.1f" y2="%.1f"/>'
+                   % (x0, x0 + panel_w, py(tick), py(tick)))
+        if p == 0:
+            out.append('<text class="m" x="%.1f" y="%.1f" font-size="11" text-anchor="end">'
+                       "%d%%</text>" % (x0 - 6, py(tick) + 4, int(100 * tick)))
+    out.append('<line class="axis" x1="%.1f" x2="%.1f" y1="%.1f" y2="%.1f"/>'
+               % (x0, x0 + panel_w, py(0.0), py(0.0)))
+    for index, level in enumerate(levels):
+        label = "clean" if index == 0 else _level_text(family, level)
+        out.append('<text class="m" x="%.1f" y="%.1f" font-size="11" text-anchor="middle">%s</text>'
+                   % (px(index), py(0.0) + 16, _escape(label)))
+    out.append('<text class="t" x="%.1f" y="%.1f" font-size="12" font-weight="600">%s</text>'
+               % (x0, top - 12, _escape(PERTURBATIONS[family][2])))
+
+    for i, name in enumerate(names):
+        values = [table[(name, "clean", 0.0)]["top1"]] + [
+            table[(name, family, level)]["top1"] for level in levels[1:]]
+        d = " ".join("%s%.1f,%.1f" % ("M" if k == 0 else "L", px(k), py(v))
+                     for k, v in enumerate(values))
+        out.append('<path class="line l%d" d="%s"/>' % (i % len(MARKERS), d))
+        for k, value in enumerate(values):
+            out.append(_marker(MARKERS[i % len(MARKERS)], px(k), py(value), "p%d" % (i % len(MARKERS))))
+    return out
 
 
 def _escape(text: str) -> str:

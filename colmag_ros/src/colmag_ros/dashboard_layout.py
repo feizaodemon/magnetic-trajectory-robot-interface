@@ -146,63 +146,8 @@ class DashboardLayoutMixin:
 
         self.canvas = tk.Canvas(stage, bg=theme.SURFACE, highlightthickness=0)
 
-        if self.config.demo_input_mode == "ocr_canvas":
-            buttons = [
-                ("X", "X\nClear", lambda e, bid="X": self._handle_ocr_action(bid)),
-                ("A", "A\nStop", lambda e, bid="A": self._handle_ocr_action(bid)),
-                ("C", "C\nConfirm", lambda e, bid="C": self._handle_ocr_action(bid)),
-                ("B", "B\nDraw", lambda e, bid="B": self._handle_ocr_action(bid)),
-            ]
-        elif self.config.is_trajectory_mode and self.config.candidate_preview_enabled and self.config.hover_buttons_enabled:
-            buttons = [
-                ("X", "X\nClear", lambda e, bid="X": self._handle_preview_button_action(bid)),
-                ("A", "A\nReject", lambda e, bid="A": self._handle_preview_button_action(bid)),
-                ("C", "C\nConfirm", lambda e, bid="C": self._handle_preview_button_action(bid)),
-                ("B", "B\nRecognize", lambda e, bid="B": self._handle_preview_button_action(bid)),
-            ]
-        elif self.config.is_trajectory_mode:
-            buttons = []
-        else:
-            buttons = [
-                ("X", "A\nRecog", lambda e: self._on_recognize_button()),
-                ("A", "X\nReject", lambda e: self._on_reject_button()),
-                ("C", "B\nConfirm", lambda e: self._on_confirm_publish_button()),
-                ("B", "C\nResamp", lambda e: self._on_resample_button()),
-                ("CLEAR", "CLEAR", lambda e: self._on_clear_button()),
-            ]
-
-        for button_id, label_text, handler in buttons:
-            widget = tk.Canvas(stage, bg=theme.SURFACE, highlightthickness=0, cursor="hand2")
-            preview_button = (
-                self.config.is_trajectory_mode and self.config.candidate_preview_enabled
-                and self.config.hover_buttons_enabled
-            )
-            if self.config.demo_input_mode == "ocr_canvas" or (
-                preview_button and self.config.hover_dwell_enabled
-            ):
-                widget.bind("<Enter>", lambda _event, bid=button_id: self._set_ocr_hover_button(bid))
-                widget.bind("<Leave>", lambda _event, bid=button_id: self._clear_ocr_hover_button(bid))
-                if preview_button:
-                    widget.bind("<Motion>", self._handle_preview_pointer_motion)
-            else:
-                def on_enter(_e, cv=widget): cv.config(cursor="hand2")
-                def on_leave(_e, cv=widget): cv.config(cursor="")
-                widget.bind("<Enter>", on_enter)
-                widget.bind("<Leave>", on_leave)
-
-            if preview_button:
-                widget.bind("<Button-1>", self._handle_preview_pointer_click)
-                widget.tag_bind("all", "<Button-1>", self._handle_preview_pointer_click)
-            elif self.config.hover_click_enabled or self.config.demo_input_mode != TRAJECTORY_MODE:
-                widget.bind("<Button-1>", handler)
-                # Support text clicks as well if they miss the circle slightly
-                widget.tag_bind("all", "<Button-1>", handler)
-
-            self.ocr_button_widgets[button_id] = {
-                "canvas": widget,
-                "base_text": label_text,
-                "size": 82,
-            }
+        for button_id, label_text, handler in self._toolbar_button_specs():
+            self._add_toolbar_button(stage, button_id, label_text, handler)
         self._update_ocr_toolbar_visuals()
 
         self.canvas.bind("<ButtonPress-1>", self._on_canvas_press)
@@ -217,6 +162,68 @@ class DashboardLayoutMixin:
             self.root.bind("<Leave>", self._handle_preview_pointer_leave, add="+")
         if self.config.demo_input_mode == "ocr_canvas" or self._preview_dwell_active():
             self.root.after(50, self._process_ocr_toolbar_dwell)
+
+    def _toolbar_button_specs(self):
+        """``(button_id, label, click handler)`` for each toolbar button of this mode."""
+        if self.config.demo_input_mode == "ocr_canvas":
+            return [
+                ("X", "X\nClear", lambda e, bid="X": self._handle_ocr_action(bid)),
+                ("A", "A\nStop", lambda e, bid="A": self._handle_ocr_action(bid)),
+                ("C", "C\nConfirm", lambda e, bid="C": self._handle_ocr_action(bid)),
+                ("B", "B\nDraw", lambda e, bid="B": self._handle_ocr_action(bid)),
+            ]
+        elif self.config.is_trajectory_mode and self.config.candidate_preview_enabled and self.config.hover_buttons_enabled:
+            return [
+                ("X", "X\nClear", lambda e, bid="X": self._handle_preview_button_action(bid)),
+                ("A", "A\nReject", lambda e, bid="A": self._handle_preview_button_action(bid)),
+                ("C", "C\nConfirm", lambda e, bid="C": self._handle_preview_button_action(bid)),
+                ("B", "B\nRecognize", lambda e, bid="B": self._handle_preview_button_action(bid)),
+            ]
+        elif self.config.is_trajectory_mode:
+            return []
+        else:
+            return [
+                ("X", "A\nRecog", lambda e: self._on_recognize_button()),
+                ("A", "X\nReject", lambda e: self._on_reject_button()),
+                ("C", "B\nConfirm", lambda e: self._on_confirm_publish_button()),
+                ("B", "C\nResamp", lambda e: self._on_resample_button()),
+                ("CLEAR", "CLEAR", lambda e: self._on_clear_button()),
+            ]
+
+    def _add_toolbar_button(self, stage, button_id, label_text, handler):
+        """Create one toolbar button canvas and bind its hover and click events."""
+        tk = self.tk
+        widget = tk.Canvas(stage, bg=theme.SURFACE, highlightthickness=0, cursor="hand2")
+        preview_button = (
+            self.config.is_trajectory_mode and self.config.candidate_preview_enabled
+            and self.config.hover_buttons_enabled
+        )
+        if self.config.demo_input_mode == "ocr_canvas" or (
+            preview_button and self.config.hover_dwell_enabled
+        ):
+            widget.bind("<Enter>", lambda _event, bid=button_id: self._set_ocr_hover_button(bid))
+            widget.bind("<Leave>", lambda _event, bid=button_id: self._clear_ocr_hover_button(bid))
+            if preview_button:
+                widget.bind("<Motion>", self._handle_preview_pointer_motion)
+        else:
+            def on_enter(_e, cv=widget): cv.config(cursor="hand2")
+            def on_leave(_e, cv=widget): cv.config(cursor="")
+            widget.bind("<Enter>", on_enter)
+            widget.bind("<Leave>", on_leave)
+
+        if preview_button:
+            widget.bind("<Button-1>", self._handle_preview_pointer_click)
+            widget.tag_bind("all", "<Button-1>", self._handle_preview_pointer_click)
+        elif self.config.hover_click_enabled or self.config.demo_input_mode != TRAJECTORY_MODE:
+            widget.bind("<Button-1>", handler)
+            # Support text clicks as well if they miss the circle slightly
+            widget.tag_bind("all", "<Button-1>", handler)
+
+        self.ocr_button_widgets[button_id] = {
+            "canvas": widget,
+            "base_text": label_text,
+            "size": 82,
+        }
 
     def _layout_ocr_stage(self, event=None):
 

@@ -110,6 +110,13 @@ class MagneticTrajectoryDashboardNode(
         )
 
     def _initialize_dashboard_state(self):
+        self._init_input_state()
+        self._init_sample_buffers()
+        self._init_recognition_state()
+        self._init_dwell_state()
+
+    def _init_input_state(self):
+        """Canvas size, latest board sample, input gating and control mode."""
         config = self.config
         # The layout resizes the canvas; it starts at the configured size.
         self.canvas_width = config.canvas_width
@@ -134,6 +141,9 @@ class MagneticTrajectoryDashboardNode(
         self.teleop_active_keys = ()
         self._teleop_view = None
 
+    def _init_sample_buffers(self):
+        """Trails, drawing buffers, published/captured samples and OCR draw area."""
+        config = self.config
         trail_maxlen = config.traj_trace_window_points if config.is_trajectory_mode else config.trail_size
         self.trail = deque(maxlen=trail_maxlen)
         self.drawing_zone_trail = deque(maxlen=trail_maxlen)
@@ -165,6 +175,9 @@ class MagneticTrajectoryDashboardNode(
         else:
             self._ocr_draw_area = None
 
+    def _init_recognition_state(self):
+        """Preview interaction, candidates and the segment recorder."""
+        config = self.config
         self.preview_interaction = PreviewInteraction()
         self.recognition_backend_label = backend_display_name(config.recognition_backend)
         self.trajectory_candidates = []
@@ -179,6 +192,9 @@ class MagneticTrajectoryDashboardNode(
         )
         self.recorded_segment = []
 
+    def _init_dwell_state(self):
+        """Dwell/hover confirm state and the OCR canvas stroke state."""
+        config = self.config
         self.dwell_state = update_dwell_state({}, "", time.time(), config.dwell_confirm_sec)
         self.ocr_button_widgets = {}
         self.preview_button_hit_zones = []
@@ -216,6 +232,13 @@ class MagneticTrajectoryDashboardNode(
         self.root.configure(bg=dashboard_theme.APP_BG)
         self.root.protocol("WM_DELETE_WINDOW", self._close)
 
+        self._init_status_vars()
+        self._init_trajectory_preview_vars()
+        self._init_mouse_operator_vars()
+
+    def _init_status_vars(self):
+        """Tk variables of the shared status, recognizer, task and teleop panels."""
+        tk = self.tk
         self.ui_state_var = tk.StringVar(value="WAITING")
         self.capture_var = tk.StringVar(value="-")
         self.control_mode_var = tk.StringVar(value="Mode: TASK")
@@ -244,6 +267,9 @@ class MagneticTrajectoryDashboardNode(
         self.teleop_backend_var = tk.StringVar(value="")
         self.teleop_gripper_var = tk.StringVar(value="")
 
+    def _init_trajectory_preview_vars(self):
+        """Tk variables of the trajectory preview (shown in trajectory mode)."""
+        tk = self.tk
         # Trajectory-preview status (trajectory mode only).
         if self.config.traj_scale_mode == "auto":
             _scale_label = "auto-fit recent (diagnostic)"
@@ -293,6 +319,10 @@ class MagneticTrajectoryDashboardNode(
             tk.StringVar(value="")
             for i in range(3)
         ]
+
+    def _init_mouse_operator_vars(self):
+        """Tk variables of the mouse/OCR operator panel."""
+        tk = self.tk
         self.mouse_mode_var = tk.StringVar(value="Mode: IDLE")
         self.mouse_operator_status_var = tk.StringVar(value="Hover B to start drawing")
         self.mouse_operator_result_var = tk.StringVar(value="No candidates yet")
