@@ -1,6 +1,6 @@
 # Recognizer comparison
 
-The runtime recognizer is DTW against a template bank. This page compares it with four other single-stroke recognizers on the same data. It is an offline experiment: only DTW runs in the ROS pipeline, and nothing here changes what the robot does.
+The runtime recognizer is DTW against a template bank. This page compares it with five alternatives on the same data: its own Sakoe-Chiba window variant and four other single-stroke recognizers. It is an offline experiment: only DTW runs in the ROS pipeline, and nothing here changes what the robot does.
 
 ![Top-1 accuracy of each recognizer under synthetic perturbations](media/recognizer_robustness.svg)
 
