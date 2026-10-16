@@ -175,3 +175,11 @@ def test_cli_writes_markdown_svg_and_json(tmp_path, capsys):
 def test_cli_rejects_unknown_method():
     with pytest.raises(SystemExit):
         compare_recognizers.main(["--methods", "bogus"])
+
+
+def test_svg_matches_the_tracked_chart():
+    # The tracked chart was rendered from the tracked rows; re-rendering it
+    # must give the same bytes.
+    rows = json.loads((REPO / "docs" / "data" / "recognizer_comparison.json").read_text(encoding="utf-8"))
+    tracked = (REPO / "docs" / "media" / "recognizer_robustness.svg").read_text(encoding="utf-8")
+    assert compare_recognizers.format_svg(rows) == tracked
