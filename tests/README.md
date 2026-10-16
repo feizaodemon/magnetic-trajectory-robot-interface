@@ -21,7 +21,10 @@ Layout:
   themselves without ROS Noetic.
 - `cpp/`: ROS-free C++ tests for the FR3 safety helpers, trajectory
   generators, and the Cartesian core. Tests build them with `g++` through
-  `cpp_harness.py` into a pytest temporary directory and run them.
+  `cpp_harness.py` into a pytest temporary directory and run them. A test
+  skips when `g++` is missing, or when it needs Boost and `libboost-dev` is not
+  installed. CI sets `COLMAG_REQUIRE_CPP_DEPS=1`, which turns those skips into
+  failures.
 - `dashboard_harness.py`: builds a real dashboard node with fake `rospy`,
   `std_msgs`, and `tkinter` modules, so dashboard tests need no display or ROS
   master.
