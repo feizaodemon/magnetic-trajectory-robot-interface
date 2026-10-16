@@ -43,7 +43,7 @@ def rotate(points: List[Point2D], degrees: float, rng: random.Random) -> List[Po
     ]
 
 
-def truncate(points: List[Point2D], fraction: float, rng: random.Random) -> List[Point2D]:
+def truncate(points: List[Point2D], fraction: float, _rng: random.Random) -> List[Point2D]:
     """Drop the last ``fraction`` of the points, as if the pen lifted early."""
     keep = max(2, int(round(len(points) * (1.0 - fraction))))
     return points[:keep]

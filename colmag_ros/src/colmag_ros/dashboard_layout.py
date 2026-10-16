@@ -185,8 +185,8 @@ class DashboardLayoutMixin:
                 if preview_button:
                     widget.bind("<Motion>", self._handle_preview_pointer_motion)
             else:
-                def on_enter(e, cv=widget): cv.config(cursor="hand2")
-                def on_leave(e, cv=widget): cv.config(cursor="")
+                def on_enter(_e, cv=widget): cv.config(cursor="hand2")
+                def on_leave(_e, cv=widget): cv.config(cursor="")
                 widget.bind("<Enter>", on_enter)
                 widget.bind("<Leave>", on_leave)
 

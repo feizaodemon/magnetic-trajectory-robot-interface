@@ -5,8 +5,6 @@ preview recognition, and tests. It does not import ROS, Tk, recognizers, or any
 robot execution path.
 """
 
-from colmag_ros.trajectory_strokes import flatten_strokes  # noqa: F401  (re-exported)
-
 
 def coerce_xy_point(point):
     """Return ``(x, y)`` floats from supported point shapes, or ``None``."""

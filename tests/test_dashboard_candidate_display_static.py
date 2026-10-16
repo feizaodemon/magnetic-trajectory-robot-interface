@@ -19,8 +19,8 @@ HELPER = REPO / "colmag_ros" / "src" / "colmag_ros" / "dashboard_candidate_displ
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from colmag_ros import dashboard_candidate_display as display  # noqa: E402
-from dashboard_harness import (  # noqa: E402
+from colmag_ros import dashboard_candidate_display as display
+from dashboard_harness import (
     SAMPLE_CANDIDATES,
     SAMPLE_CAPTURE,
     DashboardHarness,

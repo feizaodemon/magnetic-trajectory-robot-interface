@@ -15,9 +15,9 @@ TRACKED_BANK = (
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from colmag_ros import dtw_bank_features as features  # noqa: E402
-from colmag_ros import dtw_template_bank_tools as bank_tools  # noqa: E402
-from colmag_ros import preview_recognition  # noqa: E402
+from colmag_ros import dtw_bank_features as features
+from colmag_ros import dtw_template_bank_tools as bank_tools
+from colmag_ros import preview_recognition
 
 
 def _legacy_finite_float(value, default=0.0):

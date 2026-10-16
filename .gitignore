@@ -16,10 +16,6 @@ Thumbs.db
 
 captures/
 .tmp/
-colmag_ros/logs/*
-!colmag_ros/logs/.gitkeep
-.venv_colmag_ocr/
-.venv_classifier/
 
 # Local generated outputs
 outputs/

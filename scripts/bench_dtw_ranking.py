@@ -21,7 +21,7 @@ PACKAGE_SRC = REPO / "colmag_ros" / "src"
 if str(PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(PACKAGE_SRC))
 
-from colmag_ros.dtw_template_bank_tools import (  # noqa: E402
+from colmag_ros.dtw_template_bank_tools import (
     coerce_points,
     load_template_bank,
     rank_labels_for_query,
