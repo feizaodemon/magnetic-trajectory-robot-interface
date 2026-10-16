@@ -7,6 +7,7 @@ from colmag_ros.adapter import (
     ensure_project_src_path,
     packet_to_raw_json,
 )
+from colmag_ros.param_utils import strict_bool_param
 
 
 DEFAULT_PORT = "/dev/ttyACM0"
@@ -23,7 +24,7 @@ class SerialPacketPublisherNode:
         self.project_src_path = rospy.get_param("~project_src_path", None)
         self.publish_topic = rospy.get_param("~publish_topic", "/colmag/raw_packet")
         self.read_timeout = float(rospy.get_param("~read_timeout", DEFAULT_READ_TIMEOUT))
-        self.debug = bool(rospy.get_param("~debug", False))
+        self.debug = strict_bool_param(rospy.get_param("~debug", False), "~debug")
 
         ensure_project_src_path(self.project_src_path)
         from serial_mvp.reader import SerialPacketReader  # pylint: disable=import-outside-toplevel

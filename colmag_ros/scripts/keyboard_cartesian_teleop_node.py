@@ -16,6 +16,7 @@ if _PACKAGE_SRC.is_dir() and str(_PACKAGE_SRC) not in sys.path:
     sys.path.insert(0, str(_PACKAGE_SRC))
 
 from colmag_ros import cartesian_keyboard_input
+from colmag_ros.param_utils import strict_bool_param
 
 
 PUBLISH_PERIOD_SEC = 1.0 / 30.0
@@ -52,8 +53,8 @@ class KeyboardCartesianTeleopNode:
         self.output_topic = rospy.get_param(
             "~cartesian_input_topic", "/colmag/teleop/cartesian_input"
         )
-        self.require_subscriber = bool(
-            rospy.get_param("~require_subscriber", True)
+        self.require_subscriber = strict_bool_param(
+            rospy.get_param("~require_subscriber", True), "~require_subscriber"
         )
         self.publisher = rospy.Publisher(
             self.output_topic, String, queue_size=10, latch=False
