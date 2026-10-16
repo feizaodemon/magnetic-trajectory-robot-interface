@@ -7,7 +7,8 @@ swap them freely:
 
 ``DTWRecognizer``
     The runtime method: centroid/max-abs normalization, 64-point arc-length
-    resampling, and ``dtw_distance`` from ``colmag_ros.dtw_bank_features``.
+    resampling, and ``dtw_distance`` from ``colmag_ros.dtw_bank_features``,
+    optionally with the same Sakoe-Chiba ``window`` the runtime can enable.
 ``DerivativeDTWRecognizer``
     DTW on the local slope of the normalized stroke (Keogh and Pazzani, 2001),
     which aligns shape changes instead of absolute positions.
@@ -28,8 +29,9 @@ the ROS nodes, without NumPy.
 
 from __future__ import annotations
 
+import functools
 import math
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from colmag_ros.dtw_bank_features import (
     dtw_distance,
@@ -97,15 +99,18 @@ class TemplateRecognizer:
 class DTWRecognizer(TemplateRecognizer):
     name = "DTW"
 
-    def __init__(self, resample_points: int = 64) -> None:
+    def __init__(self, resample_points: int = 64, window: Optional[int] = None) -> None:
         super().__init__()
         self.resample_points = resample_points
+        self.window = window
+        if window is not None:
+            self.name = "%s (window %d)" % (type(self).name, window)
 
     def preprocess(self, points: Sequence[Point2D]) -> List[Point2D]:
         return normalize_points(points, resample_length=self.resample_points)
 
     def distance(self, query: List[Point2D], template: List[Point2D]) -> float:
-        return dtw_distance(query, template)
+        return dtw_distance(query, template, window=self.window)
 
 
 def derivative_sequence(points: Sequence[Point2D]) -> List[Point2D]:
@@ -272,7 +277,7 @@ def stroke_features(points: Sequence[Point2D]) -> List[float]:
         turning / (2 * math.pi),
         absolute_turning / (2 * math.pi),
         closure,
-        math.log((width + 1e-3) / (height + 1e-3)),
+        math.log((width + 1e-3 * size) / (height + 1e-3 * size)),
         start[0], start[1],
         end[0], end[1],
     ] + grid
@@ -310,8 +315,10 @@ class FeatureKNNRecognizer(TemplateRecognizer):
         return math.sqrt(sum((q - t) ** 2 for q, t in zip(query, template)))
 
 
-RECOGNIZERS = {
+RECOGNIZERS: Dict[str, Callable[..., TemplateRecognizer]] = {
     "dtw": DTWRecognizer,
+    # The optional Sakoe-Chiba window the runtime recognizer can enable.
+    "dtw_window4": functools.partial(DTWRecognizer, window=4),
     "ddtw": DerivativeDTWRecognizer,
     "protractor": ProtractorRecognizer,
     "pdollar": PDollarRecognizer,
