@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>colmag_gazebo_stub</name>
-  <version>0.0.1</version>
+  <version>1.0.0</version>
   <description>Gazebo FollowJointTrajectory bridge, TELEOP gripper bridge and pick-and-place objects for the COLMAG robot-body demo.</description>
 
   <maintainer email="64273122+feizaodemon@users.noreply.github.com">Xiaowei Rong</maintainer>
