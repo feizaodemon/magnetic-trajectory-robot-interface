@@ -7,7 +7,7 @@ The helpers accept the old flat ``points`` representation and the newer
 from __future__ import annotations
 
 import math
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 
 Point2D = Tuple[float, float]
@@ -15,8 +15,11 @@ Stroke = List[Point2D]
 
 
 def coerce_point(point: Any) -> Optional[Point2D]:
+    """Return a finite ``(x, y)`` from a pair or an ``x``/``y`` dict, or ``None``."""
     if point is None:
         return None
+    x: Any
+    y: Any
     try:
         if isinstance(point, dict):
             x = point.get("x")
@@ -58,6 +61,7 @@ def _normalize_point_list(points: Sequence[Any]) -> List[Stroke]:
 
 
 def normalize_strokes(strokes: Any) -> List[Stroke]:
+    """Return the non-empty strokes of a list of point lists, dropping invalid points."""
     if not isinstance(strokes, list):
         return []
     out: List[Stroke] = []
@@ -89,10 +93,12 @@ def normalize_payload_strokes(payload: Any) -> List[Stroke]:
 
 
 def flatten_strokes(strokes: Sequence[Sequence[Point2D]]) -> List[Point2D]:
+    """Concatenate strokes into one flat point list."""
     return [point for stroke in strokes for point in stroke]
 
 
-def stroke_metadata(strokes: Sequence[Sequence[Point2D]]) -> dict:
+def stroke_metadata(strokes: Sequence[Sequence[Point2D]]) -> Dict[str, int]:
+    """Return the non-empty stroke count and the total point count."""
     return {
         "stroke_count": len([stroke for stroke in strokes if stroke]),
         "point_count": len(flatten_strokes(strokes)),

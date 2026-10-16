@@ -14,7 +14,7 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 - **Confirmation-gated command path.** Recognition, confirmation, dispatch and execution are separate ROS nodes. A candidate on screen cannot move the robot: only the dispatcher publishes `/colmag/task_command`, and only after an explicit `C Confirm`.
 - **Shared Cartesian teleoperation core.** One C++ core (`Fr3CartesianTeleopCore`) turns keyboard or board input into bounded joint targets with damped-least-squares inverse kinematics. It drives both the Gazebo Panda and the Real-FR3 adapter.
 - **Defensive hardware layer.** ROS-free C++ safety helpers (command replay guard, one-shot motion gate, ROS-time rollback guard, goal lifecycle tracking) sit in front of every FR3 trajectory and have their own unit tests.
-- **Tested end to end in CI.** About 470 pytest cases plus C++ tests, ruff, a recognition-accuracy gate, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
+- **Tested end to end in CI.** About 470 pytest cases plus C++ tests, ruff, mypy, a recognition-accuracy gate, a catkin build, and a headless Gazebo smoke test that checks mode gating, Cartesian motion and gripper open/close on every pull request.
 
 ## Results
 
@@ -23,7 +23,7 @@ Draw a symbol on a magnetic board or with the mouse. The system recognizes it wi
 | Symbol recognition, leave-one-out over the 124 tracked templates (8 symbols) | Top-1 100%, Top-3 100% |
 | Queries accepted by the runtime confidence and margin gates | 100%, all of them correct |
 | Recognition time per query, pure-Python DTW against 123 templates | 83 ms median, 118 ms p95 on one CPU core |
-| Automated checks | about 470 pytest tests, 7 ROS-free C++ test programs, 6 CI jobs |
+| Automated checks | about 470 pytest tests, 7 ROS-free C++ test programs, 7 CI jobs |
 
 All templates were drawn with a mouse by one person, so these numbers show that the 8 symbols separate cleanly within one writer's data. They are an upper bound, not a measured accuracy for new users or for the magnetic board. Reproduce them without ROS in about 10 seconds:
 
@@ -121,14 +121,15 @@ scripts/                   Offline DTW tools and guarded FR3 operator helpers
 docker/                    Gazebo and FR3 build and runtime profiles
 tests/                     pytest suite, headless dashboard harness, C++ tests
 docs/                      Architecture, running, validation, and boundary docs
-.github/workflows/         CI: pytest (with and without ROS), ruff, DTW evaluation, catkin build, Gazebo smoke
+.github/workflows/         CI: pytest (with and without ROS), ruff, mypy, DTW evaluation, catkin build, Gazebo smoke
 ```
 
 ## Testing and CI
 
-Every pull request and push to `main` runs five jobs:
+Every pull request and push to `main` runs seven jobs:
 
 - `ruff check`;
+- `mypy` on the core ROS-free recognition and trajectory modules listed in `mypy.ini`;
 - pytest on Python 3.10 without ROS;
 - pytest in a ROS Noetic container, plus a parse of the launch files that need no Gazebo or FR3 packages;
 - `catkin_make install` for both ROS packages;

@@ -5,11 +5,18 @@ semantics. Historical first-point/range/resample96 paths intentionally remain
 separate.
 """
 
+from __future__ import annotations
+
 import math
+from typing import Any, Sequence, Tuple
+
 from colmag_ros.param_utils import finite_float
 
+Point = Tuple[float, float]
 
-def resample_by_arclength(points, n=64):
+
+def resample_by_arclength(points: Sequence[Point], n: int = 64) -> list[Point]:
+    """Resample a polyline to ``n`` points evenly spaced along its arc length."""
     if len(points) < 2:
         return list(points)
 
@@ -20,7 +27,7 @@ def resample_by_arclength(points, n=64):
     if total <= 1e-12:
         return [points[0]] * n
 
-    out = []
+    out: list[Point] = []
     j = 0
     for k in range(n):
         target = total * k / (n - 1)
@@ -34,8 +41,9 @@ def resample_by_arclength(points, n=64):
     return out
 
 
-def normalize_points(points, resample_length=64):
-    clean = []
+def normalize_points(points: Sequence[Any], resample_length: int = 64) -> list[Point]:
+    """Center on the centroid, scale by the max abs coordinate, then resample by arc length."""
+    clean: list[Point] = []
     for point in points:
         if not isinstance(point, (list, tuple)) or len(point) < 2:
             continue
@@ -55,7 +63,8 @@ def normalize_points(points, resample_length=64):
     return resample_by_arclength(normalized, n=resample_length)
 
 
-def dtw_distance(a, b):
+def dtw_distance(a: Sequence[Point], b: Sequence[Point]) -> float:
+    """Return the DTW distance between two point sequences, divided by ``len(a) + len(b)``."""
     n, m = len(a), len(b)
     if n == 0 or m == 0:
         return float("inf")

@@ -8,7 +8,11 @@ For the 8 C4 labels the task must match execution_semantics.C4_LABEL_TO_TASK,
 which is what the dispatcher executes. Display only; nothing here dispatches.
 """
 
-SYMBOL_SEMANTICS = {
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+SYMBOL_SEMANTICS: Dict[str, Dict[str, Any]] = {
     "1": {
         "label": "1",
         "display_name": "Move Left",
@@ -110,14 +114,14 @@ SYMBOL_SEMANTICS = {
     }
 }
 
-def get_symbol_semantics(label):
+def get_symbol_semantics(label: Any) -> Optional[Dict[str, Any]]:
     """
     Get the semantics dict for a given canonical label.
     Returns None if the label is unknown.
     """
     return SYMBOL_SEMANTICS.get(label)
 
-def enrich_candidate_with_semantics(candidate):
+def enrich_candidate_with_semantics(candidate: Dict[str, Any]) -> Dict[str, Any]:
     """
     Enrich a candidate dictionary with semantic fields.
     Mutates the candidate in place and returns it.

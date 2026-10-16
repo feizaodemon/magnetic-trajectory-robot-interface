@@ -28,7 +28,7 @@ from colmag_ros.dtw_bank_features import (
 Point2D = Tuple[float, float]
 
 
-def coerce_points(points: Sequence[Any]) -> List[Point2D]:
+def coerce_points(points: Any) -> List[Point2D]:
     """Keep the existing finite XY coercion used by bank files and tooling."""
     if isinstance(points, dict):
         for key in ("points", "trajectory", "path", "points_2d"):
@@ -64,7 +64,7 @@ DEFAULT_MIN_CONFIDENCE = 0.30
 BAD_INTENDED_LABELS = frozenset({"bad", "ambiguous", "noise", "random", "none", "na", "n/a"})
 
 DEFAULT_PREPROCESS_PROFILE = "mouse_centroid_maxabs_resample64"
-PREPROCESS_PROFILES = {
+PREPROCESS_PROFILES: Dict[str, Dict[str, Any]] = {
     "mouse_centroid_maxabs_resample64": {
         "resample_points": 64,
         "center": "centroid",
@@ -78,6 +78,7 @@ DEFAULT_EVAL_DIR = Path("outputs") / "classifier_artifacts" / "dtw_eval"
 
 
 def parse_labels_csv(text: Any, default: Sequence[str] = DEFAULT_LABELS) -> List[str]:
+    """Split comma-separated labels, dropping blanks and duplicates; fall back to ``default``."""
     raw = [item.strip() for item in str(text or "").split(",")]
     labels: List[str] = []
     for label in raw:
@@ -93,14 +94,16 @@ def flip_y_points(points: Sequence[Any]) -> List[Point2D]:
 
 def preprocess_profile_points(points: Sequence[Any], profile: str,
                               resample_points: Optional[int] = None) -> List[Point2D]:
+    """Coerce and preprocess points with a named profile; raise ``ValueError`` if unknown."""
     params = PREPROCESS_PROFILES.get(profile)
     if params is None:
         raise ValueError("unknown preprocess profile: %r" % profile)
     n = int(resample_points or params["resample_points"])
-    return [tuple(point) for point in preprocess_points(coerce_points(points), resample_length=n)]
+    return [(x, y) for x, y in preprocess_points(coerce_points(points), resample_length=n)]
 
 
 def is_bad_intended_label(label: Any) -> bool:
+    """Return whether a sample's intended label marks it as bad or ambiguous."""
     return str(label or "").strip().lower() in BAD_INTENDED_LABELS
 
 
@@ -114,6 +117,7 @@ def build_template_record(label: Any, raw_points: Sequence[Any], *,
                           semantic_role: Optional[str] = None,
                           is_executable: bool = False,
                           notes: str = "") -> Dict[str, Any]:
+    """Build one preprocessed template record with its source and metadata."""
     clean_label = str(label or "").strip()
     if not clean_label:
         raise ValueError("template label is required")
@@ -150,6 +154,7 @@ def build_template_bank(templates: Sequence[Dict[str, Any]], *, labels: Sequence
                         resample_points: Optional[int] = None,
                         generated_by: str = "dtw_template_bank_tools",
                         created_at: Optional[float] = None) -> Dict[str, Any]:
+    """Wrap templates in a versioned bank; raise ``ValueError`` on an unknown label or profile."""
     params = PREPROCESS_PROFILES.get(profile)
     if params is None:
         raise ValueError("unknown preprocess profile: %r" % profile)
@@ -183,6 +188,7 @@ def build_template_bank(templates: Sequence[Dict[str, Any]], *, labels: Sequence
 
 
 def validate_template_bank(bank: Any) -> Dict[str, Any]:
+    """Return ``bank`` if it has the expected schema and usable templates, else raise ``ValueError``."""
     if not isinstance(bank, dict):
         raise ValueError("template bank must be a JSON object")
     if bank.get("schema") != TEMPLATE_BANK_SCHEMA:
@@ -203,6 +209,7 @@ def validate_template_bank(bank: Any) -> Dict[str, Any]:
 
 
 def load_template_bank(path: Any) -> Dict[str, Any]:
+    """Read and validate a template bank JSON file."""
     return validate_template_bank(json.loads(Path(path).read_text(encoding="utf-8")))
 
 
@@ -226,7 +233,7 @@ def rank_labels_for_query(query_points: Sequence[Point2D], bank: Dict[str, Any],
     label and the nearest different label.
     """
     wanted = {str(label) for label in labels} if labels else None
-    scored = []
+    scored: List[Tuple[float, str, str]] = []
     for template in bank.get("templates", []):
         label = str(template.get("label", ""))
         if wanted is not None and label not in wanted:
@@ -241,11 +248,11 @@ def rank_labels_for_query(query_points: Sequence[Point2D], bank: Dict[str, Any],
             best_by_label[label] = (distance, template_id)
     ranked_labels = sorted(best_by_label.items(), key=lambda item: (item[1][0], item[0]))
 
-    top = [
+    top: List[Dict[str, Any]] = [
         {"rank": rank, "label": label, "distance": distance, "template_id": template_id}
         for rank, (label, (distance, template_id)) in enumerate(ranked_labels[:max(1, int(top_k))], start=1)
     ]
-    best = top[0] if top else {"label": "", "distance": float("inf"), "template_id": ""}
+    best: Dict[str, Any] = top[0] if top else {"label": "", "distance": float("inf"), "template_id": ""}
     second = ranked_labels[1] if len(ranked_labels) > 1 else None
     second_distance = second[1][0] if second else float("inf")
     margin = second_distance - best["distance"] if second else float("inf")
@@ -263,6 +270,7 @@ def rank_labels_for_query(query_points: Sequence[Point2D], bank: Dict[str, Any],
 
 
 def margin_ratio(best_distance: float, second_distance: float) -> float:
+    """Return the relative gap ``(second - best) / second`` clamped to [0, 1]."""
     if not (math.isfinite(best_distance) and math.isfinite(second_distance)):
         return 0.0
     if second_distance <= 1e-9:
@@ -274,6 +282,7 @@ def decide_acceptance(best_distance: float, margin: float,
                       max_distance: float, min_margin: float,
                       top1_confidence: Optional[float] = None,
                       min_confidence: float = 0.0) -> Dict[str, Any]:
+    """Apply the distance, margin, and confidence gates in that order."""
     reason = ""
     if not math.isfinite(best_distance):
         reason = "no_candidates"
@@ -372,7 +381,7 @@ def bank_candidates_from_ranking(ranking: Dict[str, Any], max_distance: Any,
     ranks carry their distance gap behind the best label.
     """
     best_distance = float(ranking.get("best_distance", float("inf")))
-    candidates = []
+    candidates: List[Dict[str, Any]] = []
     for item in ranking.get("top", []):
         distance = float(item["distance"])
         if not math.isfinite(distance):
@@ -411,7 +420,8 @@ def _runtime_gate(accepted: bool, reason: str, candidates: Sequence[Dict[str, An
 def recognize_with_template_bank(points: Sequence[Any], state: Optional[Dict[str, Any]],
                                  top_k: int = 3, max_distance: float = DEFAULT_MAX_DISTANCE,
                                  min_margin: float = DEFAULT_MIN_MARGIN,
-                                 min_confidence: float = DEFAULT_MIN_CONFIDENCE):
+                                 min_confidence: float = DEFAULT_MIN_CONFIDENCE,
+                                 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     """Pure opt-in runtime path: capture points -> (candidates, gate, metadata).
 
     Runtime query points are never y-flipped; the y-flip decision lives in the

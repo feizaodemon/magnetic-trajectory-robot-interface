@@ -15,6 +15,10 @@ def apply_uncertainty_gate(candidates: Sequence[Dict[str, Any]],
                            min_confidence: float = 0.70,
                            min_margin: float = 0.20,
                            invalid_payload: bool = False) -> Dict[str, Any]:
+    """Gate top-k candidates on top-1 confidence and the top-1/top-2 margin.
+
+    Returns the acceptance decision with its reason and the values it used.
+    """
     clean: List[Dict[str, Any]] = [c for c in candidates or [] if isinstance(c, dict)]
     top1 = _confidence(clean[0]) if clean else 0.0
     top2 = _confidence(clean[1]) if len(clean) > 1 else 0.0
